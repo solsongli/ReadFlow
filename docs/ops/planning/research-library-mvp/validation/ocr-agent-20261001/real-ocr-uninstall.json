@@ -1,0 +1,12 @@
+{
+  "at": "2026-10-01T08:03:59.815Z",
+  "syntheticOnly": true,
+  "steps": [
+    "Removed the real OCR module through the original UI; PDF bytes, item, note and completed OCR revision remain intact and searchable."
+  ],
+  "pageErrors": [],
+  "noteId": "b32d00d0-6ca8-48e9-9cac-8bab517f8e51",
+  "parseRevision": "152ed2cb6d125698a554f58cefbd0abcccc5076284c588459cd4bcb9fbde9d72",
+  "passed": true,
+  "moduleStatus": "not_installed"
+}

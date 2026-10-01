@@ -1,0 +1,38 @@
+{
+  "at": "2026-10-01T07:27:05.260Z",
+  "entry": "http://127.0.0.1:40061/index.html?tab=research",
+  "steps": [
+    "Original shell workspace supports custom OpenAI-compatible and local keyless model configuration, without saving or calling a model.",
+    "Actual public SafeVLA text is retrieved locally; verified source citation opens the matching physical page in the original Reader.",
+    "Original shell shows the pinned 18-file OCR manifest, exact sizes and checksums; unapproved download remains disabled."
+  ],
+  "pageErrors": [],
+  "realModelTested": false,
+  "realOcrTested": false,
+  "modelGate": {
+    "configured": false,
+    "enabled": false
+  },
+  "evidence": {
+    "count": 6,
+    "pageNumbers": [
+      32,
+      1,
+      8,
+      26,
+      1,
+      2
+    ],
+    "itemId": "626f17cb-6f21-4e57-ad2d-ff54d6387e89",
+    "attachmentId": "b9bf0f8d-ae33-405a-9dff-ca4295be9ccd",
+    "sourceHash": "91d8a7eeadc5841ef2328c242e9eb1197eecd9ab769c94c4bd9e2eaceaa68d13"
+  },
+  "readerPageNumber": 32,
+  "readerPageVisible": true,
+  "ocrPreview": {
+    "bytes": 151802982,
+    "files": 18,
+    "downloadEnabled": false
+  },
+  "passed": true
+}

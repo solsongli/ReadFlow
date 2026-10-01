@@ -1,0 +1,263 @@
+{
+  "at": "2026-10-01T09:32:13.801125+00:00",
+  "scope": "Replace original RetainPDF settings OCR with local CPU module and validate original OCR pipeline/reader",
+  "complete": true,
+  "repo": "/home/lsy/Documents/LeoProjetcs/Retainpdf/retain-pdf",
+  "report": "/home/lsy/Documents/LeoProjetcs/Retainpdf/retain-pdf/docs/ops/planning/research-library-mvp/settings-local-ocr-acceptance-20261001.md",
+  "runtime": {
+    "at": "2026-10-01T09:28:39.393273+00:00",
+    "pid": 133343,
+    "start_ticks": "1877997",
+    "url": "http://127.0.0.1:40061/index.html?tab=research",
+    "checks": {
+      "home": {
+        "http_status": 200
+      },
+      "settings_api": {
+        "http_status": 200,
+        "status": "ready"
+      },
+      "ocr_job": {
+        "http_status": 200,
+        "status": "succeeded"
+      },
+      "markdown": {
+        "http_status": 200,
+        "synthetic_chinese_present": true
+      }
+    },
+    "debug_port_9229_open": false,
+    "external_models_enabled": false,
+    "ocr_module_ready": true
+  },
+  "code_and_test_files": [
+    {
+      "path": "backend/config/ocr_providers.json",
+      "sha256": "da82313655c32c3624e29663f8227bd11285af67722a5937b736ee03e800e44d"
+    },
+    {
+      "path": "backend/library_mvp/agent_service.py",
+      "sha256": "605f8c03364663e66a2137adff94d7fde8692e0bdc47434c365de3612bdd87d4"
+    },
+    {
+      "path": "backend/library_mvp/agent_tools.py",
+      "sha256": "45d48907f6a3978cce4895d556dbd59881993d39bbef8cff5b609d5368aeec8d"
+    },
+    {
+      "path": "backend/library_mvp/agent_transport.py",
+      "sha256": "1e4c8c3001612204e120dab95313c3ad7df20c843e6e06512ec35eba2b139c94"
+    },
+    {
+      "path": "backend/library_mvp/ai_runtime.py",
+      "sha256": "a325ae8903d2c1e3e82cd6da5dcd11a102be02ae827097596aad534233effbb9"
+    },
+    {
+      "path": "backend/library_mvp/ocr_jobs.py",
+      "sha256": "ef85c4d186557b96213e26cc7c3336a0f3ad1f26a84f04448a6373c6a80bcf2b"
+    },
+    {
+      "path": "backend/library_mvp/ocr_modules.py",
+      "sha256": "8c9409ac91670281fb00eaa3967805ce48f5c7a4da2411e110c742eb25cdd9ed"
+    },
+    {
+      "path": "backend/library_mvp/tests/test_agent_service.py",
+      "sha256": "319ca462a374571520360cd69e2a6dadb741708e31db48fdc525e5f179325816"
+    },
+    {
+      "path": "backend/library_mvp/tests/test_optional_ocr.py",
+      "sha256": "0072a272eedc559061401e4f977bab86b58d4d7ca411bd8bc45737685801525e"
+    },
+    {
+      "path": "backend/library_mvp/tests/test_packaged_runtime.py",
+      "sha256": "b1dc8fc7c7217fdcd82fd8e3bdc099cfe5c5675b86243274a9dae9d67f3e981b"
+    },
+    {
+      "path": "backend/pipeline/devtools/tests/document_schema/test_local_cpu_ocr_driver.py",
+      "sha256": "77185738fb5d2e097f5b8d90dff1de0c42ac9cbcc45259c63aa4d1ad9b11056b"
+    },
+    {
+      "path": "backend/pipeline/retainpdf_pipeline/ocr/ocr_provider/drivers.py",
+      "sha256": "5337d2ac77e23fc7e8e5502a1841f829fa43148c87c3a79de9b0d54f263fa653"
+    },
+    {
+      "path": "backend/pipeline/retainpdf_pipeline/ocr/ocr_provider/local_cpu_driver.py",
+      "sha256": "d366859aa83b88a6d24acf3bb52fcf50e8fd07973fe43a5b0a21d5196ea0a0d1"
+    },
+    {
+      "path": "backend/pipeline/retainpdf_pipeline/ocr/ocr_provider/provider_pipeline.py",
+      "sha256": "b207b126deae664e65fa9675c11d5b955f99119ada8d5cc030792a729584151e"
+    },
+    {
+      "path": "frontend/desktop/main.js",
+      "sha256": "b1b22f9181063df64595c47f961612acf83e390e487f1c139fec69abcdd30591"
+    },
+    {
+      "path": "frontend/desktop/scripts/prepare-app.mjs",
+      "sha256": "b74f2d77d223042f7e351b484fc359ae758a23566b60b746496e0845f9579d1d"
+    },
+    {
+      "path": "frontend/desktop/src/main/backend-env.js",
+      "sha256": "9f9c1028f2e3c991c74dac11459bc8aa4032d0cdb2aafd977a07b9b289c60b4e"
+    },
+    {
+      "path": "frontend/desktop/src/main/backend-env.test.mjs",
+      "sha256": "f69137ce9a5c2df659af5ca3bfd7f2b364c73b304180952cb17629b1fd1adcdd"
+    },
+    {
+      "path": "frontend/desktop/src/main/desktop-config.js",
+      "sha256": "de6dd00fc5f9959455f4614d155b9055cca00e0f38dfccde738859bcbe91aab6"
+    },
+    {
+      "path": "frontend/desktop/src/main/desktop-config.test.mjs",
+      "sha256": "66c5a477ca164193cbe0b7b0b0cd1e56359c9b88ad9fc2df72b4c2d60dd8e2d7"
+    },
+    {
+      "path": "frontend/web/src/app/home/composition/create-workflow-upload.ts",
+      "sha256": "da3635346c7750fece7b05bfd4762ef6b6195c9d4bb750af8b0a2458a186c183"
+    },
+    {
+      "path": "frontend/web/src/app/home/create-home-composition.ts",
+      "sha256": "d73b7bed354a31138b014c2669b5bcdb5a346b488dbe2cdde3c3656e99c03ccf"
+    },
+    {
+      "path": "frontend/web/src/features/credentials/domain/credential-access.ts",
+      "sha256": "b3cb7333fb8507b46f5c06430200ceff595dcffc5493a2f352546220594fa6af"
+    },
+    {
+      "path": "frontend/web/src/features/credentials/domain/credential-vault.ts",
+      "sha256": "b24c1b20af0fa5db7b031479dde0bdf33bd52046580a2c73d81b4fe280c04e82"
+    },
+    {
+      "path": "frontend/web/src/features/credentials/domain/desktop-readiness.ts",
+      "sha256": "d2b0788dccafd6aa08873fd722d9f917aa81a9c8e7bf65480c95a15ff36d9935"
+    },
+    {
+      "path": "frontend/web/src/features/credentials/domain/dialog-sync.ts",
+      "sha256": "27f714981ed8e0f0ca3b189c8e674d76943125f9934d2eba73856055c90c25fa"
+    },
+    {
+      "path": "frontend/web/src/features/credentials/domain/dialog-values.ts",
+      "sha256": "68bdc76d428919adcb41c0fd04553bd68dd4581bb432fc250d975dad0fb5a45c"
+    },
+    {
+      "path": "frontend/web/src/features/credentials/domain/hidden-input-dom-port.ts",
+      "sha256": "6e74fec37f1e82accccdec73f1cb1a55d83e1984e4d0dfc679d796cbf6c01bec"
+    },
+    {
+      "path": "frontend/web/src/features/credentials/domain/ocr-readiness-flow.ts",
+      "sha256": "e7b1032a6429e98a01102e567240fb6a884b65504f9750713f4dfcfeda1f412d"
+    },
+    {
+      "path": "frontend/web/src/features/credentials/domain/save-flow.ts",
+      "sha256": "0dc61dc454976ebd178b8c80d3cb1e1a91ebeff7e37d5ff4a5b83e26415aa0dd"
+    },
+    {
+      "path": "frontend/web/src/features/credentials/domain/state-selectors.ts",
+      "sha256": "7c1b61717e064c284272cb0e2ae491d4d2e2cf839a29af6da239c47fe017e3f5"
+    },
+    {
+      "path": "frontend/web/src/features/credentials/domain/validation.ts",
+      "sha256": "e22243b1bb2297e531c1ab84c04c4888bfa886a03801ca09adbd5d22ad90db0f"
+    },
+    {
+      "path": "frontend/web/src/features/credentials/ui/CredentialsWorkbench.tsx",
+      "sha256": "7dbe674ee9a3ccafe34181b43371adf295063c5ad6e23488ee1493ccf36e0500"
+    },
+    {
+      "path": "frontend/web/src/features/credentials/ui/HiddenCredentialInputs.tsx",
+      "sha256": "b95b022021cb4cf95b1d5528d4e6284d796488c2790ad41dccd5d14a6105607c"
+    },
+    {
+      "path": "frontend/web/src/features/credentials/ui/OcrPanels.tsx",
+      "sha256": "fccb410d65a69b6eccc87cf59411ebbc0bd7015b5b3043b21d8f6f499b9df44a"
+    },
+    {
+      "path": "frontend/web/src/features/ingest/domain/actions/submit/readiness.ts",
+      "sha256": "78792c6a714c478fc8f5e2f46d8892437b2ee50f3250f71b5f6c2c4f63f44e48"
+    },
+    {
+      "path": "frontend/web/src/features/ingest/domain/workflow/payload-assembly.ts",
+      "sha256": "e686606d0c7d203acc9148621b7ea15cf7af627b9e2e2399ff6991b92a27ad4d"
+    },
+    {
+      "path": "frontend/web/src/features/ingest/domain/workflow/payload.ts",
+      "sha256": "0f2d8a6e0feb911237f0fad9e706644ec7976adb3ab881ecf5010593ae238bac"
+    },
+    {
+      "path": "frontend/web/src/features/reader/domain/host/data.ts",
+      "sha256": "c87012571ababc6b97bdaeb4ea578e1954f0f818668462460137e1dacb8ff00f"
+    },
+    {
+      "path": "frontend/web/src/features/research-library/ui/ResearchOcrPanel.tsx",
+      "sha256": "c3827d635cb1713db60b7573e1a6a892c69156b3af8de560c3cd5ecc1621ee89"
+    },
+    {
+      "path": "frontend/web/src/platform/config/providers.ts",
+      "sha256": "198399158c2444dbc8ac8de9552bc9ca6cea31fb461b91d9de4c293fd593fa75"
+    },
+    {
+      "path": "frontend/web/tests/credentials/desktop-setup-gate.test.mjs",
+      "sha256": "20c581a1e1baa4a48243f88327e5a5c5dcf8d4cca25a6c7ea8ba1a4eac7a5796"
+    },
+    {
+      "path": "frontend/web/tests/credentials/local-ocr.test.mjs",
+      "sha256": "7e5d794673c7035e6a466bf5c96fe4225414dc7c3439645aef8cfba881da334a"
+    },
+    {
+      "path": "frontend/web/tests/credentials/mineru.test.mjs",
+      "sha256": "c588d273bc5cfbe89db2f4c3d8da23450af51b36034fecb07422608f8f376a55"
+    },
+    {
+      "path": "frontend/web/tests/home/credentials-dialog-component.test.mjs",
+      "sha256": "af59e0458b47b49b859df0bbff448b105bbe996d3762c45abd405a9b07d74a0e"
+    },
+    {
+      "path": "frontend/web/tests/home/credentials-domain-modules.test.mjs",
+      "sha256": "8044d95b49e006d1bf79eef44d17969e5637f0a669378a1dff1ba4c114952335"
+    },
+    {
+      "path": "frontend/web/tests/home/credentials-validation.test.mjs",
+      "sha256": "4492c3350df41105b1b655e3cdfc469980e0e6b5933a9fbc3b96c52d292f3f0a"
+    },
+    {
+      "path": "frontend/web/tests/home/workflow-payload.test.mjs",
+      "sha256": "4af006691f6f7676a4e27c8dc90279078990060601d01c06e9753c1a661e597c"
+    },
+    {
+      "path": "frontend/web/tests/reader/local-ocr-markdown-source.test.mjs",
+      "sha256": "c797110ae3c4d8427ac32dd79c487f7091f5ecf1cd16c9251f0a2beaaca7b653"
+    }
+  ],
+  "generated_assets": "frontend/web/dist and HTML cache stamps regenerated; reader package dist built earlier in this phase",
+  "preservation": "No reset, clean, stash, commit or push. Existing user changes retained; pre-edit backups in task workspace.",
+  "validation": {
+    "settings_and_ingest_tests": 63,
+    "research_tests": 19,
+    "reader_tests": 16,
+    "desktop_tests": 6,
+    "pipeline_and_ocr_tests": 29,
+    "agent_service_tests": 16,
+    "packaged_lifecycle_tests": 1,
+    "typescript": "passed",
+    "desktop_eslint": "passed",
+    "frontend_full_build": "passed before final Reader-only change; final JS bundle passed",
+    "git_diff_check": "passed",
+    "original_ui_real_ocr": "passed",
+    "real_model_calls": "not performed"
+  },
+  "screenshots": [
+    "/home/lsy/Documents/LeoProjetcs/Retainpdf/retain-pdf/docs/ops/planning/research-library-mvp/validation/settings-local-ocr-20261001/original-settings-local-ocr-final.png",
+    "/home/lsy/Documents/LeoProjetcs/Retainpdf/retain-pdf/docs/ops/planning/research-library-mvp/validation/settings-local-ocr-20261001/original-ocr-reader-content.png"
+  ],
+  "library_upload": {
+    "status": "blocked",
+    "reason": "Library helper could not discover prepare_uploads; no Library file IDs returned"
+  },
+  "remaining": [
+    "Complex scan/layout OCR quality not benchmarked",
+    "Real translation/Agent not tested; preview external model switch disabled",
+    "Release installer not rebuilt",
+    "Older Rust OCR raw artifact URL projection still requires the applied Reader compatibility adaptation",
+    "Open-source distribution dependency license review remains"
+  ]
+}

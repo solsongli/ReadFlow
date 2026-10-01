@@ -1,0 +1,38 @@
+import { useEffect, useRef, useState } from "react";
+import { Button } from "@/ui/Button.js";
+import type { ResearchLibraryApi } from "@/platform/api/research-library.js";
+import type { Attachment, PaperItem, ResearchAgentRun, ResearchAgentStatus } from "@/platform/contracts/research-library.js";
+import { readableError } from "../domain/model.js";
+import { researchCitationTarget } from "../domain/citation-target.js";
+function isLoopbackModel(value: string): boolean {
+  try {
+    const host = new URL(value).hostname.toLowerCase();
+    return host === "localhost" || host === "[::1]" || /^127(?:\.\d{1,3}){3}$/.test(host);
+  } catch { return false; }
+}
+const activeRun = (run: ResearchAgentRun | null) => run?.status === "queued" || run?.status === "running";
+export function ResearchAgentPanel({ api, items, onOpenReader }: { api: ResearchLibraryApi; items: PaperItem[]; onOpenReader: (item: PaperItem, attachment: Attachment, pageIdx?: number) => Promise<void> }) {
+  const [status, setStatus] = useState<ResearchAgentStatus | null>(null);
+  const [baseUrl, setBaseUrl] = useState(""); const [model, setModel] = useState(""); const [key, setKey] = useState("");
+  const [query, setQuery] = useState(""); const [run, setRun] = useState<ResearchAgentRun | null>(null);
+  const [error, setError] = useState(""); const [busy, setBusy] = useState(false); const [pollRevision, setPollRevision] = useState(0);
+  const mounted = useRef(true);
+  const current = useRef<ResearchAgentRun | null>(null); current.current = run;
+  useEffect(() => { const controller = new AbortController(); if (api.agentStatus) api.agentStatus(controller.signal).then((value) => { if (!controller.signal.aborted) { setStatus(value); setBaseUrl(value.base_url); setModel(value.model); } }).catch((e) => { if (!controller.signal.aborted) setError(readableError(e)); }); return () => controller.abort(); }, [api]);
+  useEffect(() => { if (!activeRun(run) || !api.agentRun) return; const controller = new AbortController(); const timer = window.setTimeout(() => { api.agentRun!(run!.id, controller.signal).then((value) => { if (!controller.signal.aborted) setRun(value); }).catch((e) => { if (!controller.signal.aborted) setError(readableError(e)); }); }, 700); return () => { window.clearTimeout(timer); controller.abort(); }; }, [api, run, pollRevision]);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; if (activeRun(current.current)) void api.cancelAgentRun?.(current.current!.id).catch(() => {}); }; }, [api]);
+  async function configure(remove = false) { setBusy(true); setError(""); try { const value = remove ? await api.clearAgentConfig?.() : await api.saveAgentConfig?.({ base_url: baseUrl.trim(), model: model.trim(), api_key: key }); if (value) { setStatus(value); setBaseUrl(value.base_url); setModel(value.model); setKey(""); } } catch (e) { setError(readableError(e)); } finally { setBusy(false); } }
+  async function start(mode: "source-search" | "agent") { if (!api.startAgentRun) return; setBusy(true); setError(""); setRun(null); try { const value = await api.startAgentRun(items.map((item) => item.id), query.trim(), mode); if (!mounted.current) { if (activeRun(value)) await api.cancelAgentRun?.(value.id); return; } current.current = value; setRun(value); } catch (e) { setError(readableError(e)); } finally { setBusy(false); } }
+  async function cancel() { if (!run || !api.cancelAgentRun) return; setBusy(true); try { setRun(await api.cancelAgentRun(run.id)); setError(""); } catch (e) { setError(readableError(e)); } finally { setBusy(false); } }
+  const running = activeRun(run); const disabled = busy || running; const keyOptional = isLoopbackModel(baseUrl);
+  return <section className="research-workspace-panel" aria-label="文献库原文检索与 Agent"><h3>原文检索与文献库 Agent</h3><p className="research-muted">本地检索不调用模型。Agent 仅使用当前所选文献的原文工具；回答及引用仍需人工核对。</p>
+    {!api.agentStatus && <p className="research-notice">当前服务未提供文献库 Agent 接口。</p>}
+    {status && <p role="status" className="research-notice">{!status.configured ? "未配置模型；本地原文检索仍可使用。" : !status.external_models_allowed ? "模型已配置，但本机尚未启用模型调用；可继续使用本地原文检索。" : `已配置 ${status.model}；点击 Agent 问答后才会调用模型。`}</p>}
+    <details className="research-agent-config"><summary>文献库专用模型设置</summary><p className="research-muted">支持自定义 OpenAI-compatible Chat Completions 地址和模型名称，包含本地服务。Agent 要求模型支持工具调用；不支持时可使用本地原文检索。已存密钥不会回显；远程服务保存时须重新输入密钥，本地无需认证时可留空。</p><form onSubmit={(e) => { e.preventDefault(); void configure(); }}><label className="research-field">Base URL<input type="url" required placeholder="https://your-provider.example/v1" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} disabled={disabled} /></label><label className="research-field">模型<input required value={model} onChange={(e) => setModel(e.target.value)} disabled={disabled} /></label><label className="research-field">API Key<input type="password" required={!keyOptional} autoComplete="new-password" value={key} placeholder={keyOptional ? "本地无认证服务可留空" : status?.configured ? "已配置；保存时请重新输入密钥" : "输入密钥"} onChange={(e) => setKey(e.target.value)} disabled={disabled} /></label><div className="research-actions"><Button type="submit" variant="outline" disabled={disabled || !api.saveAgentConfig || (!keyOptional && !key.trim())}>保存配置</Button><Button type="button" variant="ghost" disabled={disabled || !api.clearAgentConfig || !status?.configured} onClick={() => void configure(true)}>清除配置与密钥</Button></div></form></details>
+    <label className="research-field">问题或原文关键词<textarea maxLength={2000} rows={3} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="输入需要查找或对照的问题" disabled={disabled} /></label><div className="research-actions"><Button variant="outline" disabled={disabled || !query.trim() || !items.length || !api.startAgentRun} onClick={() => void start("source-search")}>本地原文检索</Button><Button variant="default" disabled={disabled || !query.trim() || !items.length || !status?.configured || !status.external_models_allowed} onClick={() => void start("agent")}>Agent 问答</Button>{running && <Button variant="outline" disabled={busy} onClick={() => void cancel()}>取消任务</Button>}</div>
+    {error && <div className="research-error" role="alert">{error}{running && <Button variant="outline" onClick={() => { setError(""); setPollRevision((value) => value + 1); }}>重新读取进度</Button>}</div>}
+    {run && <p className="research-muted" role="status">{run.mode === "source-search" ? "本地检索" : "Agent"}：{({ queued: "排队中", running: "处理中", completed: "已完成", failed: "失败", cancelled: "已取消" })[run.status]} · {run.rounds || 0} 轮 · {run.tool_trace?.length || 0} 次工具记录</p>}
+    {run?.error && <p className="research-error" role="alert">{run.error.message}</p>}
+    {run?.result && <div><p className="research-muted">{run.result.kind === "source-search" ? "以下是本地原文检索结果，未生成模型回答。" : "引用已按来源归属校验；这不代表模型或论断正确性已验证。"}</p><div className="research-agent-answer">{run.result.answer}</div>{run.result.incomplete_reason && <p className="research-notice">{run.result.incomplete_reason}</p>}{run.result.notices?.map((notice, index) => <p key={index} className="research-notice">{typeof notice === "string" ? notice : notice.message}</p>)}{run.result.citations.map((citation, index) => { const target = researchCitationTarget(items, citation); return <article className="research-note-preview" key={index}><strong>[{citation.ref}] {target?.item.title || "来源引用"} · 原文第 {citation.page_idx + 1} 页</strong><blockquote>{citation.quote}</blockquote>{target ? <Button variant="link" onClick={() => void onOpenReader(target.item, target.attachment, target.pageIdx)}>在原阅读器查看第 {target.pageIdx + 1} 页 ↗</Button> : <p className="research-error">引用附件身份或页码无效，已阻止打开。</p>}</article>; })}</div>}
+  </section>;
+}

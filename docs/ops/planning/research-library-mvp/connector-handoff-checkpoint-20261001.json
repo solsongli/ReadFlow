@@ -1,0 +1,151 @@
+{
+  "checked_at": "2026-10-01T06:39:12.273531+00:00",
+  "repo": "/home/lsy/Documents/LeoProjetcs/Retainpdf/retain-pdf",
+  "git_head": "857868407aeace94ccf5d8cf0bcf90aecae3b7bf",
+  "runtime": {
+    "alive": true,
+    "ready": true,
+    "pid": 32556,
+    "url": "http://127.0.0.1:40061/index.html?tab=research",
+    "profile": "/home/lsy/Documents/LeoProjetcs/Retainpdf/retain-pdf/.retain-native-preview/profile"
+  },
+  "debug_port_9229_open": false,
+  "health": {
+    "ok": true,
+    "version": "0.1.0",
+    "data_mode": "isolated",
+    "ai": {
+      "status": "not-verified"
+    }
+  },
+  "connector": {
+    "status": "experimental",
+    "port": 23119,
+    "real_connector_verified": false,
+    "client": "RetainPDF",
+    "api_version": 3,
+    "product_version": "4.2.5",
+    "partial_acceptance": {
+      "tested_at": "2026-10-01",
+      "connector_version": "5.0.216",
+      "browser": "Firefox 156.0.1",
+      "fixture": "synthetic_local_webpage_pdf",
+      "passed": [
+        "metadata",
+        "pdf_binary_upload",
+        "same_page_repeat",
+        "native_reader_after_restart"
+      ],
+      "public_samples": [
+        {
+          "site": "arxiv.org",
+          "identifier": "2503.03480",
+          "revision": "v4"
+        }
+      ]
+    },
+    "active_sessions": 0,
+    "supported_methods": [
+      "ping",
+      "getSelectedCollection",
+      "saveItems",
+      "saveAttachment",
+      "saveStandaloneAttachment",
+      "updateSession",
+      "delaySync",
+      "hasAttachmentResolvers"
+    ],
+    "unsupported_methods": [
+      "saveSnapshot",
+      "saveSingleFile",
+      "getTranslators",
+      "getTranslatorCode",
+      "detect",
+      "import",
+      "installStyle",
+      "saveAttachmentFromResolver",
+      "getRecognizedItem"
+    ],
+    "failures": []
+  },
+  "public_arxiv": {
+    "url": "https://arxiv.org/abs/2503.03480",
+    "revision": "v4",
+    "paper_id": "626f17cb-6f21-4e57-ad2d-ff54d6387e89",
+    "attachment_id": "b9bf0f8d-ae33-405a-9dff-ca4295be9ccd",
+    "pdf_sha256": "91d8a7eeadc5841ef2328c242e9eb1197eecd9ab769c94c4bd9e2eaceaa68d13",
+    "pdf_bytes": 16355430,
+    "page_count": 32,
+    "final_native_reader_ready": true,
+    "retained_for_user": true,
+    "same_page_repeat_clicks": 2,
+    "duplicate_item_created": false,
+    "original_reader_after_restart": "passed",
+    "independent_source_sha256_match": true
+  },
+  "offline_checks": {
+    "library_backend": {
+      "passed": 161
+    },
+    "native_sidecar": {
+      "passed": 8
+    },
+    "related_frontend": {
+      "passed": 18,
+      "files": 3
+    },
+    "web_typescript": "passed",
+    "web_bundles_and_cache_stamp": "passed",
+    "desktop_43_tests": "earlier baseline only; not rerun in this acceptance"
+  },
+  "browser_cleanup": {
+    "at": "2026-10-01T06:35:44Z",
+    "browser_stopped": true,
+    "driver_stopped": true,
+    "persistent_profile_exists": true,
+    "extension_id": "zotero@chnm.gmu.edu",
+    "version": "5.0.216",
+    "active": true,
+    "signed_state": 2
+  },
+  "user_change_protection": {
+    "original_files_hashed": 14,
+    "changed_original_files": [],
+    "commit_push_publish": false
+  },
+  "phase_source_changes": [
+    "backend/library_mvp/connector.py",
+    "frontend/web/src/platform/contracts/research-library.ts",
+    "frontend/web/src/features/research-library/ui/ResearchLibraryView.tsx"
+  ],
+  "library_screenshots": [
+    {
+      "filename": "arxiv-official-connector.png",
+      "library_file_id": "libfile_a95f1c67a02c81918ddfbb98f14833f1",
+      "file_id": "file_00000000ff3c81f589ad3d7a5b8dc848"
+    },
+    {
+      "filename": "arxiv-native-library.png",
+      "library_file_id": "libfile_1790ef292ffc8191bc73b147cf385daa",
+      "file_id": "file_000000004a0881f681860c6ac529e811"
+    },
+    {
+      "filename": "arxiv-native-reader.png",
+      "library_file_id": "libfile_ce47934b94188191ab315528c232b469",
+      "file_id": "file_00000000f30c81f79f6271a01e8507cc"
+    }
+  ],
+  "remaining_unverified": [
+    "Other publisher websites and authenticated PDFs",
+    "Connector save-popup target/tag editing and standalone PDF pages",
+    "Other browser/extension versions",
+    "Real AI model calls and generated citation quality"
+  ],
+  "not_supported_in_mvp": [
+    "Webpage snapshots",
+    "EPUB",
+    "Word citation linkage",
+    "Zotero plugin-private data"
+  ],
+  "resume_note": "No blocker for the tested public arXiv capture/read path. Do not reinstall the retained official extension. User daily browser was not modified. Keep original RetainPDF shell as product entry."
+}

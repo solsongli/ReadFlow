@@ -1,0 +1,38 @@
+{
+  "captured_on": "2026-09-30",
+  "repo": "/home/lsy/Documents/LeoProjetcs/Retainpdf/retain-pdf",
+  "branch": "main",
+  "head": "857868407aeace94ccf5d8cf0bcf90aecae3b7bf",
+  "status": [
+    " M .github/workflows/release-desktop.yml",
+    " M .github/workflows/tests.yml",
+    " M frontend/desktop/.gitignore",
+    " M frontend/desktop/eslint.config.mjs",
+    " M frontend/desktop/package.json",
+    " M frontend/desktop/scripts/prepare-app.mjs",
+    " M frontend/desktop/scripts/runtime-prune.mjs",
+    " M frontend/desktop/scripts/runtime-prune.test.mjs",
+    " M frontend/desktop/src/runtime/README.md",
+    " M frontend/web/src/app/desktop/bootstrap.ts",
+    " M frontend/web/tests/credentials/desktop-setup-gate.test.mjs",
+    "?? frontend/desktop/scripts/linux-runtime.mjs",
+    "?? frontend/desktop/scripts/linux-runtime.test.mjs",
+    "?? frontend/desktop/scripts/smoke-linux-translation.py"
+  ],
+  "sha256": {
+    ".github/workflows/release-desktop.yml": "bc6f7cb87efa03dcfa3c153e88ffd3f913e2c7551c3f850ecec7f697537016a7",
+    ".github/workflows/tests.yml": "7aaca84d4251ad2baa84befaf018c34f7f6701f5705d4f04518ad6b875d3707c",
+    "frontend/desktop/.gitignore": "9eebd1a38f9b4251305c3b70a74cdc12e6bbd3f6361a5a6d69ba435fda25c782",
+    "frontend/desktop/eslint.config.mjs": "79c0c12cb18da5f1d697909692a5af05f71203e05071c73716dd5a8b4eb52449",
+    "frontend/desktop/package.json": "ef0d5f1d92eef9de051923401fae9a7dea5d2078b1c1f328b474e81c219a6884",
+    "frontend/desktop/scripts/prepare-app.mjs": "e7d22d789b323e67edd68163e4d76359dc8fb5319db4ba1333e5149abcd345d8",
+    "frontend/desktop/scripts/runtime-prune.mjs": "d497aa916cf8145bd1d5a7025409639287a0745f3c8ff403a4adcaec7b499db7",
+    "frontend/desktop/scripts/runtime-prune.test.mjs": "75a591b75c7cf29ae2ffdfd1c96afd0862cb8745eca62957a20f469f82f179a9",
+    "frontend/desktop/src/runtime/README.md": "4ba9f5dc7d768c274bfc7d77ab938561287ab0499fe5d83dfb6bbae39059533e",
+    "frontend/web/src/app/desktop/bootstrap.ts": "ccd2744d62bf6102faabdd58872a840b120a3b038f960e2f71f54ddd4eb64b0f",
+    "frontend/web/tests/credentials/desktop-setup-gate.test.mjs": "eebb513c6def7bf971ea791ed7ddda244de216e490b018cece417dc2ad4b4c28",
+    "frontend/desktop/scripts/linux-runtime.mjs": "37526119e0495584a9ffc7dbbed3fea389ca65d5abd627675fd1f9eaf60a56bf",
+    "frontend/desktop/scripts/linux-runtime.test.mjs": "670aa108843b90ed1bf30a4356d62b59fc640022480b1139571ce2c54f8861a0",
+    "frontend/desktop/scripts/smoke-linux-translation.py": "bd3f156e08836ed15d1c5e0f593e06b2b89fc42fc17de72f830a6cfcc0fd022f"
+  }
+}

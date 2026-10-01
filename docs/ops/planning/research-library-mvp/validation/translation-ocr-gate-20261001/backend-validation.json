@@ -1,0 +1,15 @@
+{
+  "status": 400,
+  "response": {
+    "code": 40000,
+    "message": "translation.api_key or translation.credential_ref is required",
+    "error": {
+      "code": "BAD_REQUEST",
+      "http_status": 400,
+      "details": {}
+    }
+  },
+  "syntheticOnly": true,
+  "modelCredentialsSupplied": false,
+  "modelCallPerformed": false
+}

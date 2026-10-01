@@ -1,0 +1,26 @@
+{
+  "at": "2026-10-01T09:28:39.393273+00:00",
+  "pid": 133343,
+  "start_ticks": "1877997",
+  "url": "http://127.0.0.1:40061/index.html?tab=research",
+  "checks": {
+    "home": {
+      "http_status": 200
+    },
+    "settings_api": {
+      "http_status": 200,
+      "status": "ready"
+    },
+    "ocr_job": {
+      "http_status": 200,
+      "status": "succeeded"
+    },
+    "markdown": {
+      "http_status": 200,
+      "synthetic_chinese_present": true
+    }
+  },
+  "debug_port_9229_open": false,
+  "external_models_enabled": false,
+  "ocr_module_ready": true
+}

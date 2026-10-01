@@ -1,0 +1,44 @@
+[
+  {
+    "id": "SYNDEMO1",
+    "type": "article-journal",
+    "title": "Synthetic Evidence Reading",
+    "author": [
+      {
+        "family": "Researcher",
+        "given": "Fictional"
+      }
+    ],
+    "issued": {
+      "date-parts": [
+        [
+          2026,
+          9,
+          30
+        ]
+      ]
+    },
+    "container-title": "Synthetic Methods Journal",
+    "DOI": "10.0000/synthetic-example",
+    "URL": "https://example.org/synthetic-only",
+    "abstract": "Self-authored fixture for migration. This is not a real publication."
+  },
+  {
+    "id": "SYNDEMO2",
+    "type": "report",
+    "title": "合成迁移样本：中文书目",
+    "author": [
+      {
+        "literal": "虚构研究组"
+      }
+    ],
+    "issued": {
+      "date-parts": [
+        [
+          2026
+        ]
+      ]
+    },
+    "note": "只用于检查Unicode和稳定来源ID；没有真实私人数据。"
+  }
+]

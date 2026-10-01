@@ -1,0 +1,49 @@
+{
+  "at": "2026-10-01T09:53:49.360528+00:00",
+  "scope": "Only current-version translation OCR configuration false warning",
+  "status": "fixed and verified; other work paused",
+  "files": [
+    {
+      "path": "frontend/web/src/features/library/domain/documents/error-messages.ts",
+      "sha256": "1b3ecf38476505ad75ecb7657a37361890d97a8c00535762c46123b9e09329a7"
+    },
+    {
+      "path": "frontend/web/src/features/library/domain/documents/submit-actions.ts",
+      "sha256": "3a6e087016c0894360b3a24dd07148ea37b4b510ba7cdcf799ee7fee88804620"
+    },
+    {
+      "path": "frontend/web/src/features/library/domain/documents/submit-payloads.ts",
+      "sha256": "c24e42de147af86a3bb8fbf8abb03b60e1d8bbd2e02baa1578d66f905ef8836f"
+    },
+    {
+      "path": "frontend/web/tests/library/document-actions.test.mjs",
+      "sha256": "7b1f568c8c565c32c8b1ad686d843b463922b5353a4db723c5f6e4c4f062bae9"
+    },
+    {
+      "path": "frontend/web/tests/library/local-ocr-translation-gate.test.mjs",
+      "sha256": "502e7deaa28866786471c580de093bdd13e56ab98bb170c38527a27f59e6caab"
+    }
+  ],
+  "tests_passed": 28,
+  "typescript": "passed",
+  "bundle": "passed",
+  "runtime": {
+    "at": "2026-10-01T09:52:40.477933+00:00",
+    "url": "http://127.0.0.1:40061/index.html?tab=research",
+    "pid": 152920,
+    "home_http_status": 200,
+    "app_asset": "./dist/app.bundle.js?v=b3aa0f8e30",
+    "running_bundle_matches_current_source_build": true,
+    "ocr_module_status": "ready",
+    "synthetic_document_jobs": 0,
+    "debug_port_9229_open": false,
+    "real_model_calls": 0,
+    "translation_config_changed": false,
+    "other_project_work": "paused"
+  },
+  "real_model_calls": 0,
+  "user_model_configuration_modified": false,
+  "credential_values_read": false,
+  "remaining": "No real translation model acceptance; await explicit continuation",
+  "report": "docs/ops/planning/research-library-mvp/translation-ocr-gate-fix-20261001.md"
+}

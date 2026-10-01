@@ -1,0 +1,50 @@
+{
+  "checked_at": "2026-10-01T05:01:51.476247+00:00",
+  "runtime": {
+    "alive": true,
+    "ready": true,
+    "pid": 16721,
+    "url": "http://127.0.0.1:40061/index.html?tab=research",
+    "profile": "/home/lsy/Documents/LeoProjetcs/Retainpdf/retain-pdf/.retain-native-preview/profile"
+  },
+  "http": {
+    "research": {
+      "http": 200,
+      "ok": true,
+      "status": null,
+      "real_connector_verified": null
+    },
+    "connector": {
+      "http": 200,
+      "ok": null,
+      "status": "experimental",
+      "real_connector_verified": false
+    }
+  },
+  "head": "857868407aeace94ccf5d8cf0bcf90aecae3b7bf",
+  "protected_files": 14,
+  "protected_changed": [],
+  "tests": {
+    "library_backend": 161,
+    "desktop_modules": 43,
+    "native_sidecar": 8,
+    "frontend_test_files": 3,
+    "web_typecheck": "passed"
+  },
+  "ui_report": "validation/native-20261001-8aZ0Kx/report.json",
+  "screenshots": {
+    "home": {
+      "library_file_id": "libfile_4cda18b65b54819183f86ef450ae8e91",
+      "file_id": "file_0000000041fc81f59e682727a2c12322"
+    },
+    "reader": {
+      "library_file_id": "libfile_b7620ac1545c8191a866ecaf57dcad60",
+      "file_id": "file_00000000504881f789271d434edbbd84"
+    }
+  },
+  "pending": [
+    "Official Zotero Connector installation in isolated browser requires authorization; real extension acceptance not performed",
+    "Real AI requires explicit model, data and budget authorization",
+    "Formal desktop packaging and full profile restore not verified"
+  ]
+}

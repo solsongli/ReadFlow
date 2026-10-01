@@ -1,0 +1,6 @@
+node_modules/
+app/
+win/
+src/runtime/linux/python/
+src/runtime/linux/typst/
+src/runtime/shared/typst-packages/

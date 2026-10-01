@@ -1,0 +1,12 @@
+{
+  "at": "2026-10-01T06:15:01.813Z",
+  "entry": "http://127.0.0.1:40061/index.html?tab=research",
+  "steps": [
+    "Original Electron/React literature tab displays the actual Connector-imported paper with its PDF after application restart.",
+    "Clicked the literature row into the original Reader; the imported PDF renders and its synthetic evidence sentence is visible."
+  ],
+  "pageErrors": [],
+  "readerUrl": "http://127.0.0.1:40061/reader.html?document_id=37b15d43e7d34cabf3a61f78176941a83bb426f0f1fb09270aee38cfb620c355&research_item_id=80db0c36-421d-4fda-b143-e7ffdd0b1f3d&attachment_id=d0fe3ce8-2792-41b2-8dfd-7cc34c4ab5ff",
+  "evidenceVisible": true,
+  "passed": true
+}

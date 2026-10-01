@@ -1,0 +1,16 @@
+{
+  "at": "2026-10-01T09:50:54.375Z",
+  "phase": "after",
+  "passed": true,
+  "originalElectronUi": true,
+  "button": "图书馆 → 合成文档 → 处理 → 翻译整本",
+  "interceptedSubmissions": 1,
+  "modelCalls": 0,
+  "translationConfigChanged": false,
+  "credentialValuesRead": false,
+  "backendValidation": "translation.api_key or translation.credential_ref is required",
+  "visibleError": "翻译需要先在「设置」里配置翻译 API 后再试。",
+  "pageErrors": [
+    "翻译需要先在「设置」里配置翻译 API 后再试。"
+  ]
+}

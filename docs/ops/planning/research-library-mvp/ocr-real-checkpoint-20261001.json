@@ -1,0 +1,72 @@
+{
+  "saved_at": "2026-10-01T08:25:30.498596+00:00",
+  "last_runtime_check_at": "2026-10-01T08:20:40Z",
+  "stage": "real_local_ocr_accepted; real_model_call_pending",
+  "repo": "/home/lsy/Documents/LeoProjetcs/Retainpdf/retain-pdf",
+  "entry_url": "http://127.0.0.1:40061/index.html?tab=research",
+  "normal_preview": {
+    "pid": 72409,
+    "alive_at_last_check": true,
+    "ready_at_last_check": true,
+    "debug_port_9229_open": false,
+    "active_ocr_jobs": 0,
+    "system_autostart_configured": false
+  },
+  "launch_command": "python3 ops/development/native_retain_preview.py start --connector --allow-ocr-download",
+  "restart_command": "python3 ops/development/native_retain_preview.py restart --connector --allow-ocr-download",
+  "ocr": {
+    "module": "rapidocr-mobile-cpu",
+    "status": "ready",
+    "download_artifacts": 18,
+    "download_bytes": 151802982,
+    "runtime_logical_bytes": 476497312,
+    "real_synthetic_pdf_pages": 3,
+    "native_text_pages": 1,
+    "real_ocr_pages": 2,
+    "chinese_english_and_90_degree_rotation_verified": true,
+    "cancel_retry_cache_verified": true,
+    "citation_opens_original_reader_verified": true,
+    "uninstall_preserves_source_notes_and_parse_verified": true,
+    "ui_reinstall_and_restart_persistence_verified": true,
+    "final_inference_with_telemetry_optout_in_restricted_sandbox_verified": true,
+    "complex_scientific_layouts_validated": false,
+    "writes_text_layer_into_original_pdf": false
+  },
+  "ai": {
+    "custom_openai_compatible_chat_completions_configuration_implemented": true,
+    "tool_calling_required": true,
+    "configured_at_last_check": false,
+    "external_models_allowed_at_last_check": false,
+    "real_model_call_verified": false,
+    "remaining": "User-selected service/model and explicit decision to send selected document excerpts; no paid or private-document calls made"
+  },
+  "tests": {
+    "library_and_sidecar_passed_before_final_telemetry_patch": 205,
+    "targeted_ocr_passed_after_final_telemetry_patch": 18,
+    "frontend_passed": 27,
+    "typescript_passed": true,
+    "frontend_build_passed": true,
+    "native_ui_javascript_errors": []
+  },
+  "workspace_protection": {
+    "original_user_changed_files_sha_unchanged": 14,
+    "baseline": "docs/ops/planning/research-library-mvp/workspace-baseline.json",
+    "committed": false,
+    "pushed": false,
+    "published": false,
+    "original_mit_attribution_preserved": true
+  },
+  "latest_report": "docs/ops/planning/research-library-mvp/ocr-real-acceptance-20261001.md",
+  "validation_directory": "docs/ops/planning/research-library-mvp/validation/ocr-agent-20261001",
+  "screenshots": [
+    {
+      "name": "ocr-real-final-ready.png",
+      "library_file_id": "libfile_abcce2a84d948191870f02c2d6bae95f"
+    },
+    {
+      "name": "ocr-real-source-reader.png",
+      "library_file_id": "libfile_12394fcd97a88191a8c510c20e53a30d"
+    }
+  ],
+  "next_step": "User trials original shell; validate a user-selected compatible real model only within the agreed data/cost scope. OCR follow-up: mixed scan pages with sparse native text and complex scientific layouts."
+}

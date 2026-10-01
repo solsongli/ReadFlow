@@ -1,0 +1,8 @@
+{
+  "at": "2026-10-01T06:29:46.036Z",
+  "entry": "http://127.0.0.1:40061/index.html?tab=research",
+  "steps": [],
+  "pageErrors": [],
+  "passed": false,
+  "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nfalse !== true\n\n    at /home/lsy/Documents/LeoProjetcs/Retainpdf/retain-pdf/connector-test-20261001-0t7i3ezy/arxiv_native_acceptance.cjs:9:480"
+}

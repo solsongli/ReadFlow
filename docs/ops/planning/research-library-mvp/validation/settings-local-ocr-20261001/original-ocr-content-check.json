@@ -1,0 +1,22 @@
+{
+  "at": "2026-10-01T09:17:28.750Z",
+  "passed": true,
+  "syntheticOnly": true,
+  "jobId": "20261001091356-3a7ad3",
+  "sourceSha256": "9825372570fe65f079e926f5b8c671089e296f087e2effc38ca0c2b7bab35b65",
+  "parseRevision": "6d59b9571c95c78e91cb017610199f3a5ec819481fe0b3af6329f9b032e9ca61",
+  "nativeThenScanOcr": true,
+  "physicalPages": [
+    1,
+    2,
+    3
+  ],
+  "rotationPreserved": true,
+  "pageTexts": [
+    "Native scientific evidence - no OCR required.",
+    "Local citation evidence on page two.\n本地文献证据测试\nResearch sample 2026 page 2",
+    "Rotation evidence on page three.\n扫描页引用与页码\nResearch sample 2026 page 3"
+  ],
+  "boundingBoxesValid": true,
+  "markdownReady": true
+}

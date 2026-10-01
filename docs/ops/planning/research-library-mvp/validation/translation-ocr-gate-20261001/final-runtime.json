@@ -1,0 +1,14 @@
+{
+  "at": "2026-10-01T09:52:40.477933+00:00",
+  "url": "http://127.0.0.1:40061/index.html?tab=research",
+  "pid": 152920,
+  "home_http_status": 200,
+  "app_asset": "./dist/app.bundle.js?v=b3aa0f8e30",
+  "running_bundle_matches_current_source_build": true,
+  "ocr_module_status": "ready",
+  "synthetic_document_jobs": 0,
+  "debug_port_9229_open": false,
+  "real_model_calls": 0,
+  "translation_config_changed": false,
+  "other_project_work": "paused"
+}

@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "real_local_inference": true,
+  "telemetry_opt_out_before_import": true,
+  "telemetry_api_disabled": true,
+  "recognized_lines": [
+    "Local citation evidence on page two.",
+    "本地文献证据测试",
+    "Research sample 2026 page 2"
+  ],
+  "stderr_empty": true,
+  "execution_environment": "restricted sandbox, no network access needed"
+}

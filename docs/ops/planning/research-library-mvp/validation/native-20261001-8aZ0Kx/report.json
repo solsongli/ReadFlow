@@ -1,0 +1,12 @@
+{
+  "checkedAt": "2026-10-01T04:55:39.859Z",
+  "artifactRoot": "/home/lsy/Documents/LeoProjetcs/Retainpdf/retain-pdf/docs/ops/planning/research-library-mvp/validation/native-20261001-8aZ0Kx",
+  "steps": [
+    "window focus preserves unsaved metadata while editing (preceding check)",
+    "original Reader reopened after process restart with the saved page-1 note",
+    "invalid PDF rejected, valid retry succeeds without duplicate attachment",
+    "same PDF SHA in a second paper keeps Reader notes isolated",
+    "real synthetic Connector HTTP capture appears after focus refresh; official extension not involved"
+  ],
+  "pageErrors": []
+}

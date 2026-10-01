@@ -1,0 +1,9 @@
+{
+  "checkedAt": "2026-10-01T04:51:55.171Z",
+  "artifactRoot": "/home/lsy/Documents/LeoProjetcs/Retainpdf/retain-pdf/docs/ops/planning/research-library-mvp/validation/native-20261001-8aZ0Kx",
+  "steps": [
+    "window focus preserves unsaved metadata while editing"
+  ],
+  "pageErrors": [],
+  "error": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#soft-reader-frame').contentFrame().getByRole('button', { name: /^批注/ })\u001b[22m\n"
+}

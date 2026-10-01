@@ -1,0 +1,20 @@
+{
+  "at": "2026-10-01T06:03:59.979616+00:00",
+  "connector_version": "5.0.216",
+  "browser": "Firefox 156.0.1",
+  "trigger": "real Firefox extension menu button, unmodified official signed extension",
+  "item_id": "80db0c36-421d-4fda-b143-e7ffdd0b1f3d",
+  "attachment_id": "d0fe3ce8-2792-41b2-8dfd-7cc34c4ab5ff",
+  "metadata_assertions": "title/authors/date/doi passed",
+  "pdf_sha256_matches_fixture": "37b15d43e7d34cabf3a61f78176941a83bb426f0f1fb09270aee38cfb620c355",
+  "page_count": 2,
+  "reader_ready": true,
+  "same_page_repeat_clicks": 2,
+  "matching_item_count_before": 3,
+  "matching_item_count_after": 3,
+  "attachment_id_unchanged": true,
+  "reader_url": "/reader.html?document_id=37b15d43e7d34cabf3a61f78176941a83bb426f0f1fb09270aee38cfb620c355&research_item_id=80db0c36-421d-4fda-b143-e7ffdd0b1f3d&attachment_id=d0fe3ce8-2792-41b2-8dfd-7cc34c4ab5ff",
+  "scope": "Synthetic Embedded Metadata page, browser PDF binary upload, same-page repeated clicks, and original Electron Reader after restart; publisher/authenticated sites and target/tag UI not tested.",
+  "native_reader_opened": true,
+  "native_reader_report": "native-reader-report.json"
+}

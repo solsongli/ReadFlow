@@ -1,0 +1,20 @@
+{
+  "at": "2026-10-01T06:35:02.301Z",
+  "entry": "http://127.0.0.1:40061/index.html?tab=research",
+  "steps": [
+    "Original Electron/React literature tab displays the actual Connector-imported paper with its PDF after application restart.",
+    "Clicked the literature row into the original Reader; the imported PDF renders and the public SafeVLA paper title is visible."
+  ],
+  "pageErrors": [],
+  "persistence": {
+    "paper_id": "626f17cb-6f21-4e57-ad2d-ff54d6387e89",
+    "attachment_id": "b9bf0f8d-ae33-405a-9dff-ca4295be9ccd",
+    "sha256": "91d8a7eeadc5841ef2328c242e9eb1197eecd9ab769c94c4bd9e2eaceaa68d13",
+    "page_count": 32,
+    "reader_ready": false,
+    "reader_ready_after_ui_open": true
+  },
+  "readerUrl": "http://127.0.0.1:40061/reader.html?document_id=91d8a7eeadc5841ef2328c242e9eb1197eecd9ab769c94c4bd9e2eaceaa68d13&research_item_id=626f17cb-6f21-4e57-ad2d-ff54d6387e89&attachment_id=b9bf0f8d-ae33-405a-9dff-ca4295be9ccd",
+  "evidenceVisible": true,
+  "passed": true
+}

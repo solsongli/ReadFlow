@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-01T06:22:27.012563+00:00",
+  "paper_id": "626f17cb-6f21-4e57-ad2d-ff54d6387e89",
+  "attachment_id": "b9bf0f8d-ae33-405a-9dff-ca4295be9ccd",
+  "title": "SafeVLA: Towards Safety Alignment of Vision-Language-Action Model via Constrained Learning",
+  "authors": [
+    "Borong Zhang",
+    "Yuhao Zhang",
+    "Jiaming Ji",
+    "Yingshan Lei",
+    "Yishuai Cai",
+    "Josef Dai",
+    "Yuanpei Chen",
+    "Yaodong Yang"
+  ],
+  "arxiv_id": "2503.03480",
+  "doi": "10.48550/arXiv.2503.03480",
+  "date": "2026-04-19",
+  "date_meaning": "v4 revision date supplied by official arXiv translator",
+  "tags": [
+    "Computer Science - Artificial Intelligence",
+    "Computer Science - Robotics"
+  ],
+  "page_count": 32,
+  "same_page_repeat_clicks": 2,
+  "item_count_before": 1,
+  "item_count_after": 1,
+  "attachment_id_unchanged": true,
+  "pdf_sha256": "91d8a7eeadc5841ef2328c242e9eb1197eecd9ab769c94c4bd9e2eaceaa68d13",
+  "reader_url": "/reader.html?document_id=91d8a7eeadc5841ef2328c242e9eb1197eecd9ab769c94c4bd9e2eaceaa68d13&research_item_id=626f17cb-6f21-4e57-ad2d-ff54d6387e89&attachment_id=b9bf0f8d-ae33-405a-9dff-ca4295be9ccd"
+}

@@ -1,0 +1,667 @@
+{
+  "schema": "normalized_document_v1",
+  "schema_version": "1.1",
+  "document_id": "20261001091356-3a7ad3",
+  "doc_id": "20261001091356-3a7ad3",
+  "source": {
+    "provider": "local",
+    "provider_version": "ocr-v1-3c563a87f91dd0a8bdc3e667e41a55c860469e95127d56baa2561254157e090f",
+    "raw_files": {
+      "source_json": "/home/lsy/Documents/LeoProjetcs/Retainpdf/retain-pdf/.retain-native-preview/profile/chromium/data/jobs/20261001091356-3a7ad3/ocr/local_raw/payload.json"
+    },
+    "sha256": "9825372570fe65f079e926f5b8c671089e296f087e2effc38ca0c2b7bab35b65",
+    "parser_version": "ocr-v1-3c563a87f91dd0a8bdc3e667e41a55c860469e95127d56baa2561254157e090f",
+    "parse_revision": "6d59b9571c95c78e91cb017610199f3a5ec819481fe0b3af6329f9b032e9ca61",
+    "native_parser_version": "pymupdf-native-local-v1",
+    "coordinate_system": "unrotated_pdf_points",
+    "limitations": [
+      "本地解析提供文字和物理页坐标；不重建公式语义、表格结构或复杂多栏阅读顺序。"
+    ],
+    "selected_page_numbers": [
+      1,
+      2,
+      3
+    ]
+  },
+  "page_count": 3,
+  "pages": [
+    {
+      "page_index": 0,
+      "width": 595,
+      "height": 842,
+      "unit": "pt",
+      "blocks": [
+        {
+          "block_id": "p001-b0000",
+          "page_index": 0,
+          "order": 0,
+          "type": "text",
+          "sub_type": "body",
+          "bbox": [
+            55,
+            53.5,
+            454.01995849609375,
+            80.9800033569336
+          ],
+          "geometry": {
+            "bbox": [
+              55,
+              53.5,
+              454.01995849609375,
+              80.9800033569336
+            ]
+          },
+          "content": {
+            "kind": "text",
+            "text": "Native scientific evidence - no OCR required."
+          },
+          "text": "Native scientific evidence - no OCR required.",
+          "lines": [],
+          "segments": [],
+          "tags": [],
+          "derived": {
+            "role": "",
+            "by": "",
+            "confidence": 0
+          },
+          "layout_role": "paragraph",
+          "semantic_role": "body",
+          "structure_role": "body",
+          "policy": {
+            "translate": true,
+            "translate_reason": "provider_body_whitelist:body"
+          },
+          "continuation_hint": {
+            "source": "",
+            "group_id": "",
+            "role": "",
+            "scope": "",
+            "reading_order": -1,
+            "confidence": 0
+          },
+          "metadata": {
+            "text_source": "native",
+            "source_sha256": "9825372570fe65f079e926f5b8c671089e296f087e2effc38ca0c2b7bab35b65",
+            "parser_version": "pymupdf-native-local-v1",
+            "physical_page_number": 1
+          },
+          "source": {
+            "provider": "generic_flat_ocr",
+            "raw_page_index": 0,
+            "raw_type": "text",
+            "raw_sub_type": "body",
+            "raw_bbox": [
+              55,
+              53.5,
+              454.01995849609375,
+              80.9800033569336
+            ],
+            "raw_text_excerpt": "Native scientific evidence - no OCR required."
+          },
+          "reading_order": 0,
+          "provenance": {
+            "provider": "generic_flat_ocr",
+            "raw_label": "text",
+            "raw_sub_type": "body",
+            "raw_bbox": [
+              55,
+              53.5,
+              454.01995849609375,
+              80.9800033569336
+            ],
+            "raw_unit": "",
+            "raw_origin": "",
+            "raw_path": ""
+          },
+          "block_class": "body"
+        }
+      ],
+      "page": 1,
+      "metadata": {
+        "physical_page_number": 1,
+        "page_label": "1",
+        "rotation": 0,
+        "text_source": "native"
+      }
+    },
+    {
+      "page_index": 1,
+      "width": 595,
+      "height": 842,
+      "unit": "pt",
+      "blocks": [
+        {
+          "block_id": "p002-b0000",
+          "page_index": 1,
+          "order": 0,
+          "type": "text",
+          "sub_type": "body",
+          "bbox": [
+            51.5,
+            67,
+            428,
+            98.5
+          ],
+          "geometry": {
+            "bbox": [
+              51.5,
+              67,
+              428,
+              98.5
+            ]
+          },
+          "content": {
+            "kind": "text",
+            "text": "Local citation evidence on page two."
+          },
+          "text": "Local citation evidence on page two.",
+          "lines": [],
+          "segments": [],
+          "tags": [],
+          "derived": {
+            "role": "",
+            "by": "",
+            "confidence": 0
+          },
+          "layout_role": "paragraph",
+          "semantic_role": "body",
+          "structure_role": "body",
+          "policy": {
+            "translate": true,
+            "translate_reason": "provider_body_whitelist:body"
+          },
+          "continuation_hint": {
+            "source": "",
+            "group_id": "",
+            "role": "",
+            "scope": "",
+            "reading_order": -1,
+            "confidence": 0
+          },
+          "metadata": {
+            "text_source": "ocr",
+            "source_sha256": "9825372570fe65f079e926f5b8c671089e296f087e2effc38ca0c2b7bab35b65",
+            "parser_version": "ocr-v1-3c563a87f91dd0a8bdc3e667e41a55c860469e95127d56baa2561254157e090f",
+            "physical_page_number": 2
+          },
+          "source": {
+            "provider": "generic_flat_ocr",
+            "raw_page_index": 1,
+            "raw_type": "text",
+            "raw_sub_type": "body",
+            "raw_bbox": [
+              51.5,
+              67,
+              428,
+              98.5
+            ],
+            "raw_text_excerpt": "Local citation evidence on page two."
+          },
+          "reading_order": 0,
+          "provenance": {
+            "provider": "generic_flat_ocr",
+            "raw_label": "text",
+            "raw_sub_type": "body",
+            "raw_bbox": [
+              51.5,
+              67,
+              428,
+              98.5
+            ],
+            "raw_unit": "",
+            "raw_origin": "",
+            "raw_path": ""
+          },
+          "block_class": "body"
+        },
+        {
+          "block_id": "p002-b0001",
+          "page_index": 1,
+          "order": 1,
+          "type": "text",
+          "sub_type": "body",
+          "bbox": [
+            54,
+            120.5,
+            258,
+            150.5
+          ],
+          "geometry": {
+            "bbox": [
+              54,
+              120.5,
+              258,
+              150.5
+            ]
+          },
+          "content": {
+            "kind": "text",
+            "text": "本地文献证据测试"
+          },
+          "text": "本地文献证据测试",
+          "lines": [],
+          "segments": [],
+          "tags": [],
+          "derived": {
+            "role": "",
+            "by": "",
+            "confidence": 0
+          },
+          "layout_role": "paragraph",
+          "semantic_role": "body",
+          "structure_role": "body",
+          "policy": {
+            "translate": true,
+            "translate_reason": "provider_body_whitelist:body"
+          },
+          "continuation_hint": {
+            "source": "",
+            "group_id": "",
+            "role": "",
+            "scope": "",
+            "reading_order": -1,
+            "confidence": 0
+          },
+          "metadata": {
+            "text_source": "ocr",
+            "source_sha256": "9825372570fe65f079e926f5b8c671089e296f087e2effc38ca0c2b7bab35b65",
+            "parser_version": "ocr-v1-3c563a87f91dd0a8bdc3e667e41a55c860469e95127d56baa2561254157e090f",
+            "physical_page_number": 2
+          },
+          "source": {
+            "provider": "generic_flat_ocr",
+            "raw_page_index": 1,
+            "raw_type": "text",
+            "raw_sub_type": "body",
+            "raw_bbox": [
+              54,
+              120.5,
+              258,
+              150.5
+            ],
+            "raw_text_excerpt": "本地文献证据测试"
+          },
+          "reading_order": 1,
+          "provenance": {
+            "provider": "generic_flat_ocr",
+            "raw_label": "text",
+            "raw_sub_type": "body",
+            "raw_bbox": [
+              54,
+              120.5,
+              258,
+              150.5
+            ],
+            "raw_unit": "",
+            "raw_origin": "",
+            "raw_path": ""
+          },
+          "block_class": "body"
+        },
+        {
+          "block_id": "p002-b0002",
+          "page_index": 1,
+          "order": 2,
+          "type": "text",
+          "sub_type": "body",
+          "bbox": [
+            51.5,
+            184,
+            330.5,
+            212.5
+          ],
+          "geometry": {
+            "bbox": [
+              51.5,
+              184,
+              330.5,
+              212.5
+            ]
+          },
+          "content": {
+            "kind": "text",
+            "text": "Research sample 2026 page 2"
+          },
+          "text": "Research sample 2026 page 2",
+          "lines": [],
+          "segments": [],
+          "tags": [],
+          "derived": {
+            "role": "",
+            "by": "",
+            "confidence": 0
+          },
+          "layout_role": "paragraph",
+          "semantic_role": "body",
+          "structure_role": "body",
+          "policy": {
+            "translate": true,
+            "translate_reason": "provider_body_whitelist:body"
+          },
+          "continuation_hint": {
+            "source": "",
+            "group_id": "",
+            "role": "",
+            "scope": "",
+            "reading_order": -1,
+            "confidence": 0
+          },
+          "metadata": {
+            "text_source": "ocr",
+            "source_sha256": "9825372570fe65f079e926f5b8c671089e296f087e2effc38ca0c2b7bab35b65",
+            "parser_version": "ocr-v1-3c563a87f91dd0a8bdc3e667e41a55c860469e95127d56baa2561254157e090f",
+            "physical_page_number": 2
+          },
+          "source": {
+            "provider": "generic_flat_ocr",
+            "raw_page_index": 1,
+            "raw_type": "text",
+            "raw_sub_type": "body",
+            "raw_bbox": [
+              51.5,
+              184,
+              330.5,
+              212.5
+            ],
+            "raw_text_excerpt": "Research sample 2026 page 2"
+          },
+          "reading_order": 2,
+          "provenance": {
+            "provider": "generic_flat_ocr",
+            "raw_label": "text",
+            "raw_sub_type": "body",
+            "raw_bbox": [
+              51.5,
+              184,
+              330.5,
+              212.5
+            ],
+            "raw_unit": "",
+            "raw_origin": "",
+            "raw_path": ""
+          },
+          "block_class": "body"
+        }
+      ],
+      "page": 2,
+      "metadata": {
+        "physical_page_number": 2,
+        "page_label": "2",
+        "rotation": 0,
+        "text_source": "ocr"
+      }
+    },
+    {
+      "page_index": 2,
+      "width": 595,
+      "height": 842,
+      "unit": "pt",
+      "blocks": [
+        {
+          "block_id": "p003-b0000",
+          "page_index": 2,
+          "order": 0,
+          "type": "text",
+          "sub_type": "body",
+          "bbox": [
+            52.5,
+            68,
+            396.5,
+            98
+          ],
+          "geometry": {
+            "bbox": [
+              52.5,
+              68,
+              396.5,
+              98
+            ]
+          },
+          "content": {
+            "kind": "text",
+            "text": "Rotation evidence on page three."
+          },
+          "text": "Rotation evidence on page three.",
+          "lines": [],
+          "segments": [],
+          "tags": [],
+          "derived": {
+            "role": "",
+            "by": "",
+            "confidence": 0
+          },
+          "layout_role": "paragraph",
+          "semantic_role": "body",
+          "structure_role": "body",
+          "policy": {
+            "translate": true,
+            "translate_reason": "provider_body_whitelist:body"
+          },
+          "continuation_hint": {
+            "source": "",
+            "group_id": "",
+            "role": "",
+            "scope": "",
+            "reading_order": -1,
+            "confidence": 0
+          },
+          "metadata": {
+            "text_source": "ocr",
+            "source_sha256": "9825372570fe65f079e926f5b8c671089e296f087e2effc38ca0c2b7bab35b65",
+            "parser_version": "ocr-v1-3c563a87f91dd0a8bdc3e667e41a55c860469e95127d56baa2561254157e090f",
+            "physical_page_number": 3
+          },
+          "source": {
+            "provider": "generic_flat_ocr",
+            "raw_page_index": 2,
+            "raw_type": "text",
+            "raw_sub_type": "body",
+            "raw_bbox": [
+              52.5,
+              68,
+              396.5,
+              98
+            ],
+            "raw_text_excerpt": "Rotation evidence on page three."
+          },
+          "reading_order": 0,
+          "provenance": {
+            "provider": "generic_flat_ocr",
+            "raw_label": "text",
+            "raw_sub_type": "body",
+            "raw_bbox": [
+              52.5,
+              68,
+              396.5,
+              98
+            ],
+            "raw_unit": "",
+            "raw_origin": "",
+            "raw_path": ""
+          },
+          "block_class": "body"
+        },
+        {
+          "block_id": "p003-b0001",
+          "page_index": 2,
+          "order": 1,
+          "type": "text",
+          "sub_type": "body",
+          "bbox": [
+            52,
+            120,
+            257,
+            151
+          ],
+          "geometry": {
+            "bbox": [
+              52,
+              120,
+              257,
+              151
+            ]
+          },
+          "content": {
+            "kind": "text",
+            "text": "扫描页引用与页码"
+          },
+          "text": "扫描页引用与页码",
+          "lines": [],
+          "segments": [],
+          "tags": [],
+          "derived": {
+            "role": "",
+            "by": "",
+            "confidence": 0
+          },
+          "layout_role": "paragraph",
+          "semantic_role": "body",
+          "structure_role": "body",
+          "policy": {
+            "translate": true,
+            "translate_reason": "provider_body_whitelist:body"
+          },
+          "continuation_hint": {
+            "source": "",
+            "group_id": "",
+            "role": "",
+            "scope": "",
+            "reading_order": -1,
+            "confidence": 0
+          },
+          "metadata": {
+            "text_source": "ocr",
+            "source_sha256": "9825372570fe65f079e926f5b8c671089e296f087e2effc38ca0c2b7bab35b65",
+            "parser_version": "ocr-v1-3c563a87f91dd0a8bdc3e667e41a55c860469e95127d56baa2561254157e090f",
+            "physical_page_number": 3
+          },
+          "source": {
+            "provider": "generic_flat_ocr",
+            "raw_page_index": 2,
+            "raw_type": "text",
+            "raw_sub_type": "body",
+            "raw_bbox": [
+              52,
+              120,
+              257,
+              151
+            ],
+            "raw_text_excerpt": "扫描页引用与页码"
+          },
+          "reading_order": 1,
+          "provenance": {
+            "provider": "generic_flat_ocr",
+            "raw_label": "text",
+            "raw_sub_type": "body",
+            "raw_bbox": [
+              52,
+              120,
+              257,
+              151
+            ],
+            "raw_unit": "",
+            "raw_origin": "",
+            "raw_path": ""
+          },
+          "block_class": "body"
+        },
+        {
+          "block_id": "p003-b0002",
+          "page_index": 2,
+          "order": 2,
+          "type": "text",
+          "sub_type": "body",
+          "bbox": [
+            52.5,
+            185.5,
+            329.5,
+            212
+          ],
+          "geometry": {
+            "bbox": [
+              52.5,
+              185.5,
+              329.5,
+              212
+            ]
+          },
+          "content": {
+            "kind": "text",
+            "text": "Research sample 2026 page 3"
+          },
+          "text": "Research sample 2026 page 3",
+          "lines": [],
+          "segments": [],
+          "tags": [],
+          "derived": {
+            "role": "",
+            "by": "",
+            "confidence": 0
+          },
+          "layout_role": "paragraph",
+          "semantic_role": "body",
+          "structure_role": "body",
+          "policy": {
+            "translate": true,
+            "translate_reason": "provider_body_whitelist:body"
+          },
+          "continuation_hint": {
+            "source": "",
+            "group_id": "",
+            "role": "",
+            "scope": "",
+            "reading_order": -1,
+            "confidence": 0
+          },
+          "metadata": {
+            "text_source": "ocr",
+            "source_sha256": "9825372570fe65f079e926f5b8c671089e296f087e2effc38ca0c2b7bab35b65",
+            "parser_version": "ocr-v1-3c563a87f91dd0a8bdc3e667e41a55c860469e95127d56baa2561254157e090f",
+            "physical_page_number": 3
+          },
+          "source": {
+            "provider": "generic_flat_ocr",
+            "raw_page_index": 2,
+            "raw_type": "text",
+            "raw_sub_type": "body",
+            "raw_bbox": [
+              52.5,
+              185.5,
+              329.5,
+              212
+            ],
+            "raw_text_excerpt": "Research sample 2026 page 3"
+          },
+          "reading_order": 2,
+          "provenance": {
+            "provider": "generic_flat_ocr",
+            "raw_label": "text",
+            "raw_sub_type": "body",
+            "raw_bbox": [
+              52.5,
+              185.5,
+              329.5,
+              212
+            ],
+            "raw_unit": "",
+            "raw_origin": "",
+            "raw_path": ""
+          },
+          "block_class": "body"
+        }
+      ],
+      "page": 3,
+      "metadata": {
+        "physical_page_number": 3,
+        "page_label": "3",
+        "rotation": 90,
+        "text_source": "ocr"
+      }
+    }
+  ],
+  "assets": {},
+  "derived": {
+    "notes": "本地解析提供文字和物理页坐标；不重建公式语义、表格结构或复杂多栏阅读顺序。"
+  },
+  "markers": {}
+}

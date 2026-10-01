@@ -1,0 +1,143 @@
+{
+  "job_id": "20261001091356-3a7ad3",
+  "status": "succeeded",
+  "workflow": "ocr",
+  "error": null,
+  "completion_note": null,
+  "artifacts": {
+    "pdf_ready": false,
+    "markdown_ready": true,
+    "bundle_ready": true,
+    "schema_version": "document.v1",
+    "provider_raw_dir": "jobs/20261001091356-3a7ad3/ocr/local_raw",
+    "provider_zip": "jobs/20261001091356-3a7ad3/ocr/bundle.zip",
+    "provider_summary_json": "jobs/20261001091356-3a7ad3/ocr/result.json",
+    "pdf_url": "http://127.0.0.1:41060/api/v1/ocr/jobs/20261001091356-3a7ad3/pdf",
+    "markdown_url": "http://127.0.0.1:41060/api/v1/ocr/jobs/20261001091356-3a7ad3/markdown",
+    "markdown_images_base_url": "http://127.0.0.1:41060/api/v1/ocr/jobs/20261001091356-3a7ad3/markdown/images/",
+    "bundle_url": "http://127.0.0.1:41060/api/v1/ocr/jobs/20261001091356-3a7ad3/download",
+    "normalized_document_url": "http://127.0.0.1:41060/api/v1/ocr/jobs/20261001091356-3a7ad3/normalized-document",
+    "normalization_report_url": "http://127.0.0.1:41060/api/v1/ocr/jobs/20261001091356-3a7ad3/normalization-report",
+    "manifest_path": "/api/v1/ocr/jobs/20261001091356-3a7ad3/artifacts-manifest",
+    "manifest_url": "http://127.0.0.1:41060/api/v1/ocr/jobs/20261001091356-3a7ad3/artifacts-manifest",
+    "actions": {
+      "open_job": {
+        "enabled": true,
+        "method": "GET",
+        "path": "/api/v1/ocr/jobs/20261001091356-3a7ad3",
+        "url": "http://127.0.0.1:41060/api/v1/ocr/jobs/20261001091356-3a7ad3"
+      },
+      "open_artifacts": {
+        "enabled": true,
+        "method": "GET",
+        "path": "/api/v1/ocr/jobs/20261001091356-3a7ad3/artifacts",
+        "url": "http://127.0.0.1:41060/api/v1/ocr/jobs/20261001091356-3a7ad3/artifacts"
+      },
+      "cancel": {
+        "enabled": false,
+        "method": "POST",
+        "path": "/api/v1/ocr/jobs/20261001091356-3a7ad3/cancel",
+        "url": "http://127.0.0.1:41060/api/v1/ocr/jobs/20261001091356-3a7ad3/cancel"
+      },
+      "rerun": {
+        "enabled": false,
+        "method": "POST",
+        "path": "/api/v1/ocr/jobs/20261001091356-3a7ad3/rerun",
+        "url": "http://127.0.0.1:41060/api/v1/ocr/jobs/20261001091356-3a7ad3/rerun"
+      },
+      "download_pdf": {
+        "enabled": false,
+        "method": "GET",
+        "path": "/api/v1/ocr/jobs/20261001091356-3a7ad3/pdf",
+        "url": "http://127.0.0.1:41060/api/v1/ocr/jobs/20261001091356-3a7ad3/pdf"
+      },
+      "open_markdown": {
+        "enabled": true,
+        "method": "GET",
+        "path": "/api/v1/ocr/jobs/20261001091356-3a7ad3/markdown",
+        "url": "http://127.0.0.1:41060/api/v1/ocr/jobs/20261001091356-3a7ad3/markdown"
+      },
+      "open_markdown_raw": {
+        "enabled": true,
+        "method": "GET",
+        "path": "/api/v1/ocr/jobs/20261001091356-3a7ad3/markdown?raw=true",
+        "url": "http://127.0.0.1:41060/api/v1/ocr/jobs/20261001091356-3a7ad3/markdown?raw=true"
+      },
+      "download_bundle": {
+        "enabled": true,
+        "method": "GET",
+        "path": "/api/v1/ocr/jobs/20261001091356-3a7ad3/download",
+        "url": "http://127.0.0.1:41060/api/v1/ocr/jobs/20261001091356-3a7ad3/download"
+      }
+    },
+    "normalized_document": {
+      "ready": true,
+      "path": "/api/v1/ocr/jobs/20261001091356-3a7ad3/normalized-document",
+      "url": "http://127.0.0.1:41060/api/v1/ocr/jobs/20261001091356-3a7ad3/normalized-document",
+      "method": "GET",
+      "content_type": "application/json",
+      "file_name": "document.v1.json",
+      "size_bytes": 18488
+    },
+    "normalization_report": {
+      "ready": true,
+      "path": "/api/v1/ocr/jobs/20261001091356-3a7ad3/normalization-report",
+      "url": "http://127.0.0.1:41060/api/v1/ocr/jobs/20261001091356-3a7ad3/normalization-report",
+      "method": "GET",
+      "content_type": "application/json",
+      "file_name": "document.v1.report.json",
+      "size_bytes": 2530
+    },
+    "pdf": {
+      "ready": false,
+      "path": "/api/v1/ocr/jobs/20261001091356-3a7ad3/pdf",
+      "url": "http://127.0.0.1:41060/api/v1/ocr/jobs/20261001091356-3a7ad3/pdf",
+      "method": "GET",
+      "content_type": "application/pdf",
+      "file_name": null,
+      "size_bytes": null
+    },
+    "markdown": {
+      "ready": true,
+      "json_path": "/api/v1/ocr/jobs/20261001091356-3a7ad3/markdown",
+      "json_url": "http://127.0.0.1:41060/api/v1/ocr/jobs/20261001091356-3a7ad3/markdown",
+      "raw_path": "/api/v1/ocr/jobs/20261001091356-3a7ad3/markdown?raw=true",
+      "raw_url": "http://127.0.0.1:41060/api/v1/ocr/jobs/20261001091356-3a7ad3/markdown?raw=true",
+      "images_base_path": "/api/v1/ocr/jobs/20261001091356-3a7ad3/markdown/images/",
+      "images_base_url": "http://127.0.0.1:41060/api/v1/ocr/jobs/20261001091356-3a7ad3/markdown/images/",
+      "file_name": "full.md",
+      "size_bytes": 228
+    },
+    "bundle": {
+      "ready": true,
+      "path": "/api/v1/ocr/jobs/20261001091356-3a7ad3/download",
+      "url": "http://127.0.0.1:41060/api/v1/ocr/jobs/20261001091356-3a7ad3/download",
+      "method": "GET",
+      "content_type": "application/zip",
+      "file_name": "20261001091356-3a7ad3.zip",
+      "size_bytes": null
+    }
+  },
+  "stage_snapshot": null,
+  "timestamps": {
+    "created_at": "2026-10-01T09:13:56Z",
+    "updated_at": "2026-10-01T09:14:00Z",
+    "started_at": "2026-10-01T09:13:56Z",
+    "finished_at": "2026-10-01T09:14:00Z",
+    "duration_seconds": 4.433176479
+  },
+  "normalization_summary": {
+    "provider": "generic_flat_ocr",
+    "detected_provider": "generic_flat_ocr",
+    "provider_was_explicit": true,
+    "pages_seen": 3,
+    "blocks_seen": 7,
+    "document_defaults": 0,
+    "page_defaults": 0,
+    "block_defaults": 2,
+    "schema": "normalized_document_v1",
+    "schema_version": "1.1",
+    "page_count": 3,
+    "block_count": 7
+  }
+}
