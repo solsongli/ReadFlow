@@ -162,14 +162,17 @@ function createDesktopWindows(app, options = {}) {
       },
     });
 
-    const indexPath = path.join(frontendRoot, "index.html");
+    // Only known entry pages are accepted; a build without workbench.html keeps index.html.
+    const requestedStart = ["index.html", "workbench.html"].includes(options.startPage) ? options.startPage : "index.html";
+    const startPage = fs.existsSync(path.join(frontendRoot, requestedStart)) ? requestedStart : "index.html";
+    const indexPath = path.join(frontendRoot, startPage);
     const frontendBaseUrl = typeof options.getFrontendBaseUrl === "function"
       ? options.getFrontendBaseUrl()
       : "";
     if (frontendBaseUrl) {
       // Served by the local gateway: same origin for pages and /api/*, and
       // the real apiBase is inlined into the HTML. Falls back to file below.
-      const indexUrl = `${String(frontendBaseUrl).replace(/\/+$/, "")}/index.html`;
+      const indexUrl = `${String(frontendBaseUrl).replace(/\/+$/, "")}/${startPage}`;
       logDesktop(`[desktop] loading frontend via gateway ${indexUrl}`);
       mainWindow.loadURL(indexUrl);
     } else {

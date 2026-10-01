@@ -22,6 +22,7 @@ const PAGES = [
   { html: "index.html", assets: ["dist/css/home.css", "dist/app.bundle.js"] },
   { html: "detail.html", assets: ["dist/css/detail.css", "dist/detail.bundle.js"] },
   { html: "reader.html", assets: ["dist/css/reader.css", "dist/reader.bundle.js"] },
+  { html: "workbench.html", assets: ["dist/css/workbench.css", "dist/workbench.bundle.js"] },
 ];
 
 function contentHash(absPath) {

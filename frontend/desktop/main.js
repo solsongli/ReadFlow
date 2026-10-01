@@ -161,6 +161,8 @@ const desktopWindows = createDesktopWindows(app, {
   appRoot: __dirname,
   closeSplashWindow,
   getFrontendBaseUrl: () => frontendGatewayBaseUrl,
+  // ReadFlow 工作台（workbench.html）作为首页的显式开关；未设置时保持原 index.html。
+  startPage: process.env.RETAIN_PDF_START_PAGE,
   isQuitting: () => isQuitting,
   loadDesktopConfig,
   logDesktop,

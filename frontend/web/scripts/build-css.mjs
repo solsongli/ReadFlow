@@ -18,6 +18,7 @@ const ENTRIES = [
   { in: "src/styles/entries/home.css", out: "dist/css/home.css" },
   { in: "src/styles/entries/detail.css", out: "dist/css/detail.css" },
   { in: "src/styles/entries/reader.css", out: "dist/css/reader.css" },
+  { in: "src/styles/entries/workbench.css", out: "dist/css/workbench.css" },
 ];
 
 mkdirSync(join(ROOT, "dist/css"), { recursive: true });

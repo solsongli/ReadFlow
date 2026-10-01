@@ -191,7 +191,7 @@ function createLocalGateway(options = {}) {
     }
     const urlPath = rawPath.split("?")[0];
     const entryNavigation = req.method === "GET"
-      && ["/", "/index.html", "/reader.html", "/detail.html"].includes(urlPath)
+      && ["/", "/index.html", "/reader.html", "/detail.html", "/workbench.html"].includes(urlPath)
       && req.headers["sec-fetch-mode"] === "navigate" && req.headers["sec-fetch-dest"] === "document";
     const origin = req.headers.origin;
     if (origin) {

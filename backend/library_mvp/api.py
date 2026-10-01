@@ -55,6 +55,8 @@ def create_app(data_root: Path, *, bridge: NativeBridge | None = None,
             await asyncio.to_thread(app.state.ocr_modules.close)
             if agent_stopped:
                 store.close()
+            if getattr(app.state, "workbench_translation", None) is not None:
+                app.state.workbench_translation.close()
             if bridge is not None:
                 bridge.close()
 
@@ -208,6 +210,13 @@ def create_app(data_root: Path, *, bridge: NativeBridge | None = None,
 
     from .evidence import register_evidence_routes
     register_evidence_routes(app, store)
+    from .workbench import register_workbench_routes
+    translation_status = None
+    if bridge is not None:
+        from .workbench_translation import TranslationStatus
+        translation_status = TranslationStatus(bridge.document_jobs)
+    app.state.workbench_translation = translation_status
+    register_workbench_routes(app, store, json_body, translations=translation_status.states if translation_status else None)
     from .agent_service import register_agent_routes
     from .ocr_jobs import register_ocr_routes
     register_agent_routes(app, store, allow_external_models=allow_external_models)

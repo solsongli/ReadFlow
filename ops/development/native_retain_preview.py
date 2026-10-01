@@ -123,7 +123,7 @@ def prepare(root: Path) -> Path:
     web = REPO / "frontend/web"
     target = app / "app/frontend"
     target.mkdir(parents=True, exist_ok=True)
-    for name in ["index.html", "reader.html", "detail.html", "runtime-config.js"]:
+    for name in ["index.html", "reader.html", "detail.html", "workbench.html", "runtime-config.js"]:
         shutil.copy2(web / name, target / name)
     # Never copy an existing local runtime config, user keys or desktop state.
     (target / "runtime-config.local.js").write_text("// Empty isolated preview override.\n")
@@ -235,6 +235,7 @@ def main() -> int:
                    "RETAIN_PDF_ALLOW_OCR_DOWNLOAD": "1" if options.allow_ocr_download else "0",
                    "RETAIN_PDF_ALLOW_EXTERNAL_MODELS": "1" if options.allow_external_models else "0",
                    "RETAIN_PDF_RESEARCH_CODE_ROOT": str(REPO), "RETAIN_PDF_NATIVE_START_TAB": "research",
+                   "RETAIN_PDF_START_PAGE": "workbench.html",
                    "RETAIN_PDF_PREVIEW_API_PORT": "41060", "RETAIN_PDF_PREVIEW_GATEWAY_PORT": "40061",
                    "RETAIN_PDF_PREVIEW_JOBS_PORT": "41062", "RETAIN_PDF_PREVIEW_SIMPLE_PORT": "42060",
                    "RETAIN_PDF_PREVIEW_AI_PORT": "41160", "RETAIN_PDF_RESEARCH_CONNECTOR_PORT": "23119" if options.connector else ""}

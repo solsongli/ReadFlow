@@ -87,6 +87,13 @@ const PAGE_BUNDLES = [
     entry: path.join(frontendRoot, "src/app/reader/entry.tsx"),
     out: "reader.bundle",
   },
+  // ReadFlow 工作台（新外壳 + 文献库 + 书桌），与旧三页并行，切换前不影响它们。
+  //   workbench.html → src/app/workbench/entry.tsx → dist/workbench.bundle.js
+  {
+    name: "workbench",
+    entry: path.join(frontendRoot, "src/app/workbench/entry.tsx"),
+    out: "workbench.bundle",
+  },
 ];
 
 // mathjax-full/js/components/version.js 在未定义 PACKAGE_VERSION 时会

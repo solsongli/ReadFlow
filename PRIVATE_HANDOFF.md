@@ -1,4 +1,16 @@
-# RetainPDF 科研阅读版本：私有交接快照
+# RetainPDF 科研阅读版本（ReadFlow）：私有交接快照
+
+## 最新状态（2026-10-01，Claude 接手后）
+
+- 用户已从 GPT 代理切换到 Claude 继续开发；下文「后续代理按用户要求使用 GPT-6 Astra」一句已失效。
+- 用户恢复开发，方向是把 UI 与逻辑整体改造成专业的科研辅助软件（文献管理 + 双语翻译 + AI 伴读 + 笔记）。设计定稿与分阶段计划见 [ReadFlow 工作台](docs/ops/planning/readflow-workbench/README.md)。
+- **阶段 1 已完成**：新入口 `frontend/web/workbench.html`（外壳、标签页、命令栏、三栏文献库、多分组、书桌、只读翻译状态），预览启动器已把它设为 Electron 首页；旧界面经「设置 → 打开旧版界面」进入。接手前已存在的 4 项前端测试失败记录在该文档「验证」一节。
+- Git 约定（用户选择）：在本机原目录直接开发、不提交；需要备份时整体打快照推到私有仓库 Lsy-aia/ReadFlow 的 `checkpoint-20261001` 分支，不推标签。
+- 在 VSCode 内启动预览必须 `env -u ELECTRON_RUN_AS_NODE …`，见工作台文档「运行」一节。
+
+以下为 GPT 交接时的原始记录（2026-10-01 UTC），保留供追溯。
+
+---
 
 记录时间：2026-10-01（UTC）。这是当前研发工作快照，不是已发布安装包。
 
@@ -14,6 +26,7 @@
 2. 阅读 [真实 Connector 验收](docs/ops/planning/research-library-mvp/official-connector-acceptance-20261001.md)。
 3. 阅读 [原设置页本地 OCR 验收](docs/ops/planning/research-library-mvp/settings-local-ocr-acceptance-20261001.md)。
 4. 阅读最新 [翻译 OCR 配置误报修复](docs/ops/planning/research-library-mvp/translation-ocr-gate-fix-20261001.md) 与 [检查点](docs/ops/planning/research-library-mvp/translation-ocr-gate-checkpoint-20261001.json)。
+5. （2026-10-01 新增）阅读 [ReadFlow 工作台](docs/ops/planning/readflow-workbench/README.md)。
 
 较早文档中“未实现/未验证/未提交”的说法是当时记录，以上述更新日期与对应检查点区分；真实翻译模型验收仍未完成。
 
@@ -40,6 +53,8 @@ python3 ops/development/native_retain_preview.py start --connector --allow-ocr-d
 
 ## 当前约束
 
-用户暂停了后续开发；本次仅授权私有 GitHub 备份。接手后先只读核对状态，继续开发需用户明确指示。不得读取/展示密钥、上传私人论文、调用付费模型或公开发布。后续代理按用户要求使用 GPT-6 Astra、正常服务档。
+（2026-10-01 更新）开发已按用户指示恢复，范围与阶段见工作台文档。以下安全约束继续有效：不得读取/展示密钥、上传私人论文、调用付费模型或公开发布；真实模型调用（翻译验收、AI 伴读）须用户另行授权模型与预算。
+
+原记录：用户暂停了后续开发；本次仅授权私有 GitHub 备份。接手后先只读核对状态，继续开发需用户明确指示。后续代理按用户要求使用 GPT-6 Astra、正常服务档（已失效，见上文）。
 
 首次保存使用 `checkpoint-20261001` 分支，避开上游仅由 main/master/tag 触发的 CI/发布；不推标签。后续启用 CI、发布或切换默认分支前须检查原有工作流的自动部署行为。

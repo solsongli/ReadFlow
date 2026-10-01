@@ -1,0 +1,119 @@
+/* ReadFlow 工作台 CSS 入口 → dist/css/workbench.css，仅 workbench.html 加载。
+ *
+ * 与旧三页完全隔离：source(none) 关掉自动探测，只扫描工作台自己的源码；
+ * 不引入旧 tokens / 装饰皮肤。颜色真值在 themes/workbench.css。 */
+@import "tailwindcss" source(none);
+@import "../themes/workbench.css";
+
+@source "../../../workbench.html";
+@source "../../app/workbench/**/*.{ts,tsx}";
+@source "../../features/workbench/**/*.{ts,tsx}";
+@source "../../ui/wb/**/*.{ts,tsx}";
+
+@theme inline {
+  --color-wb-bg: var(--wb-bg);
+  --color-wb-chrome: var(--wb-chrome);
+  --color-wb-chrome-line: var(--wb-chrome-line);
+  --color-wb-sidebar: var(--wb-sidebar);
+  --color-wb-panel: var(--wb-panel);
+  --color-wb-panel-2: var(--wb-panel-2);
+  --color-wb-panel-3: var(--wb-panel-3);
+  --color-wb-hover: var(--wb-hover);
+  --color-wb-line: var(--wb-line);
+  --color-wb-line-soft: var(--wb-line-soft);
+  --color-wb-line-strong: var(--wb-line-strong);
+  --color-wb-text: var(--wb-text);
+  --color-wb-text-2: var(--wb-text-2);
+  --color-wb-text-3: var(--wb-text-3);
+  --color-wb-text-4: var(--wb-text-4);
+  --color-wb-chip: var(--wb-chip);
+  --color-wb-chip-text: var(--wb-chip-text);
+  --color-wb-accent: var(--wb-accent);
+  --color-wb-accent-hover: var(--wb-accent-hover);
+  --color-wb-on-accent: var(--wb-on-accent);
+  --color-wb-accent-soft: var(--wb-accent-soft);
+  --color-wb-accent-tint: var(--wb-accent-tint);
+  --color-wb-accent-line: var(--wb-accent-line);
+  --color-wb-warn: var(--wb-warn);
+  --color-wb-warn-soft: var(--wb-warn-soft);
+  --color-wb-danger: var(--wb-danger);
+  --color-wb-danger-soft: var(--wb-danger-soft);
+  --color-wb-overlay: var(--wb-overlay);
+  --color-wb-hl-yellow: var(--wb-hl-yellow);
+  --color-wb-hl-green: var(--wb-hl-green);
+  --color-wb-hl-blue: var(--wb-hl-blue);
+  --color-wb-hl-red: var(--wb-hl-red);
+  --color-wb-hl-purple: var(--wb-hl-purple);
+  --color-wb-tag-1: var(--wb-tag-1);
+  --color-wb-tag-2: var(--wb-tag-2);
+  --color-wb-tag-3: var(--wb-tag-3);
+  --color-wb-tag-4: var(--wb-tag-4);
+  --color-wb-tag-5: var(--wb-tag-5);
+  --color-wb-tag-6: var(--wb-tag-6);
+  --color-wb-tag-7: var(--wb-tag-7);
+  --shadow-wb-pop: var(--wb-shadow-pop);
+  --font-wb-sans: "IBM Plex Sans", "Noto Sans SC", "Noto Sans CJK SC", "Source Han Sans SC", "PingFang SC",
+    "Microsoft YaHei", system-ui, sans-serif;
+  --font-wb-mono: "IBM Plex Mono", "JetBrains Mono", "Cascadia Mono", "DejaVu Sans Mono", ui-monospace, monospace;
+  --font-wb-serif: "Source Serif 4", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", Georgia, serif;
+}
+
+@layer base {
+  html,
+  body,
+  #workbench-root {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    overflow: hidden;
+    background: var(--wb-bg);
+    color: var(--wb-text);
+    font-family: var(--font-wb-sans);
+    font-size: 12.5px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+  }
+
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--wb-accent-line);
+    outline-offset: 1px;
+  }
+
+  ::selection {
+    background: var(--wb-accent-tint);
+  }
+}
+
+@layer components {
+  /* 中英题名双行：长标题截断，悬停给完整 title 属性。 */
+  .wb-truncate {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .wb-scroll {
+    overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--wb-line-strong) transparent;
+  }
+
+  .wb-numeric {
+    font-family: var(--font-wb-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}

@@ -13,6 +13,16 @@
 @source "../../ui/**/*.{ts,tsx}";
 @source "../../platform/**/*.{ts,tsx}";
 @source inline("detail-item detail-tab detail-tab-panel progress-bar mono button-link");
+/* ReadFlow 工作台的源码与产物只进 workbench.css，不进旧三页，保证旧页面产物不变。 */
+@source not "../../app/workbench";
+@source not "../../features/workbench";
+@source not "../../ui/wb";
+@source not "../../platform/api/workbench.ts";
+@source not "../../platform/contracts/workbench.ts";
+@source not "../../../workbench.html";
+@source not "../../../dist/workbench.bundle.js";
+@source not "../../../dist/chunks/workbench";
+@source not "../../../dist/css/workbench.css";
 
 @layer tokens, base, pages;
 

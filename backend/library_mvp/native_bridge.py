@@ -104,6 +104,17 @@ class NativeBridge:
             raise NativeBridgeError("NATIVE_INVALID_RESPONSE", "原服务缺少文档记录。")
         return result
 
+    def document_jobs(self, sha256: str, *, limit: int = 5) -> list[dict]:
+        """Newest-first OCR/translation runs the original service links to this source PDF (read-only)."""
+        if not re.fullmatch(r"[0-9a-f]{64}", sha256):
+            return []
+        response = self._client.get(f"{self.base_url}/api/v1/documents/{sha256}/jobs", params={"limit": limit},
+                                    headers=self._headers, follow_redirects=False)
+        if not self._status(response, missing_allowed=True):
+            return []
+        items = self._json(response).get("items", [])
+        return [item for item in items if isinstance(item, dict)] if isinstance(items, list) else []
+
     def _document(self, sha256: str) -> dict | None:
         response = self._client.get(f"{self.base_url}/api/v1/documents/{sha256}",
                                     headers=self._headers, follow_redirects=False)

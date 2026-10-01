@@ -1,0 +1,145 @@
+/* ReadFlow 工作台皮肤（定稿 B「仪器」）——只由 entries/workbench.css 加载。
+ *
+ * 不进 themes/index.css：旧主页的装饰皮肤与这里互不影响。
+ * 本目录是唯一允许写字面色值的地方（css-color-literals 门禁豁免），
+ * 其余 CSS / TSX 一律经 --wb-* 变量 → Tailwind 的 wb-* 工具类取色。
+ *
+ * 主题切换：<html data-wb-theme="light|dark"> 显式指定；未指定时跟随系统。 */
+
+:root,
+[data-wb-theme="light"] {
+  color-scheme: light;
+  --wb-bg: #f2f3f5;
+  --wb-chrome: #e7e9ec;
+  --wb-chrome-line: #d5d9de;
+  --wb-sidebar: #eef0f2;
+  --wb-panel: #ffffff;
+  --wb-panel-2: #fafbfc;
+  --wb-panel-3: #f6f7f9;
+  --wb-hover: #f3f5f7;
+  --wb-line: #e1e4e8;
+  --wb-line-soft: #f0f2f4;
+  --wb-line-strong: #cdd1d6;
+  --wb-text: #111418;
+  --wb-text-2: #4b5563;
+  --wb-text-3: #5f6b7a;
+  --wb-text-4: #6b7584;
+  --wb-chip: #eef0f2;
+  --wb-chip-text: #374151;
+  --wb-accent: #0b7a68;
+  --wb-accent-hover: #096a5a;
+  --wb-on-accent: #ffffff;
+  --wb-accent-soft: rgba(11, 122, 104, 0.08);
+  --wb-accent-tint: rgba(11, 122, 104, 0.13);
+  --wb-accent-line: rgba(11, 122, 104, 0.45);
+  --wb-warn: #8a5a00;
+  --wb-warn-soft: #fdf3e1;
+  --wb-danger: #b42318;
+  --wb-danger-soft: #fdecea;
+  --wb-overlay: rgba(17, 20, 24, 0.28);
+  --wb-shadow-pop: 0 8px 24px rgba(17, 20, 24, 0.14), 0 0 0 1px rgba(17, 20, 24, 0.04);
+  --wb-hl-yellow: #ebc03f;
+  --wb-hl-green: #5fb878;
+  --wb-hl-blue: #5b8def;
+  --wb-hl-red: #e06b7a;
+  --wb-hl-purple: #9b7bd8;
+  --wb-tag-1: #b7791f;
+  --wb-tag-2: #0b7a68;
+  --wb-tag-3: #3b6fd8;
+  --wb-tag-4: #7c5cc4;
+  --wb-tag-5: #c2413b;
+  --wb-tag-6: #2f8f4e;
+  --wb-tag-7: #6b7280;
+}
+
+[data-wb-theme="dark"] {
+  color-scheme: dark;
+  --wb-bg: #15171b;
+  --wb-chrome: #1b1e23;
+  --wb-chrome-line: #2b3037;
+  --wb-sidebar: #191c20;
+  --wb-panel: #1e2126;
+  --wb-panel-2: #22262c;
+  --wb-panel-3: #262a31;
+  --wb-hover: #252a30;
+  --wb-line: #2e333a;
+  --wb-line-soft: #272b31;
+  --wb-line-strong: #3b414a;
+  --wb-text: #e6e8eb;
+  --wb-text-2: #b6bcc5;
+  --wb-text-3: #9ea6b1;
+  --wb-text-4: #8e96a1;
+  --wb-chip: #2a2f36;
+  --wb-chip-text: #ccd1d8;
+  --wb-accent: #2fb59c;
+  --wb-accent-hover: #3ac6ab;
+  --wb-on-accent: #06211c;
+  --wb-accent-soft: rgba(47, 181, 156, 0.12);
+  --wb-accent-tint: rgba(47, 181, 156, 0.18);
+  --wb-accent-line: rgba(47, 181, 156, 0.5);
+  --wb-warn: #e3b341;
+  --wb-warn-soft: rgba(227, 179, 65, 0.14);
+  --wb-danger: #f97066;
+  --wb-danger-soft: rgba(249, 112, 102, 0.14);
+  --wb-overlay: rgba(0, 0, 0, 0.5);
+  --wb-shadow-pop: 0 10px 28px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --wb-hl-yellow: #d9b23a;
+  --wb-hl-green: #58ab6f;
+  --wb-hl-blue: #5f8fe8;
+  --wb-hl-red: #d6697a;
+  --wb-hl-purple: #9a7fd4;
+  --wb-tag-1: #d39a3a;
+  --wb-tag-2: #2fb59c;
+  --wb-tag-3: #6b97ee;
+  --wb-tag-4: #a68ae0;
+  --wb-tag-5: #e5736c;
+  --wb-tag-6: #55b878;
+  --wb-tag-7: #9aa2ad;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-wb-theme="light"]) {
+    color-scheme: dark;
+    --wb-bg: #15171b;
+    --wb-chrome: #1b1e23;
+    --wb-chrome-line: #2b3037;
+    --wb-sidebar: #191c20;
+    --wb-panel: #1e2126;
+    --wb-panel-2: #22262c;
+    --wb-panel-3: #262a31;
+    --wb-hover: #252a30;
+    --wb-line: #2e333a;
+    --wb-line-soft: #272b31;
+    --wb-line-strong: #3b414a;
+    --wb-text: #e6e8eb;
+    --wb-text-2: #b6bcc5;
+    --wb-text-3: #9ea6b1;
+    --wb-text-4: #8e96a1;
+    --wb-chip: #2a2f36;
+    --wb-chip-text: #ccd1d8;
+    --wb-accent: #2fb59c;
+    --wb-accent-hover: #3ac6ab;
+    --wb-on-accent: #06211c;
+    --wb-accent-soft: rgba(47, 181, 156, 0.12);
+    --wb-accent-tint: rgba(47, 181, 156, 0.18);
+    --wb-accent-line: rgba(47, 181, 156, 0.5);
+    --wb-warn: #e3b341;
+    --wb-warn-soft: rgba(227, 179, 65, 0.14);
+    --wb-danger: #f97066;
+    --wb-danger-soft: rgba(249, 112, 102, 0.14);
+    --wb-overlay: rgba(0, 0, 0, 0.5);
+    --wb-shadow-pop: 0 10px 28px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06);
+    --wb-hl-yellow: #d9b23a;
+    --wb-hl-green: #58ab6f;
+    --wb-hl-blue: #5f8fe8;
+    --wb-hl-red: #d6697a;
+    --wb-hl-purple: #9a7fd4;
+    --wb-tag-1: #d39a3a;
+    --wb-tag-2: #2fb59c;
+    --wb-tag-3: #6b97ee;
+    --wb-tag-4: #a68ae0;
+    --wb-tag-5: #e5736c;
+    --wb-tag-6: #55b878;
+    --wb-tag-7: #9aa2ad;
+  }
+}
