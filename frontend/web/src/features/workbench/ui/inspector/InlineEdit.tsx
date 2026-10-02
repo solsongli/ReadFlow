@@ -1,17 +1,18 @@
-import { useEffect, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { Pencil } from "lucide-react";
 import { cn } from "@/ui/lib/utils.js";
 
 /** Click-to-edit text. Enter saves, Escape cancels, blur saves when changed. */
-export function InlineEdit({ value, placeholder, label, onSave, className, inputClassName, mono, validate }: {
+export function InlineEdit({ value, placeholder, label, onSave, className, inputClassName, validate }: {
   value: string;
   placeholder: string;
   label: string;
   onSave: (value: string) => void;
   className?: string;
   inputClassName?: string;
-  mono?: boolean;
   validate?: (value: string) => string | null;
 }) {
+  const cancelled = useRef(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const [error, setError] = useState<string | null>(null);
@@ -21,6 +22,7 @@ export function InlineEdit({ value, placeholder, label, onSave, className, input
   }, [value, editing]);
 
   function commit() {
+    if (cancelled.current) return;
     const next = draft.trim();
     if (next === value) {
       setEditing(false);
@@ -31,14 +33,17 @@ export function InlineEdit({ value, placeholder, label, onSave, className, input
       setError(problem);
       return;
     }
+    cancelled.current = true;
     setEditing(false);
     setError(null);
     onSave(next);
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.nativeEvent.isComposing) return;
     if (event.key === "Enter") commit();
     if (event.key === "Escape") {
+      cancelled.current = true;
       setDraft(value);
       setError(null);
       setEditing(false);
@@ -57,8 +62,7 @@ export function InlineEdit({ value, placeholder, label, onSave, className, input
           onKeyDown={onKeyDown}
           onBlur={commit}
           className={cn(
-            "h-6 w-full min-w-0 rounded border border-wb-accent-line bg-wb-panel px-1.5 outline-none",
-            mono && "font-wb-mono text-[12px]",
+            "h-8 w-full min-w-0 rounded-lg border-0 bg-wb-fill px-2 outline-none",
             inputClassName,
           )}
         />
@@ -70,15 +74,14 @@ export function InlineEdit({ value, placeholder, label, onSave, className, input
     <button
       type="button"
       title={`编辑${label}`}
-      onClick={() => setEditing(true)}
+      onClick={() => { cancelled.current = false; setEditing(true); }}
       className={cn(
-        "min-w-0 rounded border-0 bg-transparent px-0 text-left hover:bg-wb-hover",
-        !value && "text-wb-text-4",
-        mono && "font-wb-mono text-[12px]",
+        "group/edit min-w-0 rounded border-0 bg-transparent px-0 text-left hover:bg-wb-hover",
         className,
+        !value && "text-wb-text-3",
       )}
     >
-      {value || placeholder}
+      {value || <span className="inline-flex items-center gap-1.5">{placeholder}<Pencil size={12} aria-hidden="true" className="wb-transition opacity-0 group-hover/edit:opacity-100 group-focus-visible/edit:opacity-100" /></span>}
     </button>
   );
 }

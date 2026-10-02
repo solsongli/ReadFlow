@@ -1,9 +1,4 @@
-"""ReadFlow workbench API: library list / desk read models and per-item reading state.
-
-Reading state (translated title, star, read status, trash, pinned citekey) lives in its own
-``item_state`` table so the original ``items`` schema, imports and rollback snapshots are
-untouched. Groups are the existing many-to-many ``collections`` / ``item_collections``.
-"""
+"""ReadFlow list / desk API. Reading state is isolated from items; groups remain many-to-many."""
 from __future__ import annotations
 
 import json
@@ -12,6 +7,8 @@ from typing import Any, Awaitable, Callable
 from fastapi import FastAPI, Request
 
 from .store import Store, StoreError, now, text
+from .workbench_notes import ANNOTATION_SQL, note_color, note_kind, register_notes_routes
+from .workbench_translation import desk_summary
 from .workbench_model import (assign_citekeys, base_citekey, matches_query, short_venue, source_kind,
                               valid_citekey, venue_from_source, year_of)
 
@@ -21,16 +18,13 @@ CREATE TABLE IF NOT EXISTS item_state(
   title_translated TEXT NOT NULL DEFAULT '',
   venue TEXT NOT NULL DEFAULT '',
   citekey TEXT NOT NULL DEFAULT '',
-  starred INTEGER NOT NULL DEFAULT 0,
-  read_status TEXT NOT NULL DEFAULT 'unread',
-  read_page INTEGER,
-  read_pages INTEGER,
-  last_opened_at TEXT,
-  deleted_at TEXT,
+  starred INTEGER NOT NULL DEFAULT 0, read_status TEXT NOT NULL DEFAULT 'unread',
+  read_page INTEGER, read_pages INTEGER,
+  last_opened_at TEXT, deleted_at TEXT,
   updated_at TEXT NOT NULL);
 """
 READ_STATUSES = ("unread", "reading", "read")
-VIEWS = ("all", "unread", "starred", "unfiled", "recent", "trash")
+VIEWS = ("all", "unread", "starred", "unfiled", "recent", "trash", "notes", "needs_ocr", "missing_doi", "no_zh_title")
 NEEDS_OCR = ("needs_ocr", "partial_needs_ocr")
 SORT_KEYS: dict[str, Callable[[dict], Any]] = {
     "added": lambda row: row["created_at"],
@@ -46,13 +40,11 @@ MAX_BATCH = 2000
 JsonBody = Callable[[Request], Awaitable[dict]]
 TranslationLookup = Callable[[list[str]], dict[str, dict]]
 
-
 def _ids(data: Any, field: str) -> list[str]:
     values = data.get(field, []) if isinstance(data, dict) else None
     if not isinstance(values, list) or len(values) > MAX_BATCH:
         raise StoreError("INVALID_ITEM_IDS", f"{field} must be a list of at most {MAX_BATCH} ids.")
     return [text(value, field, 100, required=True) for value in values]
-
 
 class Workbench:
     def __init__(self, store: Store, translations: TranslationLookup | None = None):
@@ -65,13 +57,15 @@ class Workbench:
         """Merge read-only translation status (looked up outside the store lock)."""
         digests = [row["document_id"] for row in rows if row["document_id"]]
         if self.translations and digests:
-            states = self.translations(digests)
+            try:
+                states = self.translations(digests)
+            except Exception:  # Lookup failure must not make the library unavailable.
+                states = {}
             for row in rows:
-                if row["document_id"] in states:
-                    row["translation"] = states[row["document_id"]]
+                if row["document_id"]:
+                    row["translation"] = states.get(row["document_id"], {"status": "unknown"})
         return rows
 
-    # ---- read model -------------------------------------------------------------------
     def _rows(self) -> tuple[list[dict], list[dict]]:
         """All items (trashed included) as list rows, plus all groups. Caller holds the lock."""
         db = self.store.db
@@ -83,7 +77,7 @@ class Workbench:
         for row in db.execute("SELECT id,item_id,sha256,filename,page_count,text_status FROM attachments ORDER BY created_at,id"):
             attachments.setdefault(row["item_id"], []).append(dict(row))
         notes = {row[0]: (row[1], row[2]) for row in db.execute(
-            "SELECT item_id,COUNT(*),SUM(CASE WHEN quote<>'' THEN 1 ELSE 0 END) FROM notes GROUP BY item_id")}
+            f"SELECT item_id,COUNT(*),SUM(CASE WHEN {ANNOTATION_SQL} THEN 1 ELSE 0 END) FROM notes GROUP BY item_id")}
         sources: dict[str, tuple[str, str]] = {}
         for row in db.execute("SELECT entity_id,source_id,raw_source_json FROM source_links WHERE entity_type='item' ORDER BY source_id"):
             sources.setdefault(row[0], (row[1], row[2]))
@@ -154,9 +148,8 @@ class Workbench:
             rows, collections = self._rows()
         live = [row for row in rows if not row["deleted_at"]]
         trees = self._descendants(collections)
-        counts = {"all": len(live), "unread": sum(row["read_status"] == "unread" for row in live),
-                  "starred": sum(row["starred"] for row in live), "unfiled": sum(not row["group_ids"] for row in live),
-                  "recent": sum(bool(row["last_opened_at"]) for row in live), "trash": len(rows) - len(live)}
+        counts = {view: sum(self._in_view(row, view) for row in live) for view in VIEWS if view != "trash"}
+        counts["trash"] = len(rows) - len(live)
         group_views = [{**group, "count": sum(bool(trees[group["id"]] & set(row["group_ids"])) for row in live),
                         "direct_count": sum(group["id"] in row["group_ids"] for row in live)} for group in collections]
         tag_counts: dict[str, int] = {}
@@ -185,17 +178,12 @@ class Workbench:
 
     @staticmethod
     def _in_view(row: dict, view: str) -> bool:
-        if view == "trash":
-            return bool(row["deleted_at"])
-        if view == "unread":
-            return row["read_status"] == "unread"
-        if view == "starred":
-            return row["starred"]
-        if view == "unfiled":
-            return not row["group_ids"]
-        if view == "recent":
-            return bool(row["last_opened_at"])
-        return True
+        return {
+            "trash": bool(row["deleted_at"]), "unread": row["read_status"] == "unread", "starred": row["starred"],
+            "unfiled": not row["group_ids"], "recent": bool(row["last_opened_at"]), "notes": row["notes_count"] > 0,
+            "needs_ocr": row["text_status"] in NEEDS_OCR, "missing_doi": not row["doi"] and row["item_type"] != "note",
+            "no_zh_title": not row["title_translated"],
+        }.get(view, True)
 
     def row(self, item_id: str) -> dict:
         with self.store.lock:
@@ -206,28 +194,27 @@ class Workbench:
     def desk(self, *, since: str = "") -> dict:
         since = text(since, "since", 40)
         with self.store.lock:
-            rows, _ = self._rows()
+            rows, collections = self._rows()
             trashed = {row["id"] for row in rows if row["deleted_at"]}
             titles = {row["id"]: row["title"] for row in rows}
             notes = [dict(row) for row in self.store.db.execute(
                 "SELECT id,item_id,attachment_id,page_idx,quote,translated_quote,body,created_at,updated_at,raw_source_json "
-                "FROM notes ORDER BY created_at DESC,id LIMIT 400")]
+                "FROM notes ORDER BY created_at DESC,id")]
         live = [row for row in rows if not row["deleted_at"]]
         for note in notes:
             note["item_title"] = titles.get(note["item_id"], "")
-            note["color"] = self._note_color(note.pop("raw_source_json"))
+            note["color"] = note_color(note.pop("raw_source_json"))
         notes = [note for note in notes if note["item_id"] not in trashed]
         newest = lambda key: (lambda row: row[key] or "")
         continue_reading = sorted([row for row in live if row["last_opened_at"]], key=newest("last_opened_at"), reverse=True)[:5]
         to_read = sorted([row for row in live if row["read_status"] == "unread"], key=newest("created_at"), reverse=True)[:6]
         recent_items = sorted(live, key=newest("created_at"), reverse=True)[:5]
-        self._attach_translations(list({id(row): row for row in continue_reading + to_read + recent_items}.values()))
+        self._attach_translations(live)
         return {
-            "continue_reading": continue_reading,
-            "to_read": to_read,
-            "recent_items": recent_items,
-            "recent_annotations": [note for note in notes if note["quote"]][:6],
-            "recent_notes": sorted([note for note in notes if not note["quote"]], key=newest("updated_at"), reverse=True)[:5],
+            **desk_summary(live, len(collections)),
+            "continue_reading": continue_reading, "to_read": to_read, "recent_items": recent_items,
+            "recent_annotations": [note for note in notes if note_kind(note) == "annotation"][:6],
+            "recent_notes": sorted([note for note in notes if note_kind(note) == "note"], key=newest("updated_at"), reverse=True)[:5],
             "attention": {
                 "missing_doi": [row["id"] for row in live if not row["doi"] and row["item_type"] != "note"],
                 "needs_ocr": [row["id"] for row in live if row["text_status"] in NEEDS_OCR],
@@ -235,24 +222,12 @@ class Workbench:
             },
             "today": {
                 "opened": sum(bool(since and (row["last_opened_at"] or "") >= since) for row in live),
-                "annotations": sum(bool(since and note["quote"] and note["created_at"] >= since) for note in notes),
-                "notes": sum(bool(since and not note["quote"] and note["created_at"] >= since) for note in notes),
+                "annotations": sum(bool(since and note_kind(note) == "annotation" and note["created_at"] >= since) for note in notes),
+                "notes": sum(bool(since and note_kind(note) == "note" and note["created_at"] >= since) for note in notes),
             },
             "total": len(live),
         }
 
-    @staticmethod
-    def _note_color(raw_json: str | None) -> str:
-        try:
-            raw = json.loads(raw_json) if raw_json else {}
-        except ValueError:
-            return ""
-        annotation = next((value for value in raw.values() if isinstance(value, dict) and "color" in value), None) \
-            if isinstance(raw, dict) else None
-        color = annotation.get("color") if annotation else ""
-        return color if isinstance(color, str) and len(color) <= 32 else ""
-
-    # ---- writes -----------------------------------------------------------------------
     def _ensure_state(self, item_id: str) -> None:
         self.store._row("items", item_id)
         self.store.db.execute("INSERT OR IGNORE INTO item_state(item_id,updated_at) VALUES(?,?)", (item_id, now()))
@@ -346,11 +321,11 @@ class Workbench:
                 self.store.db.execute("DELETE FROM collections WHERE id=?", (identity,))
         return {"deleted": len(doomed)}
 
-
 def register_workbench_routes(app: FastAPI, store: Store, json_body: JsonBody,
                               translations: TranslationLookup | None = None) -> Workbench:
     bench = Workbench(store, translations)
     app.state.workbench = bench
+    register_notes_routes(app, store)
     root = "/api/research/workbench"
 
     @app.get(root + "/items")

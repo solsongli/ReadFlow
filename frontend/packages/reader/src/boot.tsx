@@ -1,5 +1,6 @@
 // @retainpdf/reader/boot — explicit MPA startup API (react-pdf only).
 import { createRoot, type Root } from "react-dom/client";
+import { WorkbenchBridge } from "./components/WorkbenchBridge.js";
 import { ReaderApp } from "./ReaderApp.js";
 import {
   clearReaderAiNavigationLock,
@@ -65,6 +66,6 @@ export function bootReader(options: ReaderBootOptions = {}): Root {
   }
 
   const root = createRoot(host);
-  root.render(<ReaderApp />);
+  root.render(<><WorkbenchBridge /><ReaderApp /></>);
   return root;
 }

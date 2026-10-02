@@ -141,7 +141,7 @@ test("windows: localized tasklist info line yields unknown image, then API ident
     const result = await occupant.reclaimPortIfOwnResidual("127.0.0.1", port);
     assert.equal(result.status, "reclaimed");
     assert.equal(killed, "yes");
-    assert.match(occupant.describeOccupant(port, result.occupant), /RetainPDF 后端残留.*27392/);
+    assert.match(occupant.describeOccupant(port, result.occupant), /ReadFlow 后端残留.*27392/);
     assert.match(occupant.describeOccupant(port, result.occupant), /taskkill \/PID 27392 \/F/);
   } finally {
     server.close();

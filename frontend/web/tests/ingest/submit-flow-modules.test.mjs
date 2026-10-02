@@ -75,7 +75,8 @@ test("runSubmitFlow blocks on readiness without requesting submit", async () => 
   const result = await runSubmitFlow(h);
   assert.equal(result.status, "blocked");
   assert.equal(requested, false);
-  assert.equal(h.errors.at(-1).text, "请先填写当前 OCR Provider 凭证。");
+  // Local OCR needs no cloud credential; this translation gate requires the model configuration.
+  assert.equal(h.errors.at(-1).text, "请先配置翻译模型 API Key；仅 OCR 无需翻译密钥。");
 });
 
 test("runSubmitFlow returns invalid_page_ranges before any request", async () => {

@@ -2,6 +2,10 @@ const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
 const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+const { PRODUCT_NAME, configureDesktopIdentity } = require("./src/main/brand");
+const { requiresIsolatedBackend } = require("./src/main/desktop-startup");
+const { createBackendProcessRegistry } = require("./src/main/backend-processes");
+const { installDesktopShutdown } = require("./src/main/desktop-shutdown");
 const {
   canConnectToPort,
   createBackendStartupDiagnostics,
@@ -22,6 +26,8 @@ const { createDesktopConfigStore } = require("./src/main/desktop-config");
 const { createDesktopLogger } = require("./src/main/desktop-logging");
 const { createDesktopWindows } = require("./src/main/desktop-windows");
 
+// Set paths before logging, config access or the single-instance lock.
+configureDesktopIdentity(app);
 const desktopLogger = createDesktopLogger(app);
 const {
   appendDesktopLog,
@@ -63,6 +69,7 @@ const {
 // The shared local service now also owns OCR settings for the original shell.
 const researchLibraryEnabled = process.env.RETAIN_PDF_RESEARCH_LIBRARY !== "0";
 const offlineLibraryPreview = researchLibraryEnabled && process.env.RETAIN_PDF_OFFLINE_LIBRARY_PREVIEW === "1";
+const isolatedBackend = requiresIsolatedBackend({ isPackaged: app.isPackaged, offlinePreview: offlineLibraryPreview });
 const previewPorts = offlineLibraryPreview ? readResearchPreviewPorts() : null;
 let frontendGateway = null;
 let backendChild = null;
@@ -78,13 +85,22 @@ let suppressBackendCrashDialog = false;
 let splashWindow = null;
 let usingExternalBackend = false;
 let isQuitting = false;
+let backendProcesses = null;
+
+function spawnBackend(command, args, options) {
+  if (backendStopping || isQuitting) throw new Error("Desktop is shutting down");
+  const child = spawn(command, args, options);
+  return backendProcesses ? backendProcesses.trackChild(child) : child;
+}
+
 const AI_SERVICE_PORT = previewPorts?.aiServicePort || 41100;
 const researchLibraryRuntime = createResearchLibraryRuntime({
+  spawnChild: spawnBackend,
   logger: { warn: logDesktop },
   onUnexpectedExit(error) {
     if (backendStopping || isQuitting) return;
     logDesktopError(`[desktop] native research-library stopped: ${error.message}`);
-    dialog.showErrorBox("RetainPDF 文献服务已停止", error.message);
+    dialog.showErrorBox(`${PRODUCT_NAME} 文献服务已停止`, error.message);
     app.quit();
   },
 });
@@ -104,6 +120,7 @@ function desktopConfigResponse(config) {
 }
 
 async function startDesktopGateway({ apiPort, backendRoot, pythonRuntime, env }) {
+  if (backendStopping || isQuitting) throw new Error("Desktop is shutting down");
   if (researchLibraryEnabled) {
     updateSplashProgress(88, "正在启动文献管理", "正在连接独立本地文献库");
     await researchLibraryRuntime.start({
@@ -161,8 +178,9 @@ const desktopWindows = createDesktopWindows(app, {
   appRoot: __dirname,
   closeSplashWindow,
   getFrontendBaseUrl: () => frontendGatewayBaseUrl,
-  // ReadFlow 工作台（workbench.html）作为首页的显式开关；未设置时保持原 index.html。
+  // Packaged defaults to workbench; explicit preview/development choices win.
   startPage: process.env.RETAIN_PDF_START_PAGE,
+  offlinePreview: process.env.RETAIN_PDF_OFFLINE_LIBRARY_PREVIEW === "1",
   isQuitting: () => isQuitting,
   loadDesktopConfig,
   logDesktop,
@@ -196,6 +214,7 @@ if (!gotSingleInstanceLock) {
 
 async function createSplashWindow() {
   splashWindow = new BrowserWindow({
+    title: PRODUCT_NAME,
     width: 520,
     height: 360,
     frame: false,
@@ -304,7 +323,7 @@ async function startBundledBackend() {
 
   // Default API port busy? Try reclaiming our own residual first; a
   // compatible existing backend may be reused in development only.
-  const defaultApiBusy = !offlineLibraryPreview && await canConnectToPort("127.0.0.1", apiPort);
+  const defaultApiBusy = !isolatedBackend && await canConnectToPort("127.0.0.1", apiPort);
   logDesktop(`[desktop] port ${apiPort} busy=${defaultApiBusy}`);
   if (defaultApiBusy) {
     const reclaim = await portOccupant.reclaimPortIfOwnResidual("127.0.0.1", apiPort);
@@ -319,8 +338,7 @@ async function startBundledBackend() {
     ? await canConnectToPort("127.0.0.1", apiPort)
     : false;
   if (defaultApiStillBusy) {
-    const allowExternalBackend = process.env.RETAINPDF_DESKTOP_ALLOW_EXTERNAL_BACKEND === "1";
-    if ((allowExternalBackend || !app.isPackaged) && await canReuseExistingBackend(apiPort)) {
+    if (!isolatedBackend && await canReuseExistingBackend(apiPort)) {
       usingExternalBackend = true;
       logDesktop(`[desktop] reusing existing backend on port ${apiPort}`);
       updateSplashProgress(52, "检测到已有本地服务", "桌面端将直接复用当前后端");
@@ -372,7 +390,7 @@ async function startBundledBackend() {
   for (let attempt = 1; ; attempt += 1) {
     const allocator = createPortAllocator({
       canConnectToPort,
-      reclaimPortIfOwnResidual: offlineLibraryPreview
+      reclaimPortIfOwnResidual: isolatedBackend
         ? async () => ({ status: "unchanged", occupant: null })
         : (host, port) => portOccupant.reclaimPortIfOwnResidual(host, port),
       describeOccupant: (port, occupant) => portOccupant.describeOccupant(port, occupant),
@@ -433,7 +451,7 @@ if (aiSuperviseForEnv) env.RUST_API_AI_SUPERVISE = aiSuperviseForEnv;
 updateSplashProgress(52, "正在启动本地服务", "Rust API 与 AI 服务正在启动");
 logDesktop(`[desktop] spawning backend: ${backendBin}`);
 backendStartupDiagnostics.reset(backendBin, backendRoot);
-backendChild = spawn(backendBin, [], {
+backendChild = spawnBackend(backendBin, [], {
   cwd: backendRoot,
   env,
   windowsHide: process.platform === "win32",
@@ -461,7 +479,7 @@ backendChild.once("exit", (code, signal) => {
   const detail = `code=${code ?? "null"} signal=${signal ?? "null"}`;
   backendStartupDiagnostics.markExit(detail);
   logDesktopError(`[desktop] Rust API worker crashed: ${detail}`);
-  dialog.showErrorBox("Rust API worker crashed", detail);
+  dialog.showErrorBox(`${PRODUCT_NAME} 后端进程异常退出`, detail);
 });
 
 // retainpdf-ai：由壳监督（RUST_API_AI_SUPERVISE=1）时桌面端不再自拉，避免双进程
@@ -499,7 +517,11 @@ try {
 } catch (error) {
   clearInterval(waitingTimer);
   const conflict = backendStartupDiagnostics.hasExited() && backendStartupDiagnostics.hasBindConflict();
-  if (aiServiceChild && !aiServiceChild.killed && aiServiceChild.pid) {
+  if (backendProcesses) {
+    await backendProcesses.stopAll();
+    aiServiceChild = null;
+    backendChild = null;
+  } else if (aiServiceChild && !aiServiceChild.killed && aiServiceChild.pid) {
     killProcessTreeSync(aiServiceChild.pid);
     aiServiceChild = null;
   }
@@ -517,6 +539,7 @@ try {
   throw error;
 }
   clearInterval(waitingTimer);
+  if (backendProcesses) backendProcesses.snapshot();
   logDesktop(`[desktop] backend ready on port ${apiPort}`);
   await startDesktopGateway({ apiPort, backendRoot, pythonRuntime, env });
   updateSplashProgress(92, "本地服务已就绪", "正在加载主界面");
@@ -554,7 +577,7 @@ async function startRetainpdfAiService({
   }
 
   logDesktop(`[desktop] spawning retainpdf-ai: ${pythonCommand} -m retainpdf_ai (port ${aiServicePort})`);
-  aiServiceChild = spawn(pythonCommand, ["-m", "retainpdf_ai"], {
+  aiServiceChild = spawnBackend(pythonCommand, ["-m", "retainpdf_ai"], {
     cwd: aiServiceRoot,
     env,
     windowsHide: process.platform === "win32",
@@ -593,66 +616,80 @@ async function startRetainpdfAiService({
   }
 }
 
+async function stopDesktopBackends() {
+  // Snapshot Rust-supervised descendants BEFORE stopping their parents.
+  if (backendProcesses) backendProcesses.snapshot({ bestEffort: true });
+  researchLibraryRuntime.stop(backendProcesses ? { terminateChild: false } : { killProcessTreeSync });
+  const gateway = frontendGateway;
+  frontendGateway = null;
+  if (gateway) {
+    // Do not hold backend cleanup hostage to a renderer's keepalive socket.
+    gateway.stop().catch((error) => logDesktopError(`[desktop] gateway stop failed: ${error.message}`));
+  }
+  if (backendProcesses) {
+    try { await backendProcesses.stopAll(); } finally { backendProcesses.stopMonitoring(); }
+  } else {
+    if (aiServiceChild && !aiServiceChild.killed && aiServiceChild.pid) killProcessTreeSync(aiServiceChild.pid);
+    if (!usingExternalBackend && backendChild && !backendChild.killed && backendChild.pid) killProcessTreeSync(backendChild.pid);
+  }
+  aiServiceChild = null;
+  backendChild = null;
+}
+
 if (gotSingleInstanceLock) {
-  app.whenReady().then(() => {
+  installDesktopShutdown({
+    app,
+    markStopping() { isQuitting = true; backendStopping = true; },
+    cleanup: stopDesktopBackends,
+    logger: { warn: logDesktopError },
+  });
+  app.whenReady().then(async () => {
+    if (isQuitting) return;
     setDesktopLogPath(resolveDesktopLogPath());
     appendDesktopLog("========== RetainPDF desktop startup ==========");
     logDesktop(`[desktop] app ready version=${app.getVersion()} packaged=${app.isPackaged} userData=${app.getPath("userData")}`);
-    setCloseToTrayHintShown(loadDesktopConfig().closeToTrayHintShown);
-    createSplashWindow()
-      .then(() => startBundledBackend())
-      .then(() => {
-        createTray();
-        createWindow();
-        app.on("activate", () => {
-          if (!hasLiveMainWindow()) {
-            createWindow();
-            return;
-          }
-          showMainWindow();
-        });
-      })
-      .catch((error) => {
-        const detail = String(error && error.stack ? error.stack : error && error.message ? error.message : error);
-        logDesktopError(`[desktop] startup failed: ${detail}`);
-        const desktopLogPath = getDesktopLogPath();
-        const dialogDetail = [
-          String(error && error.message ? error.message : error),
-          desktopLogPath ? `\n完整日志: ${desktopLogPath}` : "",
-        ].filter(Boolean).join("\n");
-        dialog.showErrorBox("RetainPDF startup failed", dialogDetail);
-        app.quit();
+    if (process.platform === "linux") {
+      backendProcesses = createBackendProcessRegistry({
+        userData: app.getPath("userData"), backendRoot: resolveBackendRoot(),
+        logger: { warn: logDesktopError },
+        onError() { app.quit(); },
       });
+      await backendProcesses.recover();
+      if (isQuitting) return;
+      backendProcesses.startMonitoring();
+    }
+    setCloseToTrayHintShown(loadDesktopConfig().closeToTrayHintShown);
+    await createSplashWindow();
+    if (isQuitting) return;
+    await startBundledBackend();
+    if (!isQuitting) {
+      createTray();
+      createWindow();
+      app.on("activate", () => {
+        if (!hasLiveMainWindow()) {
+          createWindow();
+          return;
+        }
+        showMainWindow();
+      });
+    }
+  }).catch((error) => {
+    if (isQuitting) return;
+    const detail = String(error && error.stack ? error.stack : error && error.message ? error.message : error);
+    logDesktopError(`[desktop] startup failed: ${detail}`);
+    const desktopLogPath = getDesktopLogPath();
+    const dialogDetail = [
+      String(error && error.message ? error.message : error),
+      desktopLogPath ? `\n完整日志: ${desktopLogPath}` : "",
+    ].filter(Boolean).join("\n");
+    dialog.showErrorBox(`${PRODUCT_NAME} 启动失败`, dialogDetail);
+    app.quit();
   });
 }
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin" && isQuitting) {
     app.quit();
-  }
-});
-
-app.on("before-quit", () => {
-  isQuitting = true;
-  backendStopping = true;
-  // This runtime only tracks the process spawned by this desktop instance.
-  researchLibraryRuntime.stop({ killProcessTreeSync });
-  if (frontendGateway) {
-    frontendGateway.stop().catch((error) => logDesktopError(`[desktop] gateway stop failed: ${error.message}`));
-    frontendGateway = null;
-  }
-  // Synchronously terminate whole process trees: plain ChildProcess.kill()
-  // only kills the direct child, leaving supervised grandchildren (jobsd,
-  // ai service, workers) orphaned and holding ports. Never touch foreign
-  // backends: skip rust_api when reusing an external one.
-  if (aiServiceChild && !aiServiceChild.killed && aiServiceChild.pid) {
-    killProcessTreeSync(aiServiceChild.pid);
-    aiServiceChild = null;
-  } else {
-    aiServiceChild = null;
-  }
-  if (!usingExternalBackend && backendChild && !backendChild.killed && backendChild.pid) {
-    killProcessTreeSync(backendChild.pid);
   }
 });
 

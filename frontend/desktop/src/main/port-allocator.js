@@ -29,12 +29,12 @@ function createPortAllocator(options = {}) {
 
   // Allocate one role. Returns { port, relocatedFrom, occupant }.
   // Throws with occupant detail when the whole range is exhausted.
-  async function allocateRole(host, role, fallbackDefault) {
+  async function allocateRole(host, role, fallbackDefault, reserved = exclude) {
     const start = Number.isFinite(role.defaultPort) ? role.defaultPort : fallbackDefault;
     let defaultOccupant = null;
     for (let offset = 0; offset <= maxOffset; offset += 1) {
       const port = start + offset;
-      if (exclude.has(port)) {
+      if (reserved.has(port)) {
         continue;
       }
       let busy = false;
@@ -73,14 +73,18 @@ function createPortAllocator(options = {}) {
   // { ports: { apiPort, simplePort, jobsPort, aiServicePort },
   //   relocations: [{ role, from, to }], occupantLines: { key: string } }.
   async function allocateBackendPorts(host, defaults = {}) {
+    // Processes bind only after all roles are assigned. Reserve each choice
+    // immediately so an API fallback cannot also become the jobs service port.
+    const reserved = new Set(exclude);
     const ports = {};
     const relocations = [];
     const occupantLines = {};
     for (const role of PORT_ROLES) {
       const fallbackDefault = role.fallback;
       const start = Number.isFinite(defaults[role.key]) ? defaults[role.key] : fallbackDefault;
-      const allocated = await allocateRole(host, { ...role, defaultPort: start }, fallbackDefault);
+      const allocated = await allocateRole(host, { ...role, defaultPort: start }, fallbackDefault, reserved);
       ports[role.key] = allocated.port;
+      reserved.add(allocated.port);
       if (allocated.relocatedFrom) {
         relocations.push({ role: role.label, from: allocated.relocatedFrom, to: allocated.port });
         logger.warn(`[desktop] ${role.label}端口 ${allocated.relocatedFrom} 被占用，已切换到 ${allocated.port}`);

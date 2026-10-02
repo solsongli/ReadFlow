@@ -1,4 +1,6 @@
 // 工作台状态（纯 reducer）。副作用在 controller.ts；本文件不 import React、不访问网络。
+import type { SettingsSection } from "./settings.js";
+import { initialNotesState, type NotesState } from "./notes.js";
 import { createStore } from "@/platform/store/store.js";
 import type { PaperItem, ResearchOcrJob } from "@/platform/contracts/research-library.js";
 import type {
@@ -6,29 +8,35 @@ import type {
   WorkbenchDesk,
   WorkbenchListResult,
   WorkbenchSort,
+  WorkbenchRow,
   WorkbenchView,
 } from "@/platform/contracts/workbench.js";
 
-export type MainView = "desk" | "library";
+export type MainView = "desk" | "library" | "notes" | "settings";
 export type ListLayout = "list" | "grouped";
 export type Density = "bilingual" | "compact";
 export type ThemePreference = "system" | "light" | "dark";
 export type LoadStatus = "idle" | "loading" | "ready" | "error";
 
 export interface ReaderTab {
+  row?: WorkbenchRow;
+  resumePage?: number | null;
   id: string;
   itemId: string;
   title: string;
   url: string | null;
   status: "loading" | "ready" | "error";
   error: string | null;
+  attachmentId?: string;
+  navigationKey?: number;
 }
 
 export interface Notice {
   id: number;
   tone: "info" | "success" | "error";
   text: string;
-  undo?: () => void;
+  canUndo?: boolean;
+  actionLabel?: string;
 }
 
 export interface Prefs {
@@ -37,11 +45,16 @@ export interface Prefs {
   layout: ListLayout;
   density: Density;
   theme: ThemePreference;
+  startView: "desk" | "library";
+  sidebarCollapsed: boolean;
   expandedGroups: string[];
 }
 
 export interface WorkbenchState extends Prefs {
   main: MainView;
+  settingsSection: SettingsSection;
+  settingsReturn: { main: "desk" | "library" | "notes"; activeTab: string };
+  notes: NotesState;
   view: WorkbenchView;
   groupId: string | null;
   tag: string | null;
@@ -54,6 +67,9 @@ export interface WorkbenchState extends Prefs {
   tabs: ReaderTab[];
   activeTab: string;
   paletteOpen: boolean;
+  shortcutsOpen: boolean;
+  selectionFocusId: string | null;
+  connection: { unavailable: boolean; retrying: boolean; attempt: number };
   /** The inspector's "加入分组" picker (keyboard G opens it). */
   pickerOpen: boolean;
   /** Inline "新建分组" input in the sidebar; parentId null = top level. */
@@ -70,6 +86,8 @@ export const DEFAULT_PREFS: Prefs = {
   layout: "list",
   density: "bilingual",
   theme: "system",
+  startView: "desk",
+  sidebarCollapsed: false,
   expandedGroups: [],
 };
 
@@ -77,7 +95,10 @@ export function initialWorkbenchState(prefs: Partial<Prefs> = {}): WorkbenchStat
   return {
     ...DEFAULT_PREFS,
     ...prefs,
-    main: "desk",
+    main: prefs.startView === "library" ? "library" : "desk",
+    settingsSection: "general",
+    settingsReturn: { main: "desk", activeTab: LIBRARY_TAB },
+    notes: initialNotesState(),
     view: "all",
     groupId: null,
     tag: null,
@@ -90,6 +111,9 @@ export function initialWorkbenchState(prefs: Partial<Prefs> = {}): WorkbenchStat
     tabs: [],
     activeTab: LIBRARY_TAB,
     paletteOpen: false,
+    shortcutsOpen: false,
+    selectionFocusId: null,
+    connection: { unavailable: false, retrying: false, attempt: 0 },
     pickerOpen: false,
     groupDraft: null,
     notice: null,
@@ -174,6 +198,6 @@ export function createWorkbenchStore(prefs: Partial<Prefs> = {}) {
 export type WorkbenchStore = ReturnType<typeof createWorkbenchStore>;
 
 export function prefsOf(state: S): Prefs {
-  const { sort, order, layout, density, theme, expandedGroups } = state;
-  return { sort, order, layout, density, theme, expandedGroups };
+  const { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView } = state;
+  return { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView };
 }

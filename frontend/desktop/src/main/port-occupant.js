@@ -1,5 +1,6 @@
 const { execFile, execFileSync } = require("child_process");
 const http = require("http");
+const { PRODUCT_NAME } = require("./brand");
 
 // Images owned by the RetainPDF backend. Only these are ever auto-reclaimed:
 // anything else (Docker, dev servers, system services) keeps the current
@@ -227,7 +228,7 @@ function createPortOccupant(options = {}) {
           identified = false;
         }
         if (identified) {
-          occupant.image = "RetainPDF 后端残留";
+          occupant.image = `${PRODUCT_NAME} 后端残留`;
           occupant.identifiedViaApi = true;
         } else {
           return { status: "busy", occupant };

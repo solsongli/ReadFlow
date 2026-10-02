@@ -46,6 +46,7 @@ export type {
   WorkflowViewPortLike,
 } from "./domain/workflow/controller.js";
 export { defaultWorkflowConfigPort } from "./domain/workflow/config-port.js";
+export { createDeveloperConfigResolver, resolveWorkflowDefaults } from "./domain/workflow/developer-config.js";
 
 export {
   TRANSLATION_WORKFLOW_DIALOG,

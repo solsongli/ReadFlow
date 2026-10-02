@@ -4,7 +4,7 @@ import { Check } from "lucide-react";
 import { DropdownMenu, Popover } from "radix-ui";
 import { cn } from "@/ui/lib/utils.js";
 
-const SURFACE = "z-50 rounded-lg border border-wb-line-strong bg-wb-panel text-wb-text shadow-wb-pop outline-none";
+const SURFACE = "z-50 rounded-xl border-0 bg-wb-panel text-wb-text shadow-wb-pop outline-none";
 
 export const MenuRoot = DropdownMenu.Root;
 export const MenuTrigger = DropdownMenu.Trigger;
@@ -12,13 +12,13 @@ export const MenuTrigger = DropdownMenu.Trigger;
 export function MenuContent({ className, sideOffset = 4, ...props }: ComponentPropsWithoutRef<typeof DropdownMenu.Content>) {
   return (
     <DropdownMenu.Portal>
-      <DropdownMenu.Content sideOffset={sideOffset} className={cn(SURFACE, "min-w-44 p-1 text-[12.5px]", className)} {...props} />
+      <DropdownMenu.Content sideOffset={sideOffset} className={cn(SURFACE, "min-w-48 max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-auto p-1.5 text-[13px]", className)} {...props} />
     </DropdownMenu.Portal>
   );
 }
 
 const ITEM = cn(
-  "flex h-7 cursor-default select-none items-center gap-2 rounded-[5px] px-2 outline-none",
+  "wb-transition flex h-8 cursor-default select-none items-center gap-2 rounded-lg px-2 outline-none",
   "data-[highlighted]:bg-wb-hover data-[disabled]:opacity-45",
 );
 
@@ -34,7 +34,7 @@ export function MenuItem({
     <DropdownMenu.Item className={cn(ITEM, danger && "text-wb-danger", className)} {...props}>
       <span className="inline-flex w-4 shrink-0 justify-center text-wb-text-3">{icon}</span>
       <span className="flex-1">{children}</span>
-      {shortcut ? <span className="font-wb-mono text-[11px] text-wb-text-4">{shortcut}</span> : null}
+      {shortcut ? <span className="text-[11px] text-wb-text-4">{shortcut}</span> : null}
     </DropdownMenu.Item>
   );
 }
@@ -42,7 +42,7 @@ export function MenuItem({
 export function MenuCheckboxItem({ className, children, ...props }: ComponentPropsWithoutRef<typeof DropdownMenu.CheckboxItem>) {
   return (
     <DropdownMenu.CheckboxItem className={cn(ITEM, className)} {...props}>
-      <span className="inline-flex w-4 shrink-0 justify-center text-wb-accent">
+      <span className="inline-flex w-4 shrink-0 justify-center text-wb-link">
         <DropdownMenu.ItemIndicator>
           <Check size={13} strokeWidth={2.4} aria-hidden="true" />
         </DropdownMenu.ItemIndicator>
@@ -59,7 +59,7 @@ export function MenuRadioGroup(props: ComponentPropsWithoutRef<typeof DropdownMe
 export function MenuRadioItem({ className, children, ...props }: ComponentPropsWithoutRef<typeof DropdownMenu.RadioItem>) {
   return (
     <DropdownMenu.RadioItem className={cn(ITEM, className)} {...props}>
-      <span className="inline-flex w-4 shrink-0 justify-center text-wb-accent">
+      <span className="inline-flex w-4 shrink-0 justify-center text-wb-link">
         <DropdownMenu.ItemIndicator>
           <Check size={13} strokeWidth={2.4} aria-hidden="true" />
         </DropdownMenu.ItemIndicator>

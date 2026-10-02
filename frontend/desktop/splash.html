@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>RetainPDF</title>
+    <title></title>
     <style>
       :root {
         color-scheme: light;
@@ -109,8 +109,8 @@
   </head>
   <body>
     <main class="shell">
-      <img class="logo" src="./assets/RetainPDF-logo.png" alt="RetainPDF Logo" />
-      <h1>RetainPDF</h1>
+      <img id="brand-icon" class="logo" alt="" />
+      <h1 id="brand-name"></h1>
       <p>正在启动桌面环境。首次启动或大文件环境准备会稍慢一些。</p>
 
       <section class="status" aria-live="polite">
@@ -126,6 +126,11 @@
     </main>
 
     <script>
+      const brand = window.retainPdfDesktop.brand;
+      document.title = brand.productName;
+      document.getElementById("brand-name").textContent = brand.productName;
+      document.getElementById("brand-icon").src = brand.iconUrl;
+      document.getElementById("brand-icon").alt = `${brand.productName} Logo`;
       const titleEl = document.getElementById("status-title");
       const valueEl = document.getElementById("status-value");
       const detailEl = document.getElementById("status-detail");

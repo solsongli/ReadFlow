@@ -35,6 +35,19 @@ export function formatDay(iso: string | null | undefined, now: Date = new Date()
   return date.getFullYear() === now.getFullYear() ? day : `${date.getFullYear()}-${day}`;
 }
 
+/** Mail dates use local calendar days, so DST changes cannot shift yesterday/weekday labels. */
+export function mailDate(iso: string | null | undefined, now: Date = new Date()): string {
+  const date = parse(iso);
+  if (!date) return "";
+  const dayIndex = (value: Date) => Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()) / 86400000;
+  const days = dayIndex(now) - dayIndex(date);
+  if (days === 0) return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  if (days === 1) return "昨天";
+  if (days > 1 && days < 7) return `周${"日一二三四五六"[date.getDay()]}`;
+  if (date.getFullYear() === now.getFullYear()) return `${date.getMonth() + 1}月${date.getDate()}日`;
+  return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+}
+
 export function relativeTime(iso: string | null | undefined, now: Date = new Date()): string {
   const date = parse(iso);
   if (!date) return "—";

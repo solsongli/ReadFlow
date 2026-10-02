@@ -20,7 +20,7 @@ function bootWorkbench() {
     document.body.appendChild(host);
   }
   const workbench = createWorkbench({ api: workbenchApi, storage: browserStorage() });
-  createRoot(host).render(
+  createRoot(host, { onCaughtError: () => {} }).render(
     <WorkbenchProvider workbench={workbench}>
       <WorkbenchShell />
     </WorkbenchProvider>,

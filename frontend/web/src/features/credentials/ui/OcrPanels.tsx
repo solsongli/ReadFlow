@@ -1,4 +1,4 @@
-import { ResearchOcrPanel } from "@/features/research-library/ui/ResearchOcrPanel.js";
+import { ResearchOcrPanel } from "@/features/research-library/index.js";
 import { researchLibraryApi } from "@/platform/api/research-library.js";
 
 /** Settings and the library share the same module API and management surface. */

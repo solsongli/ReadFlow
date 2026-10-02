@@ -51,3 +51,4 @@
 @import "./hud.css" layer(pages);
 /* Markdown 悬浮预览（含 MathJax） */
 @import "./markdown.css" layer(pages);
+@import "./workbench-embed.css" layer(pages);

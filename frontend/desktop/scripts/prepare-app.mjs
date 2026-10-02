@@ -34,8 +34,6 @@ const outputBackendRoot = path.join(appRoot, "backend");
 const outputFrontendVendorRoot = path.join(outputFrontendRoot, "vendor");
 const bundledFontsRoot = path.join(outputBackendRoot, "fonts");
 const buildRoot = path.join(desktopRoot, "build");
-const linuxIconsRoot = path.join(buildRoot, "icons");
-const desktopIconSource = path.join(desktopRoot, "assets", "RetainPDF-logo.png");
 const desktopPackagePath = path.join(desktopRoot, "package.json");
 const desktopPackage = JSON.parse(fs.readFileSync(desktopPackagePath, "utf8"));
 
@@ -563,13 +561,6 @@ if (desktopPackage.version !== releaseVersion) {
 }
 
 fs.mkdirSync(buildRoot, { recursive: true });
-fs.rmSync(linuxIconsRoot, { recursive: true, force: true });
-fs.mkdirSync(linuxIconsRoot, { recursive: true });
-if (fs.existsSync(desktopIconSource)) {
-  for (const size of [16, 24, 32, 48, 64, 96, 128, 256, 512]) {
-    fs.cpSync(desktopIconSource, path.join(linuxIconsRoot, `${size}x${size}.png`), { force: true });
-  }
-}
 
 if (frontendOnly) {
   fs.rmSync(outputFrontendRoot, { recursive: true, force: true });
@@ -588,6 +579,8 @@ const desktopFrontendRuntimeEntries = new Set([
   "index.html",
   "detail.html",
   "reader.html",
+  "workbench.html",
+  "research-library.html",
   "styles.css",
   "dist",
   "src",
@@ -680,7 +673,7 @@ rewriteDesktopFrontendRuntimeImports();
 const desktopRuntimeConfig = `window.__FRONT_RUNTIME_CONFIG__ = {
   apiBase: "http://127.0.0.1:41000",
   xApiKey: "retain-pdf-desktop",
-  ocrProvider: "paddle",
+  ocrProvider: "local",
   mineruToken: "",
   paddleToken: "",
   modelApiKey: "",

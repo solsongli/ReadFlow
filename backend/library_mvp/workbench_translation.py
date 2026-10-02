@@ -7,13 +7,15 @@ starts, retries or cancels work, and any lookup failure degrades to status "unkn
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
+import math
 import threading
 import time
 from typing import Any, Callable, Iterable
 
 QUEUED = frozenset({"queued", "pending", "paused"})
 FAILED = frozenset({"failed", "cancelled", "canceled"})
-NONE = {"status": "none", "job_id": None, "percent": None}
+NONE = {"status": "none", "job_id": None, "percent": None, "updated_at": None}
 
 
 def _mapping(value: Any) -> dict:
@@ -21,7 +23,7 @@ def _mapping(value: Any) -> dict:
 
 
 def summarize_jobs(jobs: Iterable[Any]) -> dict:
-    """Newest-first job list → {"status": none|queued|running|done|failed, "job_id", "percent"}."""
+    """Newest-first job list → {"status": none|queued|running|done|failed, "job_id", "percent", "updated_at"}."""
     for job in jobs:
         if not isinstance(job, dict):
             continue
@@ -29,18 +31,20 @@ def summarize_jobs(jobs: Iterable[Any]) -> dict:
         state = translation.get("state")
         status = str(job.get("status") or "")
         job_id = job.get("job_id") if isinstance(job.get("job_id"), str) else None
+        updated_at = job.get("updated_at") if isinstance(job.get("updated_at"), str) else None
         if job.get("workflow") == "ocr" and state in (None, "skipped"):
             continue  # OCR-only runs never produce a translation.
         if job.get("output_pdf_ready") is True or state == "completed" or (status == "succeeded" and state not in ("skipped", "pending")):
-            return {"status": "done", "job_id": job_id, "percent": 100}
+            return {"status": "done", "job_id": job_id, "percent": 100, "updated_at": updated_at}
         if status == "running":
             percent = _mapping(translation.get("progress")).get("percent")
             return {"status": "running", "job_id": job_id,
-                    "percent": round(float(percent)) if isinstance(percent, (int, float)) else None}
+                    "percent": max(0, min(100, round(percent))) if isinstance(percent, (int, float)) and not isinstance(percent, bool) and math.isfinite(percent) else None,
+                    "updated_at": updated_at}
         if status in QUEUED:
-            return {"status": "queued", "job_id": job_id, "percent": None}
+            return {"status": "queued", "job_id": job_id, "percent": None, "updated_at": updated_at}
         if status in FAILED:
-            return {"status": "failed", "job_id": job_id, "percent": None}
+            return {"status": "failed", "job_id": job_id, "percent": None, "updated_at": updated_at}
     return dict(NONE)
 
 
@@ -61,7 +65,7 @@ class TranslationStatus:
         try:
             value = summarize_jobs(self._fetch(digest))
         except Exception:  # noqa: BLE001 - any bridge/network failure only hides the status.
-            value = {"status": "unknown", "job_id": None, "percent": None}
+            value = {"status": "unknown", "job_id": None, "percent": None, "updated_at": None}
         with self._lock:
             self._cache[digest] = (self._clock(), value)
         return value
@@ -78,3 +82,33 @@ class TranslationStatus:
         for digest, value in zip(missing, self._pool.map(self._lookup, missing)):
             result[digest] = value
         return result
+
+
+def _finished_time(value: Any) -> datetime | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed.astimezone(timezone.utc)
+    except ValueError:
+        return None
+
+
+def desk_summary(rows: list[dict], group_count: int) -> dict:
+    """Aggregate all live papers, not just the small desk preview lists. Notes exclude annotations."""
+    attached = [row for row in rows if row["attachment_id"]]
+    done = [row for row in attached if row["translation"].get("status") == "done"]
+    dated = [(stamp, row) for row in done if (stamp := _finished_time(row["translation"].get("updated_at"))) is not None]
+    recent = max(dated, key=lambda entry: (entry[0], entry[1]["id"]))[1] if dated else None
+    return {
+        "counts": {"total": len(rows), "translated": len(done),
+                   "notes": sum(row["notes_count"] - row["annotations_count"] for row in rows),
+                   "annotations": sum(row["annotations_count"] for row in rows), "groups": group_count},
+        "translation": {
+            "running": [{"item_id": row["id"], "title": row["title"], "title_translated": row["title_translated"],
+                         "percent": row["translation"].get("percent")} for row in attached if row["translation"].get("status") == "running"],
+            "queued": sum(row["translation"].get("status") == "queued" for row in attached),
+            "done": len(done),
+            "recent_done": {"item_id": recent["id"], "title": recent["title"], "finished_at": recent["translation"]["updated_at"]} if recent else None,
+        },
+    }

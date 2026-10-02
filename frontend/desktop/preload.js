@@ -1,4 +1,7 @@
 const { contextBridge, ipcRenderer } = require("electron");
+const { pathToFileURL } = require("url");
+const { PRODUCT_NAME, resolveBrandIcon } = require("./src/main/brand");
+const { readAppVersion } = require("./src/main/app-version");
 
 window.addEventListener("error", (event) => {
   ipcRenderer.send("desktop:renderer-issue", {
@@ -21,7 +24,9 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 contextBridge.exposeInMainWorld("retainPdfDesktop", {
+  brand: { productName: PRODUCT_NAME, iconUrl: pathToFileURL(resolveBrandIcon(__dirname, 128)).href },
   platform: process.platform,
+  appVersion: readAppVersion(process.argv),
   invoke(command, args = {}) {
     return ipcRenderer.invoke("desktop:invoke", command, args);
   },

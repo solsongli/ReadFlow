@@ -127,3 +127,13 @@ test("a healthy sidecar that later exits triggers the explicit desktop error cal
   assert.equal(runtime.getBaseUrl(), "");
   runtime.stop();
 });
+
+test("registry-managed shutdown cancels startup without killing the child before tree capture", async (t) => {
+  const { entry, root } = fixture(t);
+  const child = fakeChild();
+  const runtime = createResearchLibraryRuntime({ spawnChild: () => child, logger: { warn() {} } });
+  const starting = runtime.start(settings(entry, root));
+  runtime.stop({ terminateChild: false });
+  await assert.rejects(starting, /startup cancelled/);
+  assert.equal(child.killed, false);
+});

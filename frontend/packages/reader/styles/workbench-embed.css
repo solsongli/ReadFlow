@@ -1,0 +1,22 @@
+/* Only chrome adopts the workbench font; PDF layers and translated prose keep their layout fonts. */
+html[data-reader-embed="workbench"] :is(
+  .reader-workspace-bar,
+  .reader-assistant-rail,
+  .reader-assistant-dock-header,
+  .reader-react-hud,
+  .reader-fab,
+  .reader-notes-panel-head,
+  .reader-notes-panel-toolbar,
+  .reader-sel-pop,
+  .reader-boot-loading,
+  .reader-react-error
+) {
+  --font-sans: "ReadFlow Inter", "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-display: var(--font-sans);
+  font-family: var(--font-sans);
+}
+html[data-reader-embed="workbench"] .reader-react-hud button,
+html[data-reader-embed="workbench"] .reader-react-hud input,
+html[data-reader-embed="workbench"] .reader-react-hud kbd {
+  font-family: inherit;
+}

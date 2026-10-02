@@ -62,3 +62,26 @@ test("original pipeline and settings share the optional OCR root and explicit ch
   assert.equal(bundled.RUST_API_SCRIPTS_DIR, options.scriptsDir);
   assert.equal(bundled.RETAIN_OCR_PROVIDER_CONFIG, path.join(backendRoot, "config", "ocr_providers.json"));
 });
+
+test("normal capability defaults allow explicit actions while preview opt-outs are preserved", (t) => {
+  const flags = ["RETAIN_PDF_ALLOW_OCR_DOWNLOAD", "RETAIN_PDF_ALLOW_EXTERNAL_MODELS"];
+  const original = Object.fromEntries(flags.map((name) => [name, process.env[name]]));
+  t.after(() => {
+    for (const name of flags) {
+      if (original[name] === undefined) delete process.env[name];
+      else process.env[name] = original[name];
+    }
+  });
+  const options = {
+    backendRoot: "/synthetic/backend", dataRoot: "/synthetic/ReadFlow/data",
+    pythonRuntime: { command: "/synthetic/python" },
+    typstBin: "/synthetic/typst", typstPackagePath: "/synthetic/packages",
+  };
+  for (const name of flags) delete process.env[name];
+  const defaults = buildBackendEnv(options);
+  for (const name of flags) assert.equal(defaults[name], "1");
+  assert.equal(defaults.RETAIN_LOCAL_OCR_ROOT, "/synthetic/ReadFlow/data/research-library/optional-ocr");
+  for (const name of flags) process.env[name] = "0";
+  const disabled = buildBackendEnv(options);
+  for (const name of flags) assert.equal(disabled[name], "0");
+});

@@ -1,150 +1,82 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import { ChevronDown, ChevronRight, FileUp, SearchX } from "lucide-react";
-import type { WorkbenchGroup, WorkbenchRow } from "@/platform/contracts/workbench.js";
-import { cn } from "@/ui/lib/utils.js";
+import { Bookmark, ChevronDown, ChevronRight, Clock, FileUp, Folder, Languages, Link2, NotebookPen, ScanText, SearchX, Star, Tag, Trash2 } from "lucide-react";
 import { Button } from "@/ui/wb/Button.js";
 import { WbEmptyState } from "@/ui/wb/EmptyState.js";
-import { buildGroupTree, descendantIds, flattenGroupTree, groupLabel } from "../../domain/groups.js";
+import { buildVirtualList, rowScrollTarget, virtualWindow } from "../../domain/virtual-list.js";
+import { libraryEmptyState } from "../../domain/library-presentation.js";
 import { openPdfPicker } from "../import/pdf-picker.js";
 import { useWb, useWorkbench } from "../context.js";
-import { ItemRow, ROW_GRID } from "./ItemRow.js";
+import { ItemRow } from "./ItemRow.js";
 
-const SORTABLE: Array<[string, "title" | "year" | "venue" | "added" | null]> = [
-  ["标题 / 中文题名", "title"],
-  ["分组", null],
-  ["年份", "year"],
-  ["来源", "venue"],
-  ["译文", null],
-  ["笔记", null],
-  ["添加", "added"],
-];
-
-function HeaderRow() {
-  const wb = useWorkbench();
-  const sort = useWb((state) => state.sort);
-  const order = useWb((state) => state.order);
-  return (
-    <div role="row" className={cn(ROW_GRID, "h-7 shrink-0 border-b border-wb-line bg-wb-panel-2 px-3.5 text-[11.5px] font-semibold text-wb-text-3")}>
-      {SORTABLE.map(([label, key], index) => (
-        <span key={label} role="columnheader" className={index === 0 ? "pl-3.5" : ""}>
-          {key ? (
-            <button
-              type="button"
-              onClick={() => wb.setPrefs({ sort: key, order: sort === key && order === "desc" ? "asc" : "desc" })}
-              className={cn("border-0 bg-transparent p-0 font-semibold", sort === key ? "text-wb-text" : "text-wb-text-3 hover:text-wb-text")}
-            >
-              {label}
-              {sort === key ? (order === "desc" ? " ↓" : " ↑") : ""}
-            </button>
-          ) : (
-            label
-          )}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-/** Sections for the 按分组 layout: every group (pre-order) with the rows in it; papers repeat across groups. */
-function sectionsOf(rows: WorkbenchRow[], groups: WorkbenchGroup[], browsing: string | null) {
-  const scope = browsing ? descendantIds(groups, browsing) : null;
-  const ordered = flattenGroupTree(buildGroupTree(groups)).filter((node) => !scope || (scope.has(node.id) && node.id !== browsing));
-  const sections = ordered
-    .map((node) => ({ id: node.id, label: groupLabel(groups, node.id), rows: rows.filter((row) => row.group_ids.includes(node.id)) }))
-    .filter((section) => section.rows.length);
-  const covered = new Set(ordered.map((node) => node.id));
-  const rest = rows.filter((row) => !row.group_ids.some((id) => covered.has(id)));
-  if (rest.length) sections.push({ id: "__ungrouped", label: browsing ? "只在当前分组中" : "未分组", rows: rest });
-  return sections;
-}
+const EMPTY_ICONS = { import: FileUp, trash: Trash2, unread: Bookmark, starred: Star, recent: Clock, group: Folder, notes: NotebookPen, ocr: ScanText, doi: Link2, translation: Languages, search: SearchX, tag: Tag };
 
 export function ItemList() {
   const wb = useWorkbench();
   const result = useWb((state) => state.list.result);
   const status = useWb((state) => state.list.status);
-  const error = useWb((state) => state.list.error);
   const selectedIds = useWb((state) => state.selectedIds);
+  const focusId = useWb((state) => state.selectionFocusId);
   const density = useWb((state) => state.density);
   const layout = useWb((state) => state.layout);
   const groupId = useWb((state) => state.groupId);
   const view = useWb((state) => state.view);
   const query = useWb((state) => state.query);
+  const tag = useWb((state) => state.tag);
   const [collapsed, setCollapsed] = useState<string[]>([]);
+  const [viewport, setViewport] = useState({ top: 0, height: 700 });
   const scroller = useRef<HTMLDivElement>(null);
-
-  const rows = result?.items ?? [];
-  const groups = result?.groups ?? [];
+  const frame = useRef(0);
+  const lastScroll = useRef("");
   const selection = useMemo(() => new Set(selectedIds), [selectedIds]);
-
+  const list = useMemo(() => buildVirtualList(result?.items ?? [], result?.groups ?? [], layout, density, groupId, collapsed), [result, layout, density, groupId, collapsed]);
+  const windowed = virtualWindow(list, viewport.top, viewport.height);
   const onSelect = useCallback((id: string, event: MouseEvent) => {
     wb.select(id, event.shiftKey ? "range" : event.ctrlKey || event.metaKey ? "toggle" : "single");
   }, [wb]);
   const onOpen = useCallback((id: string) => void wb.openReader(id), [wb]);
-
-  const focus = selectedIds[selectedIds.length - 1];
+  const measure = useCallback(() => {
+    const node = scroller.current;
+    if (node) setViewport({ top: node.scrollTop, height: node.clientHeight });
+  }, []);
+  useEffect(() => { wb.setLibraryOrder(list.order); return () => wb.setLibraryOrder(null); }, [list, wb]);
   useEffect(() => {
-    if (!focus) return;
-    scroller.current?.querySelector(`[data-row="${CSS.escape(focus)}"]`)?.scrollIntoView({ block: "nearest" });
-  }, [focus]);
-
-  if (status === "error") {
-    return <WbEmptyState title="文献库没有加载出来" hint={error ?? undefined} action={<Button onClick={() => void wb.refreshList()}>重试</Button>} />;
+    const node = scroller.current;
+    if (!node) return;
+    measure(); const observer = new ResizeObserver(measure); observer.observe(node);
+    return () => { observer.disconnect(); cancelAnimationFrame(frame.current); };
+  }, [Boolean(result?.items.length), measure]);
+  const focus = focusId ?? selectedIds[selectedIds.length - 1];
+  useEffect(() => {
+    const node = scroller.current;
+    if (!node || !focus) return;
+    const key = JSON.stringify([focus, density, layout, groupId, view, query, viewport.height]);
+    if (lastScroll.current === key) return;
+    lastScroll.current = key;
+    node.scrollTop = rowScrollTarget(list, focus, node.scrollTop, node.clientHeight); measure();
+  }, [focus, list, density, layout, groupId, view, query, collapsed, viewport.height, measure]);
+  if (status === "error" && !result) return <WbEmptyState title="文献库没有加载出来" hint="请检查本地服务后重试。" action={<Button onClick={() => void wb.refreshList()}>重试</Button>} />;
+  if (result && !result.items.length) {
+    const empty = libraryEmptyState({ view, query, group: groupId, tag });
+    const Icon = EMPTY_ICONS[empty.icon];
+    return <WbEmptyState icon={<Icon size={28} aria-hidden="true" />} title={empty.title} hint={empty.hint} action={empty.icon === "import" ? <Button onClick={openPdfPicker}>导入 PDF</Button> : undefined} />;
   }
-  if (result && !rows.length) {
-    const searching = Boolean(query);
-    return (
-      <div className="flex flex-1 flex-col">
-        <HeaderRow />
-        <WbEmptyState
-          icon={searching ? <SearchX size={28} /> : <FileUp size={28} />}
-          title={searching ? `没有找到与「${query}」相关的文献` : view === "trash" ? "回收站是空的" : "这里还没有文献"}
-          hint={searching ? "搜索覆盖中英题名、作者、DOI、出处、引用键和标签。" : view === "trash" ? undefined : "导入 PDF，或把 PDF 文件拖到这里。"}
-          action={!searching && view !== "trash" ? <Button variant="primary" onClick={openPdfPicker}>导入 PDF</Button> : undefined}
-        />
-      </div>
-    );
-  }
-
-  const renderRow = (row: WorkbenchRow, sectionId?: string) => (
-    <div key={(sectionId ?? "") + row.id} data-row={row.id}>
-      <ItemRow
-        row={row}
-        groups={groups}
-        browsingGroup={groupId}
-        hideGroupChip={sectionId && sectionId !== "__ungrouped" ? sectionId : undefined}
-        density={density}
-        selected={selection.has(row.id)}
-        selection={selectedIds}
-        onSelect={onSelect}
-        onOpen={onOpen}
-      />
+  const active = windowed.indices.find((index) => { const entry = list.entries[index]; return entry.kind === "row" && entry.row.id === focus; });
+  return <div ref={scroller} data-wb-list role="listbox" tabIndex={0} aria-label="文献列表" aria-multiselectable="true" aria-activedescendant={active == null ? undefined : `wb-row-${active}`} aria-busy={status === "loading"}
+    title="J / K 或 ↑ / ↓ 移动；Enter 阅读；Ctrl / Shift 多选；S 星标；G 加入分组；Del 回收站" className="wb-scroll min-h-0 flex-1 px-2.5" onScroll={() => { cancelAnimationFrame(frame.current); frame.current = requestAnimationFrame(measure); }}>
+    <div className="relative" style={{ height: list.height }}>
+      {windowed.indices.map((index) => {
+        const entry = list.entries[index];
+        if (entry.kind === "header") return <button key={entry.key} type="button" aria-expanded={!entry.collapsed} title={entry.label} onClick={() => {
+          if (!entry.collapsed && scroller.current) { scroller.current.scrollTop = entry.top; measure(); }
+          setCollapsed((value) => entry.collapsed ? value.filter((id) => id !== entry.sectionId) : [...value, entry.sectionId]);
+        }}
+          className="wb-transition absolute left-0 z-10 flex h-8 w-full items-center gap-2 rounded-lg bg-wb-sticky px-3.5 text-left text-[12px] text-wb-text-3 backdrop-blur-md" style={{ top: windowed.sticky === index ? windowed.stickyTop : entry.top }}>
+          {entry.collapsed ? <ChevronRight size={12} aria-hidden="true" /> : <ChevronDown size={12} aria-hidden="true" />}<span className="wb-truncate font-semibold">{entry.label}</span><span className="shrink-0">{entry.count}</span>
+        </button>;
+        return <div key={entry.key} data-row={entry.row.id} className="absolute left-0 w-full" style={{ top: entry.top, height: entry.height }}>
+          <ItemRow id={`wb-row-${index}`} position={entry.position} total={list.order.length} row={entry.row} density={density} selected={selection.has(entry.row.id)} selection={selectedIds} onSelect={onSelect} onOpen={onOpen} />
+        </div>;
+      })}
     </div>
-  );
-
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <HeaderRow />
-      <div ref={scroller} role="grid" aria-label="文献列表" aria-multiselectable="true" aria-busy={status === "loading"} className="wb-scroll min-h-0 flex-1">
-        {layout === "grouped"
-          ? sectionsOf(rows, groups, groupId).map((section) => {
-              const closed = collapsed.includes(section.id);
-              return (
-                <section key={section.id} aria-label={section.label}>
-                  <button
-                    type="button"
-                    onClick={() => setCollapsed((list) => (closed ? list.filter((id) => id !== section.id) : [...list, section.id]))}
-                    className="sticky top-0 z-[1] flex h-8 w-full items-center gap-2 border-0 border-b border-wb-line bg-wb-panel-3 px-3.5 text-left"
-                  >
-                    {closed ? <ChevronRight size={12} strokeWidth={2.4} aria-hidden="true" /> : <ChevronDown size={12} strokeWidth={2.4} aria-hidden="true" />}
-                    <span className="font-semibold">{section.label}</span>
-                    <span className="wb-numeric text-[11.5px] text-wb-text-3">{section.rows.length}</span>
-                  </button>
-                  {closed ? null : section.rows.map((row) => renderRow(row, section.id))}
-                </section>
-              );
-            })
-          : rows.map((row) => renderRow(row))}
-      </div>
-    </div>
-  );
+  </div>;
 }

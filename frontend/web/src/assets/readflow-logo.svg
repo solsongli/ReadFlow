@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title">
+<title id="title">ReadFlow — reading in parallel</title>
+<defs><linearGradient id="blue" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+<stop stop-color="#1686ee"/><stop offset=".5" stop-color="#0071e3"/><stop offset="1" stop-color="#005ec4"/>
+</linearGradient></defs>
+<rect x="48" y="48" width="928" height="928" rx="212" fill="url(#blue)"/>
+<path d="M 246 316 C 336 282 420 290 494 340 L 494 701 C 418 650 334 642 246 677 Z" fill="#fff"/>
+<path d="M 530 340 C 604 290 688 282 778 316 L 778 677 C 690 642 606 650 530 701 Z" fill="#fff"/>
+<path d="M 300 418 L 442 418" fill="none" stroke="#005ec4" stroke-width="20" stroke-linecap="round"/>
+<path d="M 300 500 L 442 500" fill="none" stroke="#005ec4" stroke-width="20" stroke-linecap="round"/>
+<path d="M 300 582 L 412 582" fill="none" stroke="#005ec4" stroke-width="20" stroke-linecap="round"/>
+<path d="M 582 418 L 724 418" fill="none" stroke="#a5d0f8" stroke-width="20" stroke-linecap="round"/>
+<path d="M 582 500 L 724 500" fill="none" stroke="#a5d0f8" stroke-width="20" stroke-linecap="round"/>
+<path d="M 582 582 L 694 582" fill="none" stroke="#a5d0f8" stroke-width="20" stroke-linecap="round"/>
+<path d="M 512 354 L 512 690" fill="none" stroke="#d6ebff" stroke-width="8" stroke-linecap="round"/>
+</svg>

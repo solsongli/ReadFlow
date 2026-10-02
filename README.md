@@ -1,3 +1,5 @@
+> ReadFlow 用户请从[产品介绍与使用说明](docs/readflow/README.md)开始。
+
 # RetainPDF：PDF 保留排版翻译工具
 
 <p align="center">

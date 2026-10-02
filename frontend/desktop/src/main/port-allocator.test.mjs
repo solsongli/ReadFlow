@@ -101,4 +101,18 @@ test("exclude set skips ports", async () => {
     aiServicePort: 41100,
   });
   assert.equal(result.ports.apiPort, 41002);
+  assert.equal(result.ports.jobsPort, 41003);
+  assert.equal(new Set(Object.values(result.ports)).size, 4);
+});
+
+test("coexisting installed backends keep every relocated role distinct without being reclaimed", async () => {
+  const busy = new Set([41000, 41001, 41002, 42000, 41100]);
+  const allocator = createPortAllocator({
+    canConnectToPort: async (_host, port) => busy.has(port),
+    reclaimPortIfOwnResidual: async () => ({ status: "unchanged", occupant: null }),
+    logger: { warn() {} },
+  });
+  const { ports } = await allocator.allocateBackendPorts("127.0.0.1");
+  assert.deepEqual(ports, { apiPort: 41003, simplePort: 42001, jobsPort: 41004, aiServicePort: 41101 });
+  assert.deepEqual([...busy], [41000, 41001, 41002, 42000, 41100]);
 });

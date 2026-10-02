@@ -4,6 +4,7 @@ import "react-pdf/dist/esm/Page/TextLayer.css";
 import { api, pdfUrl } from "./api";
 import { formatDate, readableError, validateNote } from "./model";
 import type { Note, NoteInput, PaperItem } from "./types";
+import { Dialog } from "./Dialog";
 
 pdfjs.GlobalWorkerOptions.workerSrc = "/dist/research-library/pdf.worker.min.mjs";
 const PDF_OPTIONS = { standardFontDataUrl: "/dist/research-library/standard_fonts/", cMapUrl: "/dist/research-library/cmaps/", cMapPacked: true };
@@ -31,6 +32,7 @@ export function PdfReader({ item, jump, onSaved, notify }: {
   const [noteAttachment, setNoteAttachment] = useState(first);
   const [editing, setEditing] = useState<Note | null>(null);
   const [busy, setBusy] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<Note | null>(null);
   useEffect(() => {
     const element = viewport.current;
     if (!element) return;
@@ -80,7 +82,6 @@ export function PdfReader({ item, jump, onSaved, notify }: {
     if (note.attachment_id && note.page_idx !== null) { setAttachmentId(note.attachment_id); setPage(note.page_idx + 1); }
   }
   async function removeNote(note: Note) {
-    if (!window.confirm("删除这条笔记？此操作会从本地文献库移除笔记。")) return;
     setBusy(true);
     try { await api.deleteNote(note.id); if (editing?.id === note.id) clearDraft(); await onSaved(); notify("笔记已删除。"); }
     catch (e) { notify(readableError(e), true); } finally { setBusy(false); }
@@ -89,7 +90,9 @@ export function PdfReader({ item, jump, onSaved, notify }: {
     if (!note.attachment_id || note.page_idx === null) return;
     setAttachmentId(note.attachment_id); setPage(note.page_idx + 1);
   }
-  return <div className="reading-layout"><section className="pdf-column">
+  return <>{removeTarget ? <Dialog title="删除这条笔记？" onClose={() => { if (!busy) setRemoveTarget(null); }}>
+    <p>此操作会从本地文献库移除笔记。</p><div className="note-actions"><button type="button" disabled={busy} onClick={() => setRemoveTarget(null)}>取消</button><button type="button" className="danger" disabled={busy} onClick={async () => { await removeNote(removeTarget); setRemoveTarget(null); }}>{busy ? "处理中…" : "删除"}</button></div>
+  </Dialog> : null}<div className="reading-layout"><section className="pdf-column">
     {item.attachments.length > 0 && <label className="attachment-picker">PDF 附件<select value={attachmentId} onChange={(e) => changeAttachment(e.target.value)}>{item.attachments.map((entry) =>
       <option key={entry.id} value={entry.id}>{entry.filename}{entry.available ? "" : " · 文件缺失"}</option>)}</select></label>}
     {attachment?.available ? <><div className="pdf-toolbar">
@@ -121,9 +124,9 @@ export function PdfReader({ item, jump, onSaved, notify }: {
     <div className="note-list" data-testid="notes-list">{item.notes.length === 0 ? <p className="subtle">笔记会持久保存，刷新或重新启动后仍可查看。</p> : item.notes.map((note) => <article className="saved-note" key={note.id}>
       <div className="note-meta">{note.page_idx === null ? <span>文献笔记</span> : <button className="text-button" onClick={() => jumpNote(note)}>第 {note.page_idx + 1} 页 ↗</button>}<time>{formatDate(note.updated_at)}</time></div>
       {note.quote && <blockquote>{note.quote}</blockquote>}{note.translated_quote && <p className="translated-quote">{note.translated_quote}</p>}{note.body && <p className="note-body">{note.body}</p>}
-      <div className="saved-note-actions"><button className="text-button" disabled={busy} onClick={() => editNote(note)}>编辑</button><button className="text-button danger" disabled={busy} onClick={() => void removeNote(note)}>删除</button></div>
+      <div className="saved-note-actions"><button className="text-button" disabled={busy} onClick={() => editNote(note)}>编辑</button><button className="text-button danger" disabled={busy} onClick={() => setRemoveTarget(note)}>删除</button></div>
     </article>)}</div>
-  </aside></div>;
+  </aside></div></>;
 }
 
 function textStatusHint(status: string): string {

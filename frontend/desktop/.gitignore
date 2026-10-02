@@ -4,3 +4,7 @@ win/
 src/runtime/linux/python/
 src/runtime/linux/typst/
 src/runtime/shared/typst-packages/
+dist-readflow/
+!/build/
+/build/*
+!/build/readflow/

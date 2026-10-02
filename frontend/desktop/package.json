@@ -1,9 +1,9 @@
 {
   "name": "retain-pdf-desktop",
-  "version": "4.2.5",
+  "version": "0.9.0",
   "private": true,
-  "description": "RetainPDF desktop wrapper",
-  "homepage": "https://github.com/wxyhgk/retain-pdf",
+  "description": "ReadFlow research library, bilingual reading and PDF translation desktop application",
+  "homepage": "https://github.com/Lsy-aia/ReadFlow",
   "author": {
     "name": "wxyhgk",
     "email": "wxyhgk@qq.com"
@@ -11,8 +11,8 @@
   "main": "main.js",
   "scripts": {
     "dev": "node scripts/run-local.mjs",
-    "lint": "eslint --max-warnings=0 main.js preload.js src/main scripts/pack-current-asar.mjs scripts/remote-windows.mjs scripts/run-local.mjs scripts/linux-runtime.mjs scripts/linux-runtime.test.mjs",
-    "test": "npm run lint && node --test scripts/runtime-prune.test.mjs scripts/linux-runtime.test.mjs src/main/*.test.mjs",
+    "lint": "eslint --max-warnings=0 main.js preload.js src/main scripts/pack-current-asar.mjs scripts/remote-windows.mjs scripts/run-local.mjs scripts/linux-runtime.mjs scripts/linux-runtime.test.mjs scripts/package-readflow-linux.mjs scripts/package-readflow-linux.test.mjs",
+    "test": "npm run lint && node --test scripts/runtime-prune.test.mjs scripts/linux-runtime.test.mjs src/main/*.test.mjs scripts/package-readflow-linux.test.mjs",
     "sync:win-frontend": "node scripts/sync-win-frontend.mjs",
     "install-git-hooks": "sh scripts/install-git-hooks.sh",
     "smoke:frontend-bundle": "node scripts/check-frontend-bundle.mjs",
@@ -26,7 +26,8 @@
     "dist:win32-installer": "npm run prepare-app && npm run verify:packaging-deps && electron-builder --win nsis --x64 --config.directories.output=win",
     "dist:mac": "RETAIN_PDF_BUNDLE_MAC_PYTHON=1 npm run prepare-app && npm run verify:packaging-deps && RETAIN_PDF_BUNDLE_MAC_PYTHON=1 electron-builder --mac dmg --publish never --config.directories.output=mac",
     "verify:linux-runtime": "node scripts/linux-runtime.mjs --check linux/linux-unpacked --probe-python linux/linux-unpacked/resources/backend/python",
-    "dist:linux": "npm run prepare-app && npm run verify:packaging-deps && electron-builder --linux deb --publish never --config.directories.output=linux && npm run verify:linux-runtime"
+    "dist:linux": "npm run prepare-app && npm run verify:packaging-deps && electron-builder --linux deb --publish never --config.directories.output=linux && npm run verify:linux-runtime",
+    "dist:readflow-linux": "node scripts/package-readflow-linux.mjs"
   },
   "devDependencies": {
     "@electron/asar": "3.4.1",
@@ -35,8 +36,7 @@
     "eslint": "10.8.1"
   },
   "build": {
-    "appId": "com.wxyhgk.retainpdf",
-    "productName": "RetainPDF",
+    "appId": "app.readflow.desktop",
     "electronVersion": "44.4.3",
     "npmRebuild": false,
     "directories": {
@@ -50,7 +50,11 @@
       "preload.js",
       "src/main/**/*",
       "splash.html",
-      "package.json"
+      "package.json",
+      "build/readflow/**/*",
+      "!src/main/**/*.test.mjs",
+      "!assets/RetainPDF-logo.png",
+      "!assets/tray/**/*"
     ],
     "extraResources": [
       {
@@ -74,7 +78,7 @@
           ]
         }
       ],
-      "artifactName": "RetainPDF-Windows-${version}.${ext}"
+      "artifactName": "ReadFlow-Windows-${version}.${ext}"
     },
     "mac": {
       "category": "public.app-category.productivity",
@@ -84,37 +88,39 @@
         "zh_CN",
         "zh_TW"
       ],
-      "artifactName": "RetainPDF-Mac-${version}.${ext}"
+      "artifactName": "ReadFlow-Mac-${version}.${ext}"
     },
     "linux": {
       "target": [
         "deb"
       ],
-      "category": "Utility",
-      "icon": "build/icons",
+      "category": "Office",
+      "icon": "build/readflow",
       "electronLanguages": [
         "en-US",
         "zh-CN",
         "zh-TW"
       ],
-      "maintainer": "wxyhgk <wxyhgk@qq.com>",
+      "maintainer": "Lsy-aia <ZahnenClineman53@outlook.com>",
       "desktop": {
         "entry": {
-          "Name": "RetainPDF",
-          "Comment": "PDF retain-layout translation desktop application",
-          "Categories": "Office;Utility;",
-          "StartupWMClass": "RetainPDF"
+          "Name": "ReadFlow",
+          "Comment": "Research library, bilingual reading and PDF translation",
+          "Categories": "Office;Education;Science;",
+          "StartupWMClass": "ReadFlow"
         }
       },
-      "artifactName": "RetainPDF-Linux-${version}.${ext}"
+      "artifactName": "ReadFlow-Linux-${version}.${ext}",
+      "executableName": "readflow"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "artifactName": "RetainPDF-Windows-${version}-Setup.${ext}",
+      "artifactName": "ReadFlow-Windows-${version}-Setup.${ext}",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "installerHeaderIcon": "build/icon.ico"
     }
-  }
+  },
+  "productName": "ReadFlow"
 }

@@ -16,8 +16,8 @@ export function Chip({ children, onRemove, removeLabel = "移除", title, classN
     <span
       title={title}
       className={cn(
-        "inline-flex max-w-full shrink-0 items-center gap-1 rounded bg-wb-chip text-wb-chip-text",
-        size === "sm" ? "h-5 px-1.5 text-[11.5px]" : "h-6 px-2 text-[12px]",
+        "inline-flex max-w-full shrink-0 items-center gap-1 rounded-full bg-wb-chip text-wb-chip-text",
+        size === "sm" ? "h-5 px-1.5 text-[11.5px]" : "h-[26px] px-2.5 text-[12.5px]",
         onRemove && "pr-0.5",
         className,
       )}
@@ -29,7 +29,7 @@ export function Chip({ children, onRemove, removeLabel = "移除", title, classN
           aria-label={removeLabel}
           title={removeLabel}
           onClick={onRemove}
-          className="inline-flex h-4 w-4 items-center justify-center rounded-sm border-0 bg-transparent text-wb-text-3 hover:bg-wb-line hover:text-wb-text"
+          className="inline-flex h-4 w-4 items-center justify-center rounded-full border-0 bg-transparent text-wb-text-3 hover:bg-wb-line hover:text-wb-text"
         >
           <X size={10} strokeWidth={2.6} aria-hidden="true" />
         </button>

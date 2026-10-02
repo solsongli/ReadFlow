@@ -33,3 +33,8 @@ export type {
   OpenCredentialDialogOptions,
   UpdateCredentialGateViewOptions,
 } from "./domain/view-contracts.js";
+// Additional DOM-free settings adapter; the existing credential flows remain unchanged.
+export { createHeadlessTranslationSettings } from "./domain/headless-translation.js";
+export type { HeadlessTranslationSettings, TranslationDraft, SettingsFeedback } from "./domain/headless-translation.js";
+export { createHeadlessAgentSettings, agentSettingsDraft, agentSettingsPayload, agentRestartPending, agentRuntimeLabel } from "./domain/headless-agent.js";
+export type { HeadlessAgentSettings, AgentSettingsDraft } from "./domain/headless-agent.js";

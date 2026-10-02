@@ -2,13 +2,15 @@
 // 成员增减与删除走 /workbench/groups/*。条目元数据、上传、导入、原阅读器沿用 researchLibraryApi。
 import { buildApiHeaders, buildApiUrl } from "@/platform/config/runtime.js";
 import { ResearchApiError, researchLibraryApi } from "@/platform/api/research-library.js";
-import type { Collection } from "@/platform/contracts/research-library.js";
+import type { Collection, Note } from "@/platform/contracts/research-library.js";
 import type {
   WorkbenchDesk,
   WorkbenchListQuery,
   WorkbenchListResult,
   WorkbenchRow,
   WorkbenchStatePatch,
+  WorkbenchNotesQuery,
+  WorkbenchNotesResult,
 } from "@/platform/contracts/workbench.js";
 
 const ROOT = "/api/research";
@@ -31,6 +33,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     headers: buildApiHeaders({ Accept: "application/json", ...(init.headers as Record<string, string> | undefined) }),
   });
   if (!response.ok) throw new ResearchApiError(await errorMessage(response), response.status);
+  if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 }
 
@@ -49,7 +52,20 @@ export function listQueryParams(query: WorkbenchListQuery): URLSearchParams {
 
 const id = (value: string) => encodeURIComponent(value);
 
+export function notesQueryParams(query: WorkbenchNotesQuery): URLSearchParams {
+  const params = new URLSearchParams({ kind: query.kind ?? "all", limit: String(query.limit ?? 200), offset: String(query.offset ?? 0) });
+  if (query.itemId) params.set("item_id", query.itemId);
+  if (query.query) params.set("q", query.query);
+  return params;
+}
+
 export const workbenchApi = {
+  notes: (query: WorkbenchNotesQuery, signal?: AbortSignal) =>
+    request<WorkbenchNotesResult>("/workbench/notes?" + notesQueryParams(query), { signal }),
+  createNote: (itemId: string, value: { body: string }) => request<Note>("/items/" + id(itemId) + "/notes", send(value)),
+  // Store.update_note synchronizes native reader_annotation.note/quote under its existing validation.
+  updateNote: (noteId: string, body: string) => request<Note>("/notes/" + id(noteId), send({ body }, "PATCH")),
+  deleteNote: (noteId: string) => request<void>("/notes/" + id(noteId), { method: "DELETE" }),
   list: (query: WorkbenchListQuery, signal?: AbortSignal) =>
     request<WorkbenchListResult>("/workbench/items?" + listQueryParams(query), { signal }),
   row: (itemId: string) => request<WorkbenchRow>("/workbench/items/" + id(itemId)),

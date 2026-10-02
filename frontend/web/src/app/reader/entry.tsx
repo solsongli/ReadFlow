@@ -6,6 +6,7 @@
 import "../shell-boot.js";
 import "./adapters/retainpdf.js";
 import { configureNativeReaderAnnotations } from "./adapters/native-library.js";
+import { loadWorkbenchReaderFonts } from "./adapters/workbench.js";
 import { bootReader } from "@retainpdf/reader/boot";
 import { canonicalizeReaderSearch } from "@/platform/navigation/pages.js";
 
@@ -25,5 +26,6 @@ try {
   /* 保持直启，解析失败不拦 boot */
 }
 
+loadWorkbenchReaderFonts();
 configureNativeReaderAnnotations();
 bootReader();

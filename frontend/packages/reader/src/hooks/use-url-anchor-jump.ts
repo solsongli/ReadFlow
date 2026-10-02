@@ -11,6 +11,7 @@
 //   写入的位置会同步标记进 appliedKeyRef，锚点跳转据此识别「这是自己刚写的」，
 //   不会再把写入当成一次待跳锚点，从而杜绝「写 → 跳」回环。
 
+import { useWorkbenchReaderProgress } from "./use-workbench-bridge.js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { resolveReaderAnchor } from "../external.js";
 import { buildReaderPageIdxSearch } from "../shared/config/page-config.js";
@@ -241,4 +242,5 @@ export function useReaderUrlAnchorSync(options: UrlReaderAnchorSyncOptions): voi
   // jump core 在锚点落定后置位 anchorSettled，写回方向才开闸。
   useUrlAnchorJumpCore(jumpOptions, appliedKeyRef, handleSettled);
   useUrlPageSyncCore(options, appliedKeyRef, anchorSettled);
+  useWorkbenchReaderProgress(options.currentPage, options.numPages, anchorSettled && options.syncEnabled);
 }

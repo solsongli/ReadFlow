@@ -44,6 +44,7 @@ export function GroupPicker({ itemIds, children }: { itemIds: string[]; children
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.nativeEvent.isComposing) return;
     if (event.key === "Enter") {
       event.preventDefault();
       if (nodes.length === 1) toggle(nodes[0].id, (members.counts.get(nodes[0].id) ?? 0) < members.total);
@@ -54,8 +55,8 @@ export function GroupPicker({ itemIds, children }: { itemIds: string[]; children
   return (
     <PopoverRoot open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
-      <PopoverContent align="start" className="flex w-[300px] flex-col text-[12.5px]">
-        <label className="flex h-9 items-center gap-2 border-b border-wb-line px-2.5 text-wb-text-3">
+      <PopoverContent align="start" className="flex w-[300px] flex-col p-1.5 text-[13px]">
+        <label className="flex h-8 items-center gap-2 rounded-lg bg-wb-fill px-2.5 text-wb-text-3">
           <Search size={14} aria-hidden="true" />
           <input
             autoFocus
@@ -74,7 +75,7 @@ export function GroupPicker({ itemIds, children }: { itemIds: string[]; children
             const state = count === 0 ? false : count >= members.total ? true : "indeterminate";
             const id = "wb-pick-" + node.id;
             return (
-              <div key={node.id} className="flex h-7 items-center gap-2 rounded-[5px] pr-2 hover:bg-wb-hover" style={{ paddingLeft: 8 + (text ? 0 : node.depth * 18) }}>
+              <div key={node.id} className="flex h-8 items-center gap-2 rounded-lg pr-2 hover:bg-wb-hover" style={{ paddingLeft: 8 + (text ? 0 : node.depth * 18) }}>
                 <Checkbox.Root
                   id={id}
                   checked={state}
@@ -92,9 +93,9 @@ export function GroupPicker({ itemIds, children }: { itemIds: string[]; children
             );
           })}
         </div>
-        <div className="flex h-9 items-center justify-between gap-2 border-t border-wb-line px-2">
+        <div className="flex min-h-9 items-center justify-between gap-2 border-t border-wb-line px-2">
           {text && !exact ? (
-            <button type="button" onClick={() => void create()} className="inline-flex min-w-0 items-center gap-1.5 rounded border-0 bg-transparent px-1.5 py-1 font-medium text-wb-accent hover:bg-wb-accent-soft">
+            <button type="button" onClick={() => void create()} className="inline-flex min-w-0 items-center gap-1.5 rounded-lg border-0 bg-transparent px-1.5 py-1 font-medium text-wb-link hover:bg-wb-accent-soft">
               <Plus size={13} aria-hidden="true" />
               <span className="wb-truncate">新建分组「{text}」并加入</span>
             </button>

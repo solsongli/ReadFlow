@@ -121,6 +121,14 @@ export const THEME_REGISTRY: readonly ThemeDefinition[] = [
     },
   },
   {
+    id: "graphite",
+    label: "石墨",
+    description: "中性深灰 · 工作台阅读",
+    group: "dark",
+    order: 45,
+    preview: { bg: "#1e1e1e", paper: "#2c2c2e", accent: "#0a84ff", ink: "#f5f5f7", danger: "#ff6961" },
+  },
+  {
     id: "night",
     label: "黛瓦夜色",
     description: "深底阅读 · 黛瓦墨黑",

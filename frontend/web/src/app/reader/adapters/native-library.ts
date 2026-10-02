@@ -1,4 +1,5 @@
 /** Native research-library note host. No model calls, credentials, or local-note migration. */
+import { notifyWorkbenchNotesChanged } from "./workbench.js";
 import { getReaderAdapters, setReaderAdapters } from "@retainpdf/reader/adapters";
 import type { ReaderAnnotationScope, ReaderAnnotationsDataPort, ReaderNote } from "@retainpdf/reader/contracts";
 
@@ -24,7 +25,7 @@ export function parseNativeReaderRoute(search: string): NativeRoute | null {
   }
   return { itemId, attachmentId, documentId };
 }
-export function createNativeReaderAnnotationsPort(route: NativeRoute, fetchResource: typeof fetch = fetch): ReaderAnnotationsDataPort {
+export function createNativeReaderAnnotationsPort(route: NativeRoute, fetchResource: typeof fetch = fetch, onChanged: () => void = () => undefined): ReaderAnnotationsDataPort {
   const key = `research:${route.itemId}:${route.attachmentId}:${route.documentId}`;
   function assertScope(scope: ReaderAnnotationScope) {
     if (scope.key !== key || scope.documentId !== route.documentId) throw new Error("批注与当前文献不匹配。");
@@ -90,7 +91,9 @@ export function createNativeReaderAnnotationsPort(route: NativeRoute, fetchResou
     },
     create: async (scope, note, options) => {
       await owned(scope, options?.signal);
-      return view(await request<ServerNote>("/items/" + encodeURIComponent(route.itemId) + "/notes", json(body(note), "POST", options?.signal)));
+      const saved = view(await request<ServerNote>("/items/" + encodeURIComponent(route.itemId) + "/notes", json(body(note), "POST", options?.signal)));
+      onChanged();
+      return saved;
     },
     update: async (scope, note, options) => {
       const item = await owned(scope, options?.signal);
@@ -104,12 +107,15 @@ export function createNativeReaderAnnotationsPort(route: NativeRoute, fetchResou
         value.reader_annotation = { ...original.reader_annotation,
           ...(value.reader_annotation as Record<string, unknown>) };
       }
-      return view(await request<ServerNote>("/notes/" + encodeURIComponent(note.id), json(value, "PATCH", options?.signal)));
+      const saved = view(await request<ServerNote>("/notes/" + encodeURIComponent(note.id), json(value, "PATCH", options?.signal)));
+      onChanged();
+      return saved;
     },
     remove: async (scope, id, options) => {
       const item = await owned(scope, options?.signal);
       if (!item.notes.some((entry) => entry.id === id && matches(entry))) throw new Error("批注不属于当前文献和附件，未删除。");
       await request<void>("/notes/" + encodeURIComponent(id), { method: "DELETE", signal: options?.signal });
+      onChanged();
     },
   };
 }
@@ -119,7 +125,7 @@ export function configureNativeReaderAnnotations(search = globalThis.location?.s
   try {
     const route = parseNativeReaderRoute(search);
     if (!route) return false;
-    setReaderAdapters({ ...current, annotationDataPort: createNativeReaderAnnotationsPort(route) });
+    setReaderAdapters({ ...current, annotationDataPort: createNativeReaderAnnotationsPort(route, fetch, () => notifyWorkbenchNotesChanged(route.itemId)) });
   } catch (error) {
     const unavailable = async (): Promise<never> => { throw error; };
     setReaderAdapters({ ...current, annotationDataPort: {

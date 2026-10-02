@@ -156,7 +156,8 @@ class WorkbenchApiTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([entry["id"] for entry in (await self.rows(view="trash"))["items"]], [old])
         self.assertEqual((await self.ok("GET", ROOT + "/desk"))["recent_annotations"], [])
         await self.ok("POST", ROOT + "/items/restore", json={"item_ids": [old]})
-        self.assertEqual((await self.rows())["counts"], {"all": 2, "unread": 1, "starred": 1, "unfiled": 2, "recent": 1, "trash": 0})
+        self.assertEqual((await self.rows())["counts"], {"all": 2, "unread": 1, "starred": 1, "unfiled": 2, "recent": 1, "trash": 0,
+                                                               "notes": 1, "needs_ocr": 0, "missing_doi": 1, "no_zh_title": 1})
 
     async def test_citekey_pins_are_unique_and_inputs_are_validated(self):
         first = await self.item("Alpha", authors=["Ada Li"], date="2024")
@@ -185,6 +186,88 @@ class WorkbenchApiTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn(response.status_code, (400, 404, 409), f"{method} {path} {kwargs}: {response.text}")
             self.assertIn("error", response.json())
 
+    async def test_dashboard_queries_all_live_pdfs_and_counts_notes_separately(self):
+        from backend.library_mvp.tests.test_store import synthetic_pdf
+        from backend.library_mvp.workbench_translation import TranslationStatus
+        store, added = self.app.state.store, []
+        for index in range(14):
+            added.append(store.add_pdf(synthetic_pdf([f"Dashboard synthetic {index}"]), filename=f"{index}.pdf"))
+        identities = [entry["item"]["id"] for entry in added]
+        digests = [entry["attachment"]["sha256"] for entry in added]
+        await self.item("No attachment")
+        await self.group("Dashboard group")
+        await self.ok("POST", f"/api/research/items/{identities[0]}/notes", json={"quote": "Annotation"})
+        await self.ok("POST", f"/api/research/items/{identities[2]}/notes", json={"body": "Note"})
+        await self.ok("POST", f"/api/research/items/{identities[13]}/notes", json={"body": "Trashed note"})
+        await self.ok("POST", ROOT + "/items/trash", json={"item_ids": [identities[13]]})
+        calls = []
+        def fetch(digest):
+            calls.append(digest)
+            index = digests.index(digest)
+            if index == 4:
+                raise RuntimeError("lookup unavailable")
+            status = {0: "succeeded", 1: "succeeded", 2: "running", 3: "queued", 13: "succeeded"}.get(index)
+            if not status:
+                return []
+            return [{"status": status, "updated_at": "2026-10-01T10:30:00+02:00" if index == 0 else "2026-10-01T09:00:00Z",
+                     "stages": {"translation": {"state": "completed" if status == "succeeded" else "in_progress", "progress": {"percent": 42}}}}]
+        lookup = TranslationStatus(fetch)
+        self.addCleanup(lookup.close)
+        self.app.state.workbench.translations = lookup.states
+        desk = await self.ok("GET", ROOT + "/desk")
+        self.assertEqual(set(calls), set(digests[:13]), "all live PDFs, including ones outside desk preview lists")
+        self.assertEqual(desk["counts"], {"total": 14, "translated": 2, "notes": 1, "annotations": 1, "groups": 1})
+        self.assertEqual(desk["translation"]["queued"], 1)
+        self.assertEqual(desk["translation"]["done"], 2)
+        self.assertEqual(desk["translation"]["running"][0]["item_id"], identities[2])
+        self.assertEqual(desk["translation"]["running"][0]["percent"], 42)
+        self.assertEqual(desk["translation"]["recent_done"]["item_id"], identities[1])
+        self.assertEqual(desk["translation"]["recent_done"]["finished_at"], "2026-10-01T09:00:00Z")
+        self.assertEqual(desk["total"], desk["counts"]["total"], "legacy fields remain available")
+        await self.ok("GET", ROOT + "/desk")
+        self.assertEqual(len(calls), 13, "second desk refresh reuses TTL cache")
+
+    async def test_new_views_counts_first_attachment_and_trash_exclusion(self):
+        from backend.library_mvp.tests.test_store import synthetic_pdf
+        scan = await self.item("Needs OCR")
+        native = await self.item("Native first", doi="10.1/native")
+        note = await self.item("Note type", item_type="note")
+        store = self.app.state.store
+        a = store.add_pdf(synthetic_pdf(["Scan"]), item_id=scan)["attachment"]["id"]
+        b = store.add_pdf(synthetic_pdf(["First native"]), item_id=native)["attachment"]["id"]
+        c = store.add_pdf(synthetic_pdf(["Second scan"]), item_id=native)["attachment"]["id"]
+        with store.transaction():
+            store.db.execute("UPDATE attachments SET text_status='needs_ocr' WHERE id IN (?,?)", (a, c))
+            store.db.execute("UPDATE attachments SET text_status='native_text',created_at='2000-01-01' WHERE id=?", (b,))
+        await self.ok("POST", f"/api/research/items/{scan}/notes", json={"quote": "Annotation alone"})
+        await self.ok("POST", f"/api/research/items/{native}/notes", json={"body": "Note alone"})
+        await self.ok("PATCH", f"{ROOT}/items/{native}/state", json={"title_translated": "原生文字"})
+        for view, wanted in {"notes": {scan, native}, "needs_ocr": {scan}, "missing_doi": {scan}, "no_zh_title": {scan, note}}.items():
+            result = await self.rows(view=view)
+            self.assertEqual({row["id"] for row in result["items"]}, wanted)
+            self.assertEqual(result["counts"][view], len(wanted))
+        filtered = await self.rows(view="notes", query="Native")
+        self.assertEqual([row["id"] for row in filtered["items"]], [native])
+        self.assertEqual(filtered["counts"]["notes"], 2, "counts describe the whole live library")
+        await self.ok("POST", ROOT + "/items/trash", json={"item_ids": [scan]})
+        self.assertEqual((await self.rows(view="needs_ocr"))["total"], 0)
+        self.assertEqual((await self.rows())["counts"]["notes"], 1)
+        with store.transaction():
+            store.db.execute("UPDATE attachments SET text_status='partial_needs_ocr' WHERE id=?", (b,))
+        self.assertEqual((await self.rows(view="needs_ocr"))["items"][0]["id"], native)
+
+    async def test_empty_dashboard_and_translation_lookup_failure_are_safe(self):
+        desk = await self.ok("GET", ROOT + "/desk")
+        self.assertEqual(desk["translation"], {"running": [], "queued": 0, "done": 0, "recent_done": None})
+        self.assertTrue(all(value == 0 for value in desk["counts"].values()))
+        from backend.library_mvp.tests.test_store import synthetic_pdf
+        self.app.state.store.add_pdf(synthetic_pdf(["Unavailable lookup"]))
+        def fail(_):
+            raise RuntimeError("bridge down")
+        self.app.state.workbench.translations = fail
+        self.assertEqual((await self.ok("GET", ROOT + "/desk"))["counts"]["translated"], 0)
+        self.assertEqual((await self.rows())["items"][0]["translation"]["status"], "unknown")
+
 
 class TranslationStatusTests(unittest.TestCase):
     def test_job_history_summaries(self):
@@ -195,9 +278,13 @@ class TranslationStatusTests(unittest.TestCase):
                    "stages": {"translation": {"state": "in_progress", "progress": {"percent": 62.4}}}}
         ocr_only = {"job_id": "j3", "workflow": "ocr", "status": "succeeded", "stages": {"translation": {"state": "skipped"}}}
         skipped = {"job_id": "j4", "workflow": "book", "status": "succeeded", "stages": {"translation": {"state": "skipped"}}}
-        self.assertEqual(summarize_jobs([]), {"status": "none", "job_id": None, "percent": None})
+        self.assertEqual(summarize_jobs([]), {"status": "none", "job_id": None, "percent": None, "updated_at": None})
         self.assertEqual(summarize_jobs([done])["status"], "done")
-        self.assertEqual(summarize_jobs([running, done]), {"status": "running", "job_id": "j2", "percent": 62})
+        self.assertEqual(summarize_jobs([{**done, "updated_at": "2026-10-01T08:00:00Z"}])["updated_at"], "2026-10-01T08:00:00Z")
+        running["stages"]["translation"]["progress"]["percent"] = float("nan")
+        self.assertIsNone(summarize_jobs([running])["percent"])
+        running["stages"]["translation"]["progress"]["percent"] = 62.4
+        self.assertEqual(summarize_jobs([running, done]), {"status": "running", "job_id": "j2", "percent": 62, "updated_at": None})
         self.assertEqual(summarize_jobs([ocr_only, done])["job_id"], "j1", "OCR-only runs are skipped")
         self.assertEqual(summarize_jobs([skipped])["status"], "none")
         self.assertEqual(summarize_jobs([{"job_id": "q", "status": "queued"}])["status"], "queued")
@@ -225,6 +312,16 @@ class TranslationStatusTests(unittest.TestCase):
             self.assertEqual(calls.count("a"), 2)
         finally:
             status.close()
+
+    def test_recent_done_requires_a_valid_timestamp_and_ignores_unknown(self):
+        from backend.library_mvp.workbench_translation import desk_summary
+        row = {"id": "a", "attachment_id": "pdf", "notes_count": 2, "annotations_count": 1,
+               "translation": {"status": "done", "updated_at": "not-a-date"}}
+        summary = desk_summary([row], 0)
+        self.assertEqual(summary["counts"]["translated"], 1)
+        self.assertIsNone(summary["translation"]["recent_done"])
+        row["translation"] = {"status": "unknown", "updated_at": "2026-10-01T09:00:00Z"}
+        self.assertEqual(desk_summary([row], 0)["counts"]["translated"], 0)
 
     def test_rows_carry_document_id_and_translation(self):
         from backend.library_mvp.tests.test_store import synthetic_pdf

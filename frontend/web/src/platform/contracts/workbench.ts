@@ -1,6 +1,6 @@
 // ReadFlow 工作台读模型（/api/research/workbench/*）。字段名与 backend/library_mvp/workbench.py 一致。
 
-export type WorkbenchView = "all" | "unread" | "starred" | "unfiled" | "recent" | "trash";
+export type WorkbenchView = "all" | "unread" | "starred" | "unfiled" | "recent" | "trash" | "notes" | "needs_ocr" | "missing_doi" | "no_zh_title";
 export type WorkbenchSort = "added" | "title" | "year" | "author" | "venue" | "opened";
 export type SortOrder = "asc" | "desc";
 export type ReadStatus = "unread" | "reading" | "read";
@@ -19,6 +19,7 @@ export interface TranslationState {
   status: "none" | "queued" | "running" | "done" | "failed" | "unknown";
   job_id?: string | null;
   percent?: number | null;
+  updated_at?: string | null;
 }
 
 export interface WorkbenchRow {
@@ -77,6 +78,10 @@ export interface WorkbenchCounts {
   unfiled: number;
   recent: number;
   trash: number;
+  notes: number;
+  needs_ocr: number;
+  missing_doi: number;
+  no_zh_title: number;
 }
 
 export interface WorkbenchListResult {
@@ -111,7 +116,43 @@ export interface WorkbenchNote {
   color: string;
 }
 
+export type WorkbenchNoteKind = "all" | "notes" | "annotations";
+export interface WorkbenchNoteRecord extends WorkbenchNote {
+  item_title_translated: string;
+  kind: "note" | "annotation";
+}
+export interface WorkbenchNotesQuery {
+  itemId?: string | null;
+  query?: string;
+  kind?: WorkbenchNoteKind;
+  limit?: number;
+  offset?: number;
+}
+export interface WorkbenchNotesResult {
+  items: WorkbenchNoteRecord[];
+  total: number;
+  /** Counts for the paper/search filter, before the kind filter; all units are records. */
+  counts: { total: number; notes: number; annotations: number };
+}
+
+export interface DeskCounts {
+  total: number;
+  translated: number;
+  notes: number;
+  annotations: number;
+  groups: number;
+}
+
+export interface DeskTranslation {
+  running: Array<{ item_id: string; title: string; title_translated: string; percent: number | null }>;
+  queued: number;
+  done: number;
+  recent_done: { item_id: string; title: string; finished_at: string } | null;
+}
+
 export interface WorkbenchDesk {
+  counts?: DeskCounts;
+  translation?: DeskTranslation;
   continue_reading: WorkbenchRow[];
   to_read: WorkbenchRow[];
   recent_items: WorkbenchRow[];

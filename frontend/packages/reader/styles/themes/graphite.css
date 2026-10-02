@@ -1,0 +1,25 @@
+/* Graphite: neutral macOS dark chrome. PDF sheets retain their original white background. */
+[data-reader-theme][data-theme="graphite"] {
+  --bg: #1e1e1e;
+  --paper: #2c2c2e;
+  --surface: #2a2a2c;
+  --ink: #f5f5f7;
+  --muted: #a1a1a6;
+  --line: rgba(255, 255, 255, 0.08);
+  --accent: #0a84ff;
+  --accent-weak: rgba(10, 132, 255, 0.16);
+  --selection: rgba(10, 132, 255, 0.16);
+  --danger: #ff6961;
+  --danger-weak: rgba(255, 69, 58, 0.14);
+  --ok: #30d158;
+  --ok-weak: rgba(48, 209, 88, 0.14);
+  --warn: #ffb340;
+  --warn-weak: rgba(255, 159, 10, 0.14);
+  --gold: #ffd60a;
+  --gold-weak: rgba(255, 214, 10, 0.14);
+  --chrome: #2a2a2c;
+  --reader-page: #ffffff;
+  --shadow-color: #000000;
+  --btn-primary-bg: var(--accent);
+  --btn-primary-fg: #101014;
+}

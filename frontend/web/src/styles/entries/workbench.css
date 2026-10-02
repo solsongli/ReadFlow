@@ -11,6 +11,17 @@
 @source "../../ui/wb/**/*.{ts,tsx}";
 
 @theme inline {
+  --color-wb-desk-bg: var(--wb-desk-bg);
+  --color-wb-desk-card: var(--wb-desk-card);
+  --color-wb-desk-inset: var(--wb-desk-inset);
+  --color-wb-on-tool: var(--wb-on-tool);
+  --color-wb-tool-translate: var(--wb-tool-translate);
+  --color-wb-tool-ai: var(--wb-tool-ai);
+  --color-wb-tool-import: var(--wb-tool-import);
+  --color-wb-tool-ocr: var(--wb-tool-ocr);
+  --color-wb-tool-notes: var(--wb-tool-notes);
+  --color-wb-tool-glossary: var(--wb-tool-glossary);
+  --shadow-wb-card: var(--wb-shadow-card);
   --color-wb-bg: var(--wb-bg);
   --color-wb-chrome: var(--wb-chrome);
   --color-wb-chrome-line: var(--wb-chrome-line);
@@ -19,6 +30,9 @@
   --color-wb-panel-2: var(--wb-panel-2);
   --color-wb-panel-3: var(--wb-panel-3);
   --color-wb-hover: var(--wb-hover);
+  --color-wb-selected: var(--wb-selected);
+  --color-wb-fill: var(--wb-fill);
+  --color-wb-sticky: var(--wb-sticky);
   --color-wb-line: var(--wb-line);
   --color-wb-line-soft: var(--wb-line-soft);
   --color-wb-line-strong: var(--wb-line-strong);
@@ -28,6 +42,7 @@
   --color-wb-text-4: var(--wb-text-4);
   --color-wb-chip: var(--wb-chip);
   --color-wb-chip-text: var(--wb-chip-text);
+  --color-wb-link: var(--wb-link);
   --color-wb-accent: var(--wb-accent);
   --color-wb-accent-hover: var(--wb-accent-hover);
   --color-wb-on-accent: var(--wb-on-accent);
@@ -52,10 +67,27 @@
   --color-wb-tag-6: var(--wb-tag-6);
   --color-wb-tag-7: var(--wb-tag-7);
   --shadow-wb-pop: var(--wb-shadow-pop);
-  --font-wb-sans: "IBM Plex Sans", "Noto Sans SC", "Noto Sans CJK SC", "Source Han Sans SC", "PingFang SC",
+  --font-wb-sans: "Inter", "Noto Sans CJK SC", "Source Han Sans SC", "PingFang SC",
     "Microsoft YaHei", system-ui, sans-serif;
   --font-wb-mono: "IBM Plex Mono", "JetBrains Mono", "Cascadia Mono", "DejaVu Sans Mono", ui-monospace, monospace;
   --font-wb-serif: "Source Serif 4", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", Georgia, serif;
+}
+
+/* URLs resolve from dist/css/workbench.css in both web and copied preview assets.
+ * Keep these relative to the built CSS; the CLI preserves entry-owned URLs. */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../../src/assets/fonts/inter/InterVariable.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../../src/assets/fonts/inter/InterVariable-Italic.woff2") format("woff2");
 }
 
 @layer base {
@@ -71,7 +103,7 @@
     background: var(--wb-bg);
     color: var(--wb-text);
     font-family: var(--font-wb-sans);
-    font-size: 12.5px;
+    font-size: 13px;
     line-height: 1.45;
     -webkit-font-smoothing: antialiased;
   }
@@ -91,6 +123,11 @@
   :focus-visible {
     outline: 2px solid var(--wb-accent-line);
     outline-offset: 1px;
+  }
+
+  h1,
+  h2 {
+    letter-spacing: -0.02em;
   }
 
   ::selection {
@@ -113,7 +150,36 @@
   }
 
   .wb-numeric {
-    font-family: var(--font-wb-mono);
     font-variant-numeric: tabular-nums;
   }
+}
+
+@layer components {
+  .wb-transition {
+    transition: background-color 150ms, color 150ms, opacity 150ms;
+  }
+  .wb-info-row + .wb-info-row::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 14px;
+    height: 1px;
+    background: var(--wb-line);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Higher specificity than outline-none, including portalled menus and input controls. */
+@layer utilities {
+  :root :focus-visible { outline: 2px solid var(--wb-link); outline-offset: 2px; }
 }

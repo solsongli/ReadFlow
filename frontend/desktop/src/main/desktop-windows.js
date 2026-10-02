@@ -1,6 +1,9 @@
 const fs = require("fs");
 const path = require("path");
 const { BrowserWindow, Menu, Tray, dialog, nativeImage, shell } = require("electron");
+const { PRODUCT_NAME, resolveBrandIcon } = require("./brand");
+const { resolveStartPage } = require("./desktop-startup");
+const { appVersionArguments } = require("./app-version");
 
 function createDesktopWindows(app, options = {}) {
   const appRoot = options.appRoot || process.cwd();
@@ -16,28 +19,18 @@ function createDesktopWindows(app, options = {}) {
   let closeToTrayHintShown = false;
 
   function resolveWindowIcon() {
-    return path.join(appRoot, "assets", "RetainPDF-logo.png");
+    return resolveBrandIcon(appRoot);
   }
 
   /**
    * Menu bar / system tray icon.
    * Issue #76: using the 1024² window logo made the macOS menu-bar glyph huge.
-   * Prefer dedicated trayTemplate assets (16 + @2x 32); fall back to a resized logo.
+   * Use the small brand artwork; avoid loading a 1024² menu-bar glyph.
    * On macOS, template images follow light/dark menu bar automatically.
    */
   function resolveTrayIcon() {
-    const trayDir = path.join(appRoot, "assets", "tray");
-    const templatePath = path.join(trayDir, "trayTemplate.png");
-    if (process.platform === "darwin" && fs.existsSync(templatePath)) {
-      // Path must end with "Template.png" so Electron also picks @2x for retina.
-      return templatePath;
-    }
-
-    const logoPath = resolveWindowIcon();
-    let image = nativeImage.createFromPath(logoPath);
-    if (image.isEmpty() && fs.existsSync(templatePath)) {
-      image = nativeImage.createFromPath(templatePath);
-    }
+    const logoPath = resolveBrandIcon(appRoot, process.platform === "darwin" ? 32 : 16);
+    const image = nativeImage.createFromPath(logoPath);
     if (image.isEmpty()) {
       return logoPath;
     }
@@ -90,7 +83,7 @@ function createDesktopWindows(app, options = {}) {
     if (process.platform === "win32" && typeof tray.displayBalloon === "function") {
       tray.displayBalloon({
         iconType: "info",
-        title: "RetainPDF 正在后台运行",
+        title: `${PRODUCT_NAME} 正在后台运行`,
         content: "窗口已隐藏到系统托盘，本地 API 仍可继续使用。右键托盘图标可退出。",
       });
     }
@@ -111,7 +104,7 @@ function createDesktopWindows(app, options = {}) {
         /* ignore */
       }
     }
-    tray.setToolTip("RetainPDF");
+    tray.setToolTip(PRODUCT_NAME);
     tray.setContextMenu(
       Menu.buildFromTemplate([
         {
@@ -147,6 +140,7 @@ function createDesktopWindows(app, options = {}) {
     logDesktop(`[desktop] creating main window frontendRoot=${frontendRoot}`);
 
     mainWindow = new BrowserWindow({
+      title: PRODUCT_NAME,
       width: 1480,
       height: 960,
       minWidth: 1200,
@@ -156,15 +150,16 @@ function createDesktopWindows(app, options = {}) {
       icon: resolveWindowIcon(),
       webPreferences: {
         preload: path.join(appRoot, "preload.js"),
+        additionalArguments: appVersionArguments(app, { offlinePreview: options.offlinePreview }),
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: false,
       },
     });
 
-    // Only known entry pages are accepted; a build without workbench.html keeps index.html.
-    const requestedStart = ["index.html", "workbench.html"].includes(options.startPage) ? options.startPage : "index.html";
-    const startPage = fs.existsSync(path.join(frontendRoot, requestedStart)) ? requestedStart : "index.html";
+    // Keep legacy page titles from overriding the desktop product identity.
+    mainWindow.on("page-title-updated", (event) => event.preventDefault());
+    const startPage = resolveStartPage({ frontendRoot, isPackaged: app.isPackaged, startPage: options.startPage });
     const indexPath = path.join(frontendRoot, startPage);
     const frontendBaseUrl = typeof options.getFrontendBaseUrl === "function"
       ? options.getFrontendBaseUrl()
@@ -195,13 +190,13 @@ function createDesktopWindows(app, options = {}) {
     mainWindow.webContents.on("did-fail-load", (_event, errorCode, errorDescription, validatedURL) => {
       const detail = `code=${errorCode} url=${validatedURL || "unknown"} error=${errorDescription || "unknown"}`;
       logDesktopError(`[desktop] renderer load failed: ${detail}`);
-      dialog.showErrorBox("RetainPDF 页面加载失败", detail);
+      dialog.showErrorBox(`${PRODUCT_NAME} 页面加载失败`, detail);
     });
 
     mainWindow.webContents.on("render-process-gone", (_event, details) => {
       const detail = `reason=${details?.reason || "unknown"} exitCode=${details?.exitCode ?? "unknown"}`;
       logDesktopError(`[desktop] renderer process gone: ${detail}`);
-      dialog.showErrorBox("RetainPDF 渲染进程异常退出", detail);
+      dialog.showErrorBox(`${PRODUCT_NAME} 渲染进程异常退出`, detail);
     });
 
     mainWindow.webContents.once("did-finish-load", () => {

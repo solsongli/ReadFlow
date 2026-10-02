@@ -1,159 +1,116 @@
-import { useRef, useState, type ChangeEvent } from "react";
-import { ChevronDown, ChevronRight, Download, X } from "lucide-react";
-import type { ImportPayload, ImportPlan } from "@/platform/contracts/research-library.js";
-import { Button } from "@/ui/wb/Button.js";
-import { MenuContent, MenuItem, MenuRoot, MenuSeparator, MenuTrigger, PopoverAnchor, PopoverContent, PopoverRoot } from "@/ui/wb/Menu.js";
-import { Segmented } from "@/ui/wb/Segmented.js";
+import { useEffect, useState } from "react";
+import { ServiceBanner } from "../shell/ServiceBanner.js";
+import { ArrowDownWideNarrow, LayoutList, Search, X } from "lucide-react";
+import type { SortOrder, WorkbenchSort } from "@/platform/contracts/workbench.js";
+import { cn } from "@/ui/lib/utils.js";
+import { IconButton } from "@/ui/wb/Button.js";
+import { MenuContent, MenuLabel, MenuRadioGroup, MenuRadioItem, MenuRoot, MenuSeparator, MenuTrigger } from "@/ui/wb/Menu.js";
 import { groupLabel } from "../../domain/groups.js";
+import { SORT_OPTIONS, sortLabel } from "../../domain/presentation.js";
+import { librarySubtitle } from "../../domain/library-presentation.js";
 import type { Density, ListLayout } from "../../domain/workbench-store.js";
-import { openPdfPicker } from "../import/pdf-picker.js";
 import { useWb, useWorkbench } from "../context.js";
+import { ImportMenu } from "../import/ImportMenu.js";
+import { TaskProgress } from "../shell/TaskProgress.js";
 
-const VIEW_TITLE = { all: "全部文献", unread: "待读", starred: "星标", recent: "最近阅读", unfiled: "未分组", trash: "回收站" } as const;
+const VIEW_TITLE = { all: "全部文献", unread: "待读", starred: "星标", recent: "最近阅读", unfiled: "未分组", trash: "回收站", notes: "有笔记的文献", needs_ocr: "需要 OCR", missing_doi: "缺少 DOI", no_zh_title: "没有中文题名" } as const;
 
-/** CSL JSON array, or Zotero Web API items (array of {key, data}). */
-function payloadOf(text: string, fileName: string): ImportPayload {
-  const data = JSON.parse(text);
-  const items = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : null;
-  if (!items) throw new Error("文件里没有文献条目：需要 CSL JSON 数组或 Zotero 导出的条目列表。");
-  const zotero = items.some((entry: Record<string, unknown>) => entry && typeof entry === "object" && "data" in entry && "key" in entry);
-  return { format: zotero ? "zotero-api" : "csl-json", source_id: "file:" + fileName, data: items, collections: zotero ? data?.collections ?? [] : undefined };
+function SortMenu() {
+  const wb = useWorkbench();
+  const sort = useWb((state) => state.sort);
+  const order = useWb((state) => state.order);
+  return (
+    <MenuRoot>
+      <MenuTrigger asChild>
+        <IconButton label="排序" title={`排序：${sortLabel(sort)} · ${order === "asc" ? "升序" : "降序"}`}>
+          <ArrowDownWideNarrow size={17} strokeWidth={1.7} aria-hidden="true" />
+        </IconButton>
+      </MenuTrigger>
+      <MenuContent align="end">
+        <MenuLabel>排序方式</MenuLabel>
+        <MenuRadioGroup value={sort} onValueChange={(value) => wb.setPrefs({ sort: value as WorkbenchSort })}>
+          {SORT_OPTIONS.map((option) => <MenuRadioItem key={option.value} value={option.value}>{option.label}</MenuRadioItem>)}
+          {sort === "opened" ? <MenuRadioItem value="opened">最近阅读</MenuRadioItem> : null}
+        </MenuRadioGroup>
+        <MenuSeparator />
+        <MenuRadioGroup value={order} onValueChange={(value) => wb.setPrefs({ order: value as SortOrder })}>
+          <MenuRadioItem value="asc">升序</MenuRadioItem>
+          <MenuRadioItem value="desc">降序</MenuRadioItem>
+        </MenuRadioGroup>
+      </MenuContent>
+    </MenuRoot>
+  );
 }
 
-function JsonImport() {
+function DisplayMenu() {
   const wb = useWorkbench();
-  const input = useRef<HTMLInputElement>(null);
-  const [pending, setPending] = useState<{ payload: ImportPayload; plan: ImportPlan; name: string } | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function onFile(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    try {
-      const payload = payloadOf(await file.text(), file.name);
-      setPending({ payload, plan: await wb.api.previewImport(payload), name: file.name });
-    } catch (error) {
-      wb.notify(error instanceof Error ? error.message : "无法读取这个文件。", "error");
-    }
-  }
-
-  async function commit() {
-    if (!pending) return;
-    setBusy(true);
-    try {
-      const result = await wb.api.commitImport(pending.payload, pending.plan.plan_hash);
-      wb.notify(`导入完成：新增 ${result.created_items} 篇，更新 ${result.updated_items} 篇`, "success");
-      setPending(null);
-      await wb.refreshAll();
-    } catch (error) {
-      wb.notify(error instanceof Error ? error.message : "导入失败。", "error");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const counts = pending?.plan.counts;
+  const layout = useWb((state) => state.layout);
+  const density = useWb((state) => state.density);
   return (
-    <PopoverRoot open={Boolean(pending)} onOpenChange={(open) => !open && setPending(null)}>
-      <PopoverAnchor asChild>
-        <span>
-          <input ref={input} type="file" hidden accept=".json,application/json" onChange={onFile} />
-          <MenuRoot>
-            <MenuTrigger asChild>
-              <Button variant="primary" icon={<Download size={13} aria-hidden="true" />}>
-                导入
-                <ChevronDown size={12} strokeWidth={2.4} aria-hidden="true" />
-              </Button>
-            </MenuTrigger>
-            <MenuContent align="end">
-              <MenuItem onSelect={openPdfPicker}>PDF 文件…</MenuItem>
-              <MenuItem onSelect={() => { if (input.current) { input.current.value = ""; input.current.click(); } }}>Zotero / CSL JSON…</MenuItem>
-              <MenuSeparator />
-              <MenuItem disabled>浏览器 Zotero Connector 保存会自动出现在这里</MenuItem>
-            </MenuContent>
-          </MenuRoot>
-        </span>
-      </PopoverAnchor>
-      <PopoverContent align="end" className="w-[340px] p-3.5 text-[12.5px]">
-        <p className="m-0 font-semibold">导入预览 · {pending?.name}</p>
-        {counts ? (
-          <p className="m-0 mt-1.5 text-wb-text-2">
-            {counts.items} 篇文献 · {counts.collections} 个分组 · {counts.tags} 个标签 · {counts.notes + counts.annotations} 条笔记
-          </p>
-        ) : null}
-        {pending?.plan.warnings.length ? (
-          <ul className="m-0 mt-2 max-h-28 list-disc overflow-auto pl-4 text-[12px] text-wb-warn">
-            {pending.plan.warnings.slice(0, 8).map((warning, index) => <li key={index}>{warning.message}</li>)}
-          </ul>
-        ) : null}
-        <p className="m-0 mt-2 text-[12px] text-wb-text-3">重复导入同一来源不会产生重复条目；导入后可在批次记录里回滚。</p>
-        <div className="mt-3 flex justify-end gap-1.5">
-          <Button size="sm" variant="ghost" onClick={() => setPending(null)}>取消</Button>
-          <Button size="sm" variant="primary" disabled={busy} onClick={() => void commit()}>{busy ? "导入中…" : "确认导入"}</Button>
-        </div>
-      </PopoverContent>
-    </PopoverRoot>
+    <MenuRoot>
+      <MenuTrigger asChild>
+        <IconButton label="显示" title="显示：列表 / 按分组，双语 / 紧凑">
+          <LayoutList size={17} strokeWidth={1.7} aria-hidden="true" />
+        </IconButton>
+      </MenuTrigger>
+      <MenuContent align="end">
+        <MenuLabel>排列方式</MenuLabel>
+        <MenuRadioGroup value={layout} onValueChange={(value) => wb.setPrefs({ layout: value as ListLayout })}>
+          <MenuRadioItem value="list">列表</MenuRadioItem>
+          <MenuRadioItem value="grouped" title="同一篇文献会出现在每个所属分组下">按分组</MenuRadioItem>
+        </MenuRadioGroup>
+        <MenuSeparator />
+        <MenuLabel>行密度</MenuLabel>
+        <MenuRadioGroup value={density} onValueChange={(value) => wb.setPrefs({ density: value as Density })}>
+          <MenuRadioItem value="bilingual">双语</MenuRadioItem>
+          <MenuRadioItem value="compact">紧凑</MenuRadioItem>
+        </MenuRadioGroup>
+      </MenuContent>
+    </MenuRoot>
   );
 }
 
 export function LibraryHeader() {
   const wb = useWorkbench();
-  const view = useWb((state) => state.view);
-  const groupId = useWb((state) => state.groupId);
-  const tag = useWb((state) => state.tag);
-  const query = useWb((state) => state.query);
-  const groups = useWb((state) => state.list.result?.groups ?? []);
-  const total = useWb((state) => state.list.result?.total ?? null);
-  const layout = useWb((state) => state.layout);
-  const density = useWb((state) => state.density);
-
-  const title = groupId ? groupLabel(groups, groupId) : tag ? `#${tag}` : VIEW_TITLE[view];
-  const crumb = groupId ? "分组" : tag ? "标签" : "文献库";
+  const state = useWb((value) => value);
+  const { main, view, groupId, tag, query, list } = state;
+  const desk = main === "desk";
+  const [search, setSearch] = useState(query);
+  const [composing, setComposing] = useState(false);
+  useEffect(() => setSearch(query), [query]);
+  useEffect(() => { if (search === query || composing) return; const timer = setTimeout(() => wb.setQuery(search), 180); return () => clearTimeout(timer); }, [search, query, composing, wb]);
+  const filtered = Boolean(groupId || tag || query);
+  const subtitle = librarySubtitle({ view, group: groupId ? groupLabel(list.result?.groups ?? [], groupId) : null, tag, query,
+    total: list.result?.total ?? (view === "all" && !filtered ? state.desk.data?.total : undefined), unread: list.result?.counts.unread });
   return (
-    <>
-      <div className="flex h-11 shrink-0 items-center gap-2 border-b border-wb-line px-3.5">
-        <span className="text-wb-text-3">{crumb}</span>
-        <ChevronRight size={12} strokeWidth={2.2} aria-hidden="true" className="text-wb-text-3" />
-        <h1 className="m-0 min-w-0 wb-truncate text-[13.5px] font-semibold">{title}</h1>
-        <span className="wb-numeric rounded bg-wb-chip px-1.5 text-[11.5px] leading-[18px] text-wb-text-2">{total ?? "…"}</span>
-        <span className="flex-1" />
-        <Segmented<ListLayout>
-          label="排列方式"
-          value={layout}
-          onChange={(value) => wb.setPrefs({ layout: value })}
-          options={[{ value: "list", label: "列表" }, { value: "grouped", label: "按分组", title: "按分组分段显示；一篇文献会出现在它所属的每个分组下" }]}
-        />
-        <Segmented<Density>
-          label="行密度"
-          value={density}
-          onChange={(value) => wb.setPrefs({ density: value })}
-          options={[{ value: "bilingual", label: "双语", title: "第二行显示中文题名" }, { value: "compact", label: "紧凑" }]}
-        />
-        <JsonImport />
-      </div>
-      {groupId || tag || query ? (
-        <div className="flex h-9 shrink-0 items-center gap-1.5 border-b border-wb-line bg-wb-panel-2 px-3.5">
-          {[groupId && ["分组", "包含", groupLabel(groups, groupId), () => wb.browse({ view, tag, query })],
-            tag && ["标签", "是", tag, () => wb.browse({ view, groupId, query })],
-            query && ["搜索", "", `“${query}”`, () => wb.browse({ view, groupId, tag })]]
-            .filter(Boolean)
-            .map((entry) => {
-              const [key, op, value, clear] = entry as [string, string, string, () => void];
-              return (
-                <span key={key} className="inline-flex h-6 items-center gap-1.5 rounded-[5px] border border-wb-line-strong bg-wb-panel pl-2 pr-0.5 text-[12px]">
-                  <span className="text-wb-text-3">{key}</span>
-                  {op ? <span className="text-wb-text-3">{op}</span> : null}
-                  <span className="max-w-[260px] wb-truncate">{value}</span>
-                  <button type="button" aria-label={`移除${key}条件`} onClick={clear} className="inline-flex h-4 w-4 items-center justify-center rounded-sm border-0 bg-transparent text-wb-text-3 hover:bg-wb-hover">
-                    <X size={10} strokeWidth={2.6} aria-hidden="true" />
-                  </button>
-                </span>
-              );
-            })}
-          <span className="flex-1" />
-          <span className="wb-numeric text-[11.5px] text-wb-text-3">{total ?? "…"} 篇</span>
+    <><header className={cn("flex h-[52px] shrink-0 items-center gap-1.5 px-4 pl-[22px]", desk ? "bg-wb-desk-bg" : "border-b border-wb-line-soft")} aria-label="工作台工具栏">
+      <div className="flex min-w-0 flex-1 flex-col">{!desk ? <>
+        <h1 className="m-0 wb-truncate text-[15px] font-semibold">{desk ? "书桌" : groupId || tag ? "文献库" : VIEW_TITLE[view]}</h1>
+        <div className="flex min-w-0 items-center gap-1 text-[11.5px] text-wb-text-3">
+          <span className="wb-truncate" title={subtitle || undefined}>
+            {subtitle}
+          </span>
+          {!desk && filtered ? <IconButton label="清除筛选" size="xs" onClick={() => wb.browse({ query: "" })}><X size={11} aria-hidden="true" /></IconButton> : null}
         </div>
-      ) : null}
-    </>
+      </> : null}</div>
+      <TaskProgress />
+      {!desk ? <><SortMenu /><DisplayMenu /></> : null}
+      {!desk ? <ImportMenu /> : null}
+      <label className="ml-1 flex h-7 w-[clamp(120px,17vw,220px)] shrink-0 items-center gap-1.5 rounded-lg bg-wb-fill px-2.5 text-wb-text-3" title="搜索当前列表（/）；命令面板（Ctrl K）">
+        <Search size={14} aria-hidden="true" />
+        <input
+          data-wb-search
+          type="search"
+          aria-label="搜索文献"
+          placeholder="搜索"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          onCompositionStart={() => setComposing(true)}
+          onCompositionEnd={(event) => { setComposing(false); setSearch(event.currentTarget.value); }}
+          onKeyDown={(event) => { if (event.key === "Escape") { setSearch(""); wb.setQuery(""); event.currentTarget.blur(); } }}
+          className="h-full min-w-0 flex-1 border-0 bg-transparent text-[13px] text-wb-text outline-none placeholder:text-wb-text-3"
+        />
+      </label>
+    </header><ServiceBanner /></>
   );
 }

@@ -4,6 +4,7 @@
 // 2) 独立 reader.html 且从主页 assign 进来 → history.back
 // 3) 深链直达 → location.assign(index.html)
 
+import { parseWorkbenchEmbed } from "../../domain/workbench-embed.js";
 import { X } from "lucide-react";
 import { SOFT_READER_CLOSE_MESSAGE } from "../../shared/navigation/soft-reader.js";
 
@@ -68,6 +69,7 @@ export function navigateReaderToHome() {
 }
 
 export function ReaderCloseHome({ onBeforeClose }: { onBeforeClose?: () => void } = {}) {
+  if (parseWorkbenchEmbed(globalThis.window?.location?.search || "")) return null;
   const close = () => {
     onBeforeClose?.();
     navigateReaderToHome();

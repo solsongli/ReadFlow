@@ -60,6 +60,10 @@ function buildBackendEnv(options = {}) {
     // Normal desktop installs are explicit actions after the pinned manifest
     // preview. A managed host/isolated launcher can still disable downloads.
     RETAIN_PDF_ALLOW_OCR_DOWNLOAD: process.env.RETAIN_PDF_ALLOW_OCR_DOWNLOAD === "0" ? "0" : "1",
+    // Permit user-configured, explicitly submitted requests. This starts no
+    // model calls; the service still requires saved settings and a POST action.
+    // The preview launcher explicitly passes 0 unless the user opts in.
+    RETAIN_PDF_ALLOW_EXTERNAL_MODELS: process.env.RETAIN_PDF_ALLOW_EXTERNAL_MODELS === "0" ? "0" : "1",
     RUST_API_SCRIPTS_DIR: selectedScriptsDir,
     RUST_API_PYTHON_ENTRYPOINT_MODE: entrypointMode,
     ...(pipelineCommand ? { RUST_API_PIPELINE_COMMAND: pipelineCommand } : {}),

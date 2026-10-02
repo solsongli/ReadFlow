@@ -2,12 +2,20 @@
 import type { WorkbenchApi } from "@/platform/api/workbench.js";
 import type { ReadStatus, WorkbenchRow, WorkbenchStatePatch } from "@/platform/contracts/workbench.js";
 import type { ItemInput } from "@/platform/contracts/research-library.js";
+import { createSettingsNavigation } from "./settings-navigation.js";
+import type { SettingsServices } from "./settings-services.js";
+import { createReaderSync } from "./reader-sync.js";
+import { createNotesController } from "./notes-controller.js";
+import { createReaderActions, type ReaderTarget } from "./reader-actions.js";
+import { createServiceRecovery } from "./service-recovery.js";
+import { createPdfImporter } from "./pdf-import.js";
 import { localMidnightIso } from "../domain/format.js";
 import {
   createWorkbenchStore,
   DEFAULT_PREFS,
   LIBRARY_TAB,
   prefsOf,
+  rangeSelection,
   type MainView,
   type Notice,
   type Prefs,
@@ -16,6 +24,7 @@ import {
 
 export interface WorkbenchEnv {
   api: WorkbenchApi;
+  createSettingsServices?: () => SettingsServices;
   storage?: Pick<Storage, "getItem" | "setItem"> | null;
   now?: () => Date;
 }
@@ -42,14 +51,23 @@ function readPrefs(storage: WorkbenchEnv["storage"]): Partial<Prefs> {
 }
 
 export function createWorkbench(env: WorkbenchEnv) {
-  const { api } = env;
   const now = env.now ?? (() => new Date());
   const store = createWorkbenchStore(readPrefs(env.storage));
   const get = () => store.getSnapshot();
+  const recovery = createServiceRecovery(env.api, store, async () => { await refreshAll(); if (get().main === "notes") await notes.refresh(); });
+  const api = recovery.api;
+  let libraryOrder: string[] | null = null;
+  const notes = createNotesController({ api, store, now, notify, failure, changed: (id) => readerSync.notesChanged(id) });
+  const readerSync = createReaderSync({ api, store, notify, failure, loadDetail, refreshDesk,
+    refreshNotes: () => get().main === "notes" ? notes.refresh() : Promise.resolve() });
+  const readerOpen = createReaderActions({ api, store, rowById, notify, failure, opened: readerSync.opened });
+  const settings = createSettingsNavigation(store, env.createSettingsServices);
   let listAbort: AbortController | null = null;
   let deskAbort: AbortController | null = null;
   let detailToken = 0;
   let noticeId = 0;
+  // Functions cannot enter the store's structuredClone snapshots.
+  let noticeUndo: (() => void) | undefined;
   let savedPrefs = JSON.stringify(prefsOf(get()));
 
   store.subscribe((state) => {
@@ -59,13 +77,30 @@ export function createWorkbench(env: WorkbenchEnv) {
     try {
       env.storage?.setItem(PREFS_KEY, next);
     } catch {
-      // Private mode or blocked storage: preferences simply do not persist.
+      failure(new Error("偏好未能保存到本机，本次设置仍有效。"), async () => { env.storage?.setItem(PREFS_KEY, next); });
     }
   });
 
-  function notify(text: string, tone: Notice["tone"] = "info", undo?: () => void) {
+  function notify(text: string, tone: Notice["tone"] = "info", undo?: () => void, actionLabel = "撤销") {
     noticeId += 1;
-    store.actions.notify({ id: noticeId, tone, text, undo });
+    noticeUndo = undo;
+    store.actions.notify({ id: noticeId, tone, text, canUndo: Boolean(undo), actionLabel: undo ? actionLabel : undefined });
+  }
+
+  function failure(error: unknown, retry: () => Promise<unknown>) {
+    notify(message(error), "error", () => { void retry().catch((next) => failure(next, retry)); }, "重试");
+  }
+
+  function dismissNotice() {
+    noticeUndo = undefined;
+    store.actions.notify(null);
+  }
+
+  function undoNotice(id: number) {
+    if (get().notice?.id !== id) return;
+    const undo = noticeUndo;
+    dismissNotice();
+    undo?.();
   }
 
   async function refreshList() {
@@ -128,19 +163,21 @@ export function createWorkbench(env: WorkbenchEnv) {
   }
 
   function select(id: string, mode: "single" | "toggle" | "range" = "single") {
-    store.actions.select(id, mode);
+    if (mode === "range" && libraryOrder) store.actions.patch({ selectedIds: rangeSelection(libraryOrder, get().anchorId, id) });
+    else store.actions.select(id, mode);
+    store.actions.patch({ selectionFocusId: id });
     const focus = mode === "single" ? id : get().selectedIds[get().selectedIds.length - 1];
     if (focus) void loadDetail(focus);
     else store.actions.detailLoaded(null);
   }
 
-  function moveSelection(delta: number) {
-    const items = get().list.result?.items ?? [];
-    if (!items.length) return;
-    const current = get().selectedIds[get().selectedIds.length - 1];
-    const index = Math.max(0, items.findIndex((row) => row.id === current));
-    const next = items[Math.min(items.length - 1, Math.max(0, current ? index + delta : 0))];
-    select(next.id);
+  function moveSelection(delta: number, extend = false) {
+    const order = libraryOrder ?? get().list.result?.items.map((row) => row.id) ?? [];
+    if (!order.length) return;
+    const current = get().selectionFocusId ?? get().selectedIds[get().selectedIds.length - 1];
+    const index = order.indexOf(current);
+    const next = order[Math.min(order.length - 1, Math.max(0, index < 0 ? 0 : index + delta))];
+    select(next, extend ? "range" : "single");
   }
 
   function rowById(id: string): WorkbenchRow | undefined {
@@ -153,23 +190,25 @@ export function createWorkbench(env: WorkbenchEnv) {
   async function mutate<T>(work: () => Promise<T>, success?: string): Promise<T | null> {
     try {
       const result = await work();
+      if (get().notice?.tone === "error") dismissNotice();
       if (success) notify(success, "success");
       await Promise.all([refreshList(), get().main === "desk" ? refreshDesk() : Promise.resolve()]);
       return result;
     } catch (error) {
-      notify(message(error), "error");
+      failure(error, () => mutate(work, success));
       return null;
     }
   }
 
   function setMain(main: MainView) {
-    store.actions.patch({ main, activeTab: LIBRARY_TAB });
-    void (main === "desk" ? refreshDesk() : refreshList());
+    return notes.beforeLeave(() => {
+      store.actions.patch({ main, activeTab: LIBRARY_TAB });
+      void (main === "desk" ? refreshDesk() : main === "notes" ? notes.refresh() : refreshList());
+    });
   }
 
   function browse(changes: Partial<Pick<WorkbenchState, "view" | "groupId" | "tag" | "query">>) {
-    store.actions.showLibrary(changes);
-    void refreshList();
+    return notes.beforeLeave(() => { store.actions.showLibrary(changes); void refreshList(); });
   }
 
   function setPrefs(changes: Partial<Prefs>) {
@@ -199,8 +238,9 @@ export function createWorkbench(env: WorkbenchEnv) {
     mutate(() => api.changeGroup(groupId, add, remove));
 
   async function createGroup(name: string, parentId: string | null, addItems: string[] = []) {
+    let created: Awaited<ReturnType<typeof api.createGroup>> | null = null;
     const group = await mutate(async () => {
-      const created = await api.createGroup(name.trim(), parentId);
+      created ??= await api.createGroup(name.trim(), parentId);
       if (addItems.length) await api.changeGroup(created.id, addItems);
       return created;
     }, `已新建分组「${name.trim()}」`);
@@ -223,56 +263,34 @@ export function createWorkbench(env: WorkbenchEnv) {
 
   const restore = (ids: string[]) => mutate(() => api.restore(ids), `已恢复 ${ids.length} 篇`);
 
-  async function openReader(itemId: string) {
-    const row = rowById(itemId);
-    const title = row?.title ?? get().detail.item?.title ?? "阅读";
-    const attachmentId = row?.attachment_id ?? get().detail.item?.attachments?.[0]?.id ?? null;
-    const tabId = "reader:" + itemId;
-    if (!attachmentId) {
-      notify("这篇文献还没有 PDF 附件。", "error");
-      return;
-    }
-    if (get().tabs.some((tab) => tab.id === tabId)) {
-      store.actions.patch({ activeTab: tabId });
-      return;
-    }
-    store.actions.openTab({ id: tabId, itemId, title, url: null, status: "loading", error: null });
-    try {
-      const result = await api.nativeReader(attachmentId);
-      const url = result.attachment?.reader_url ?? null;
-      if (!url) throw new Error(result.native_bridge?.message || "阅读器暂不可用。");
-      store.actions.updateTab(tabId, { url, status: "ready" });
-      void api.markOpened(itemId).then(() => refreshList()).catch(() => undefined);
-    } catch (error) {
-      store.actions.updateTab(tabId, { status: "error", error: message(error) });
-    }
+  async function openReader(itemId: string, target?: ReaderTarget) {
+    return await notes.beforeLeave(() => readerOpen(itemId, target));
   }
 
-  async function importPdfs(files: File[]) {
-    const pdfs = files.filter((file) => file.type === "application/pdf" || /\.pdf$/i.test(file.name));
-    if (!pdfs.length) {
-      notify("只能导入 PDF 文件。", "error");
-      return;
-    }
-    let imported = 0;
-    for (const file of pdfs) {
-      try {
-        const result = await api.upload(file);
-        imported += 1;
-        const groupId = get().groupId;
-        if (groupId && result.item?.id) await api.changeGroup(groupId, [result.item.id]);
-      } catch (error) {
-        notify(`${file.name}：${message(error)}`, "error");
-      }
-    }
-    if (imported) notify(`已导入 ${imported} 个 PDF`, "success");
-    await refreshAll();
+  function revealNotePaper(itemId: string) {
+    return notes.beforeLeave(async () => {
+      store.actions.showLibrary({});
+      await refreshList(); select(itemId);
+    });
   }
+
+  const importPdfs = createPdfImporter({ api, group: () => get().groupId, notify, failure, refresh: refreshAll });
 
   return {
+    ...settings,
+    openSettings: (...args: Parameters<typeof settings.openSettings>) => notes.beforeLeave(() => settings.openSettings(...args)),
+    notes,
+    revealNotePaper,
+    leave: notes.beforeLeave,
     store,
     notify,
-    dismissNotice: () => store.actions.notify(null),
+    failure,
+    retryService: recovery.retry,
+    dispose: recovery.dispose,
+    setLibraryOrder: (order: string[] | null) => { libraryOrder = order; },
+    setShortcuts: (shortcutsOpen: boolean) => store.actions.patch({ shortcutsOpen }),
+    dismissNotice,
+    undoNotice,
     refreshList,
     refreshDesk,
     refreshJobs,
@@ -296,7 +314,9 @@ export function createWorkbench(env: WorkbenchEnv) {
     trash,
     restore,
     openReader,
-    activateTab: (id: string) => store.actions.patch({ activeTab: id }),
+    readerProgress: readerSync.progress,
+    readerNotesChanged: readerSync.notesChanged,
+    activateTab: (id: string) => notes.beforeLeave(() => store.actions.patch({ activeTab: id })),
     closeTab: (id: string) => store.actions.closeTab(id),
     setPalette: (paletteOpen: boolean) => store.actions.patch({ paletteOpen }),
     importPdfs,

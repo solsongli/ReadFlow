@@ -1,9 +1,9 @@
-import { useRef } from "react";
 import { CircleAlert, LoaderCircle } from "lucide-react";
 import { cn } from "@/ui/lib/utils.js";
 import { Button } from "@/ui/wb/Button.js";
 import { WbEmptyState } from "@/ui/wb/EmptyState.js";
 import type { ReaderTab } from "../../domain/workbench-store.js";
+import { ReaderFrame } from "./ReaderFrame.js";
 import { useWorkbench } from "../context.js";
 
 /**
@@ -14,21 +14,11 @@ import { useWorkbench } from "../context.js";
  */
 export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean }) {
   const wb = useWorkbench();
-  const frame = useRef<HTMLIFrameElement>(null);
-
-  function onLoad() {
-    try {
-      const path = frame.current?.contentWindow?.location.pathname ?? "";
-      if (path && !path.endsWith("/reader.html")) wb.closeTab(tab.id);
-    } catch {
-      // Cross-origin would be a misconfiguration; keep the tab rather than guessing.
-    }
-  }
 
   return (
     <div className={cn("absolute inset-0 flex flex-col bg-wb-bg", !active && "hidden")}>
       {tab.status === "loading" ? (
-        <WbEmptyState className="flex-1" icon={<LoaderCircle size={22} className="animate-spin" />} title="正在准备阅读器…" hint={tab.title} />
+        <WbEmptyState className="flex-1" icon={<LoaderCircle size={22} />} title="正在准备阅读器…" hint={tab.title} />
       ) : null}
       {tab.status === "error" ? (
         <WbEmptyState
@@ -38,14 +28,14 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
           hint={tab.error ?? undefined}
           action={
             <div className="flex gap-1.5">
-              <Button onClick={() => { wb.closeTab(tab.id); void wb.openReader(tab.itemId); }}>重试</Button>
+              <Button onClick={() => { wb.closeTab(tab.id); void wb.openReader(tab.itemId, { attachmentId: tab.attachmentId, page: tab.resumePage ?? undefined }); }}>重试</Button>
               <Button variant="ghost" onClick={() => wb.closeTab(tab.id)}>关闭标签页</Button>
             </div>
           }
         />
       ) : null}
       {tab.status === "ready" && tab.url ? (
-        <iframe ref={frame} title={tab.title} src={tab.url} onLoad={onLoad} className="min-h-0 w-full flex-1 border-0 bg-wb-panel" />
+        <ReaderFrame key={`${tab.url}:${tab.navigationKey ?? 0}`} tab={tab} />
       ) : null}
     </div>
   );

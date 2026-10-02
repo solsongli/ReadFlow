@@ -226,7 +226,7 @@ function createResearchLibraryRuntime(options = {}) {
     child = null;
     baseUrl = "";
     if (cancelStartup) cancelStartup(new Error("research-library startup cancelled"));
-    if (ownedChild && !ownedChild.killed && ownedChild.pid) {
+    if (stopOptions.terminateChild !== false && ownedChild && !ownedChild.killed && ownedChild.pid) {
       if (typeof stopOptions.killProcessTreeSync === "function") stopOptions.killProcessTreeSync(ownedChild.pid);
       else ownedChild.kill();
     }
