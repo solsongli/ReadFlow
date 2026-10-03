@@ -50,20 +50,11 @@ function resetRuntime() {
 
 test("local 文件能盖掉默认：合并顺序 base→local，local 值胜出", () => {
   const baseText = fs.readFileSync(path.join(frontendRoot, "runtime-config.js"), "utf8");
-  const html = fs.readFileSync(path.join(frontendRoot, "reader.html"), "utf8");
+  const html = fs.readFileSync(path.join(frontendRoot, "workbench.html"), "utf8");
 
-  // reader.html 必须先载入默认、后载入 local
-  assert.ok(
-    html.indexOf("runtime-config.js") < html.indexOf("runtime-config.local.js"),
-    "reader.html 应先加载 runtime-config.js 再加载 runtime-config.local.js",
-  );
-
-  // runtime-config.local.js 是 gitignore 的本地文件，CI 干净检出里没有；
-  // 有就读真的，没有就用同形 fixture，保证单测 hermetic。
-  const localPath = path.join(frontendRoot, "runtime-config.local.js");
-  const localText = fs.existsSync(localPath)
-    ? fs.readFileSync(localPath, "utf8")
-    : 'window.__FRONT_RUNTIME_CONFIG__ = { apiBase: "http://127.0.0.1:41000" };';
+  assert.ok(html.indexOf("runtime-config.js") < html.indexOf("workbench.bundle.js"));
+  // Always use synthetic overrides; tests never inspect personal runtime configuration.
+  const localText = 'window.__FRONT_RUNTIME_CONFIG__ = { apiBase: "http://127.0.0.1:41000" };';
   const baseApi = lastConfigValue(baseText, "apiBase");
   const localApi = lastConfigValue(localText, "apiBase");
   assert.ok(localApi, "runtime-config.local.js 应给出本地 apiBase 覆盖");

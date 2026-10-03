@@ -1,3 +1,7 @@
+import { ReviewView } from "@/features/flashcards/index.js";
+import { FlashcardBridge } from "./FlashcardBridge.js";
+import { CanvasBridge } from "../reader/CanvasBridge.js";
+import { CanvasView } from "@/features/thought-canvas/index.js";
 import { TranslationNotice } from "./TranslationNotice.js";
 import { useEffect } from "react";
 import { cn } from "@/ui/lib/utils.js";
@@ -26,13 +30,14 @@ import { TitleBar } from "./TitleBar.js";
 import { useWorkbenchKeys } from "./useWorkbenchKeys.js";
 import { useWorkbenchTypography } from "./useWorkbenchTypography.js";
 
-export function WorkbenchShell() { return <WorkbenchErrorBoundary><WorkbenchLayout /></WorkbenchErrorBoundary>; }
+export function WorkbenchShell() { return <WorkbenchErrorBoundary><CanvasBridge><FlashcardBridge><WorkbenchLayout /></FlashcardBridge></CanvasBridge></WorkbenchErrorBoundary>; }
 
 function WorkbenchLayout() {
   const wb = useWorkbench();
   const main = useWb((state) => state.main);
   const activeTab = useWb((state) => state.activeTab);
   const tabs = useWb((state) => state.tabs);
+  const readerFocus = useWb((state) => state.main !== "settings" && state.tabs.some((tab) => tab.id === state.activeTab && tab.focused));
   const theme = useWb((state) => state.theme);
   const total = useWb((state) => state.list.result?.counts.all ?? state.desk.data?.total);
   const view = useWb((state) => state.view);
@@ -81,20 +86,23 @@ function WorkbenchLayout() {
   const libraryActive = activeTab === LIBRARY_TAB;
   return (
     <div className="flex h-full overflow-hidden">
-      <Sidebar />
+      {activeTab === LIBRARY_TAB || activeTab.startsWith("canvas:") || main === "settings" ? <Sidebar /> : null}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        {main !== "settings" ? <TitleBar /> : null}
+        {main !== "settings" && !readerFocus ? <TitleBar /> : null}
         <TranslationNotice />
         {!libraryActive ? <ServiceBanner /> : null}
         <div className="relative flex min-h-0 flex-1">
           <div className={cn("flex min-h-0 min-w-0 flex-1", !libraryActive && "hidden")}>
-            {main === "settings" ? <SettingsView /> : main === "notes" ? <NotesView /> : <main aria-label={main === "desk" ? "书桌" : "文献库"} className="flex min-h-0 min-w-0 flex-1 flex-col bg-wb-panel">
+            {main === "settings" ? <SettingsView /> : main === "notes" ? <NotesView /> : main === "review" ? <ReviewView active={libraryActive} /> : <main aria-label={main === "desk" ? "书桌" : "文献库"} className="flex min-h-0 min-w-0 flex-1 flex-col bg-wb-panel">
               <LibraryHeader />
               {empty ? <WelcomeView /> : main === "desk" ? <DeskView /> : <ItemList />}
             </main>}
             {main === "library" && !empty && (total !== 0 || hasRows) ? <Inspector /> : null}
           </div>
-          {tabs.map((tab) => <ReaderHost key={tab.id} tab={tab} active={activeTab === tab.id} />)}
+          {tabs.map((tab) => tab.kind === "canvas" ?
+            <div key={tab.id} className={cn("absolute inset-0", activeTab !== tab.id && "hidden")}>
+              <CanvasView id={tab.canvasId!} focusNode={tab.canvasNode} focusKey={tab.navigationKey} active={activeTab === tab.id} />
+            </div> : <ReaderHost key={tab.id} tab={tab} active={activeTab === tab.id} />)}
 
         </div>
       </div>

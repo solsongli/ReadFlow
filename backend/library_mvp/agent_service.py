@@ -15,6 +15,7 @@ from typing import Any
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from .data_layout import AGENT_CONFIG
 from .agent_config import AgentConfig
 from .agent_tools import LibraryAgentTools
 from .evidence import EvidenceError
@@ -228,7 +229,7 @@ class AgentService:
 def register_agent_routes(app: FastAPI, store: Any, *, config_path: Path | None = None,
                           allow_external_models: bool = False, test_chat_factory=None) -> AgentService:
     if config_path is None and getattr(store, 'data_root', None) is not None:
-        config_path = Path(store.data_root) / 'agent-config.json'
+        config_path = Path(store.data_root) / AGENT_CONFIG
     config = AgentConfig(config_path, allow_external_models=allow_external_models)
     service = AgentService(store, config, test_chat_factory=test_chat_factory)
     app.state.library_agent = service

@@ -1,3 +1,5 @@
+import { ReviewEntry } from "@/features/flashcards/index.js";
+import { CanvasList } from "@/features/thought-canvas/index.js";
 import { useState, type ComponentType } from "react";
 import { Armchair, Bookmark, Clock, FileQuestion, Library, NotebookPen, PanelLeftClose, PanelLeftOpen, Plus, Star, Trash2 } from "lucide-react";
 import type { WorkbenchView } from "@/platform/contracts/workbench.js";
@@ -64,6 +66,7 @@ export function Sidebar() {
       <div className={cn("wb-scroll flex min-h-0 flex-1 flex-col gap-[1.125rem] px-2.5 pb-4", collapsed && "px-2")}>
         <nav aria-label="工作空间" className="flex flex-col gap-0.5"><NavButton active={main === "desk"} icon={Armchair} label="书桌" shortcut="Ctrl 1" collapsed={collapsed} onClick={() => wb.setMain("desk")} />
           <NavButton active={main === "notes"} icon={NotebookPen} label="笔记" collapsed={collapsed} count={noteCounts ? noteCounts.notes + noteCounts.annotations : null} onClick={() => void wb.notes.open()} />
+          <ReviewEntry collapsed={collapsed} />
         </nav>
         <nav aria-label="文献库" className="flex flex-col gap-0.5">
           {!collapsed ? <SectionLabel>文献库</SectionLabel> : null}
@@ -75,6 +78,7 @@ export function Sidebar() {
           ))}
         </nav>
         {!collapsed ? <>
+          <CanvasList />
           <section aria-label="分组" className="flex flex-col gap-0.5" title="把文献拖到分组上即可加入">
             <SectionLabel actions={<IconButton label="新建分组" size="xs" onClick={() => wb.store.actions.patch({ groupDraft: { parentId: null } })}><Plus size={13} aria-hidden="true" /></IconButton>}>分组</SectionLabel>
             <GroupTree />

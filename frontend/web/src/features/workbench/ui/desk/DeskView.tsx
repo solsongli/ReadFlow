@@ -1,3 +1,4 @@
+import { ReviewEntry } from "@/features/flashcards/index.js";
 import { useEffect } from "react";
 import { Button } from "@/ui/wb/Button.js";
 import { deskSubtitle } from "../../domain/desk.js";
@@ -20,6 +21,7 @@ export function DeskView() {
           <p className="m-0 text-[0.875rem] text-wb-text-3">{deskSubtitle(desk?.today)}</p>
         </div>
         <QuickStart />
+        <section className="rounded-xl bg-wb-desk-card p-3"><ReviewEntry widget /></section>
         {status === "error" ? <div role="status" className="flex items-center gap-3 rounded-xl bg-wb-desk-card p-3 text-wb-text-3"><span className="flex-1">{error || "书桌暂时没有加载出来。"}</span><Button onClick={() => void wb.refreshAll()}>重试</Button></div> : null}
         {status === "loading" && !desk ? <p role="status" className="m-0 text-[0.75rem] text-wb-text-3">正在整理书桌…</p> : null}
         <div className="grid grid-cols-12 items-stretch gap-3.5">

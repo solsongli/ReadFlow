@@ -45,6 +45,8 @@ CSL_TO_BIBTEX_TYPE = {
 }
 
 
+from .data_layout import OWNED_FILES, BLOBS
+
 class StoreError(ValueError):
     def __init__(self, code: str, message: str, status: int = 400):
         super().__init__(message)
@@ -94,8 +96,7 @@ class Store:
         self.data_root.mkdir(parents=True, exist_ok=True, mode=0o700)
         marker = self.data_root / "research-library.json"
         db_path = self.data_root / "library.sqlite3"
-        owned_paths = [marker, db_path, self.data_root / "library.sqlite3-wal",
-                       self.data_root / "library.sqlite3-shm", self.data_root / "blobs"]
+        owned_paths = [self.data_root / name for name in OWNED_FILES]
         if any(path.is_symlink() for path in owned_paths):
             raise StoreError("UNSAFE_DATA_ROOT", "Research-library files must not redirect outside the data directory.")
         if not marker.exists():
@@ -112,7 +113,7 @@ class Store:
             raise StoreError("INVALID_DATA_ROOT", "The research-library marker is invalid.") from exc
         if marker_value != {"application": "retainpdf-research-library", "schema_version": 1}:
             raise StoreError("INVALID_DATA_ROOT", "The data directory belongs to another application or schema.")
-        self.blobs = self.data_root / "blobs"
+        self.blobs = self.data_root / BLOBS
         self.blobs.mkdir(exist_ok=True, mode=0o700)
         self.lock = threading.RLock()
         self.db = sqlite3.connect(db_path, check_same_thread=False, isolation_level=None)

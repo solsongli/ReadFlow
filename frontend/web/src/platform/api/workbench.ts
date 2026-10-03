@@ -69,7 +69,8 @@ export const workbenchApi = {
   createNote: (itemId: string, value: { body: string }) => request<Note>("/items/" + id(itemId) + "/notes", send(value)),
   // Store.update_note synchronizes native reader_annotation.note/quote under its existing validation.
   updateNote: (noteId: string, body: string) => request<Note>("/notes/" + id(noteId), send({ body }, "PATCH")),
-  deleteNote: (noteId: string) => request<void>("/notes/" + id(noteId), { method: "DELETE" }),
+  deleteNote: (noteId: string, policy?: "keep" | "remove") => request<void>(
+    "/notes/" + id(noteId) + (policy ? `?canvas_policy=${policy}` : ""), { method: "DELETE" }),
   list: (query: WorkbenchListQuery, signal?: AbortSignal) =>
     request<WorkbenchListResult>("/workbench/items?" + listQueryParams(query), { signal }),
   row: (itemId: string) => request<WorkbenchRow>("/workbench/items/" + id(itemId)),
@@ -78,7 +79,7 @@ export const workbenchApi = {
   updateState: (itemId: string, patch: WorkbenchStatePatch) =>
     request<WorkbenchRow>("/workbench/items/" + id(itemId) + "/state", send(patch, "PATCH")),
   markOpened: (itemId: string, progress: { page?: number; pages?: number } = {}) =>
-    request<WorkbenchRow>("/workbench/items/" + id(itemId) + "/opened", send(progress)),
+    request<WorkbenchRow>("/workbench/items/" + id(itemId) + "/opened", { ...send(progress), keepalive: true }),
   trash: (itemIds: string[]) => request<{ updated: number }>("/workbench/items/trash", send({ item_ids: itemIds })),
   restore: (itemIds: string[]) => request<{ updated: number }>("/workbench/items/restore", send({ item_ids: itemIds })),
   changeGroup: (groupId: string, add: string[], remove: string[] = []) =>

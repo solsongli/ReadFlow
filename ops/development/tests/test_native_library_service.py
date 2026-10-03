@@ -205,3 +205,78 @@ class NativeProcessTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class UsedLibraryRestartTests(unittest.IsolatedAsyncioTestCase):
+    async def test_used_library_restarts_with_annotations_canvas_ocr_and_agent_config(self):
+        import base64
+        import pymupdf
+        from library_mvp.agent_config import AgentConfig
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / 'used-library'
+            first = service.create_native_app(root, internal_token='a' * 64,
+                                             native_base='http://127.0.0.1:9', api_key='fixture-native')
+            async with first.router.lifespan_context(first):
+                store = first.state.store
+                with pymupdf.open() as pdf:
+                    pdf.new_page().insert_text((50, 50), 'Restart fixture')
+                    imported = store.add_pdf(pdf.tobytes(), filename='fixture.pdf')
+                pixmap = pymupdf.Pixmap(pymupdf.csRGB, (0, 0, 20, 20), False)
+                annotation = store.annotations.save(imported['item']['id'], {
+                    'attachment_id': imported['attachment']['id'], 'page_index': 0,
+                    'type': 'region', 'color': 'yellow', 'rects': [{'x': .1, 'y': .1, 'width': .2, 'height': .2}],
+                    'image': base64.b64encode(pixmap.tobytes('png')).decode(),
+                })
+                canvas = store.canvases.create({'name': 'Restart canvas'})
+                store.canvases.patch(canvas['id'], {'nodes': [{
+                    'id': 'image-card', 'type': 'image', 'annotation_id': annotation['id'],
+                    'x': 10, 'y': 10, 'width': 260, 'height': 180,
+                }]})
+                (root / 'optional-ocr' / 'fixture-module').mkdir(parents=True, exist_ok=True)
+                (root / 'optional-ocr' / 'fixture-module' / 'model.bin').write_bytes(b'fixture')
+                AgentConfig(root / 'agent-config.json').save({
+                    'base_url': 'http://127.0.0.1:9/v1', 'model': 'fixture', 'api_key': '',
+                })
+            self.assertTrue(list((root / 'annotation-images').glob('*.png')))
+            self.assertTrue(list((root / 'canvas-images').glob('*.png')))
+            for _ in range(2):
+                self.assertEqual(service.prepare_data_root(root), root)
+                app = service.create_native_app(root, internal_token='a' * 64,
+                                               native_base='http://127.0.0.1:9', api_key='fixture-native')
+                async with app.router.lifespan_context(app):
+                    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),
+                                                 base_url='http://127.0.0.1:49000') as client:
+                        response = await client.get('/api/research/healthz', headers={'X-RetainPDF-Internal': 'a' * 64})
+                        self.assertEqual(response.status_code, 200)
+                    self.assertEqual(len(app.state.store.canvases.get(canvas['id'])['nodes']), 1)
+
+    async def test_owned_image_directories_cannot_be_symlinks(self):
+        from library_mvp.store import Store, StoreError
+        for name in ('annotation-images', 'canvas-images', 'blobs'):
+            with tempfile.TemporaryDirectory() as tmp:
+                root = service.prepare_data_root(Path(tmp) / 'library')
+                outside = Path(tmp) / 'outside'
+                outside.mkdir()
+                (root / name).symlink_to(outside, target_is_directory=True)
+                with self.assertRaises(ValueError):
+                    service.prepare_data_root(root)
+                with self.assertRaises(StoreError):
+                    Store(root)
+
+    async def test_literal_data_root_entries_must_be_registered(self):
+        import ast
+        from library_mvp import data_layout
+        from library_mvp.data_layout import OWNED_FILES
+        unknown = []
+        for path in (ROOT / 'backend/library_mvp').rglob('*.py'):
+            if 'tests' in path.relative_to(ROOT / 'backend/library_mvp').parts:
+                continue
+            tree = ast.parse(path.read_text())
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.BinOp) or not isinstance(node.op, ast.Div):
+                    continue
+                left = ast.unparse(node.left)
+                name = node.right.value if isinstance(node.right, ast.Constant) else (
+                    getattr(data_layout, node.right.id, None) if isinstance(node.right, ast.Name) else None)
+                if 'data_root' in left and isinstance(name, str) and name not in OWNED_FILES:
+                    unknown.append((path.name, node.lineno, name))
+        self.assertEqual(unknown, [], 'New top-level storage entries must be registered in data_layout.py')

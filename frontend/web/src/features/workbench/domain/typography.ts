@@ -1,4 +1,4 @@
-import { WORKBENCH_TEXT_SCALES, validWorkbenchFont, validWorkbenchFontFamily, workbenchFontStack, type WorkbenchFont, type WorkbenchAppearance } from "@retainpdf/reader/contracts";
+import { WORKBENCH_TEXT_SCALES, validWorkbenchFont, validWorkbenchFontFamily, workbenchFontStack, type WorkbenchFont, type WorkbenchAppearance } from "./interface-fonts.js";
 export { WORKBENCH_TEXT_SCALES, workbenchFontStack };
 export type { WorkbenchFont, WorkbenchAppearance };
 export type NoteFont = "interface" | "serif" | "mono";

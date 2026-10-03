@@ -2,7 +2,7 @@ import type { ResearchOcrJob, ResearchOcrModule } from "@/platform/contracts/res
 import type { WorkbenchDesk, WorkbenchRow } from "@/platform/contracts/workbench.js";
 
 export const TRANSLATE_HINT = "选择文献后提交全文翻译；优先读取文字层，缺字页面使用本地 OCR。";
-export const AI_HINT = "选择文献后，在阅读器右侧使用 AI 问答。";
+export const AI_HINT = "选择文献后，在阅读器右侧的 AI 标签提问；发送前会确认上下文范围。";
 
 export function deskSubtitle(today: WorkbenchDesk["today"] | undefined, now: Date = new Date()): string {
   const date = `${now.getMonth() + 1}月${now.getDate()}日 星期${"日一二三四五六"[now.getDay()]}`;

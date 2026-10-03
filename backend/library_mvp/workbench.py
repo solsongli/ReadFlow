@@ -7,6 +7,7 @@ from typing import Any, Awaitable, Callable
 from fastapi import FastAPI, Request
 
 from .store import Store, StoreError, now, text
+from .annotations import Annotations
 from .workbench_notes import ANNOTATION_SQL, note_color, note_kind, register_notes_routes
 from .workbench_translation import desk_summary
 from .workbench_model import (assign_citekeys, base_citekey, matches_query, short_venue, source_kind,
@@ -50,6 +51,7 @@ class Workbench:
     def __init__(self, store: Store, translations: TranslationLookup | None = None):
         self.store = store
         self.translations = translations
+        store.annotations = getattr(store, "annotations", None) or Annotations(store)
         with store.lock:
             store.db.executescript(SCHEMA)
 
@@ -68,6 +70,7 @@ class Workbench:
 
     def _rows(self) -> tuple[list[dict], list[dict]]:
         """All items (trashed included) as list rows, plus all groups. Caller holds the lock."""
+        self.store.annotations.migrate()
         db = self.store.db
         states = {row["item_id"]: dict(row) for row in db.execute("SELECT * FROM item_state")}
         groups: dict[str, list[str]] = {}
@@ -77,7 +80,7 @@ class Workbench:
         for row in db.execute("SELECT id,item_id,sha256,filename,page_count,text_status FROM attachments ORDER BY created_at,id"):
             attachments.setdefault(row["item_id"], []).append(dict(row))
         notes = {row[0]: (row[1], row[2]) for row in db.execute(
-            f"SELECT item_id,COUNT(*),SUM(CASE WHEN {ANNOTATION_SQL} THEN 1 ELSE 0 END) FROM notes GROUP BY item_id")}
+            f"SELECT item_id,COUNT(*),SUM(CASE WHEN {ANNOTATION_SQL} THEN 1 ELSE 0 END) FROM effective_notes GROUP BY item_id")}
         sources: dict[str, tuple[str, str]] = {}
         for row in db.execute("SELECT entity_id,source_id,raw_source_json FROM source_links WHERE entity_type='item' ORDER BY source_id"):
             sources.setdefault(row[0], (row[1], row[2]))
@@ -199,7 +202,7 @@ class Workbench:
             titles = {row["id"]: row["title"] for row in rows}
             notes = [dict(row) for row in self.store.db.execute(
                 "SELECT id,item_id,attachment_id,page_idx,quote,translated_quote,body,created_at,updated_at,raw_source_json "
-                "FROM notes ORDER BY created_at DESC,id")]
+                "FROM effective_notes ORDER BY created_at DESC,id")]
         live = [row for row in rows if not row["deleted_at"]]
         for note in notes:
             note["item_title"] = titles.get(note["item_id"], "")

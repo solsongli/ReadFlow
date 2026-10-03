@@ -48,12 +48,9 @@ function collectFiles(root, extensions) {
 
 // HTML shells + production bundles (React cutover: entry is dist/*.bundle.js)
 assertExists("workbench.html");
-assertExists("reader.html");
 assertExists("runtime-config.js");
 assertExists("dist/workbench.bundle.js");
-assertExists("dist/reader.bundle.js");
 assertExists("dist/css/workbench.css");
-assertExists("dist/css/reader.css");
 
 // Runtime assets referenced by the production HTML and bundled animation URLs.
 assertExists("src/assets/RetainPDF-logo.svg");
@@ -66,7 +63,6 @@ assertExists("vendor/pdfjs-dist/build/pdf.mjs");
 assertExists("vendor/pdfjs-dist/build/pdf.worker.mjs");
 assertExists("vendor/pdfjs-dist/web/pdf_viewer.css");
 assertExists("vendor/pdfjs-dist/web/pdf_viewer.mjs");
-assertExists("vendor/pdf-lib/dist/pdf-lib.esm.js");
 
 const runtimeConfig = readFile("runtime-config.js");
 if (!runtimeConfig.includes('apiBase: "http://127.0.0.1:41000"')) {
@@ -82,14 +78,6 @@ if (fs.existsSync(path.join(frontendRoot, "runtime-config.local.js"))) {
   fail("Desktop frontend must not include runtime-config.local.js");
 }
 
-const readerHtml = readFile("reader.html");
-if (!readerHtml.includes("./vendor/pdfjs-dist/web/pdf_viewer.css")) {
-  fail("Desktop reader.html did not rewrite pdfjs viewer CSS to vendor path");
-}
-if (!readerHtml.includes("./dist/reader.bundle.js")) {
-  fail("Desktop reader.html is not using the production reader bundle");
-}
-
 const indexHtml = readFile("workbench.html");
 if (!indexHtml.includes("./dist/workbench.bundle.js")) {
   fail("Desktop workbench.html is not using the production app bundle");
@@ -98,22 +86,6 @@ if (indexHtml.includes("runtime-config.local.js")) {
   fail("Desktop workbench.html still references runtime-config.local.js");
 }
 
-// 阅读器的 AI 面板自 f53fb04e（启用 esbuild 代码分割）起被拆进
-// dist/chunks/reader/ 的独立 chunk，`credentials-changed` 这个事件名不再出现在
-// reader.bundle.js 里。原先只查主 bundle 的写法从那天起就该失败了——本地之所以
-// 一直绿，是因为 desktop/app/frontend/ 里躺着一份代码分割之前的陈旧副本；CI 每次
-// sync-frontend 重新拷贝，所以只在 CI 上红。
-//
-// 改为在主 bundle 与其 chunk 里一起找：无论将来懒加载边界怎么挪，只要这个凭据
-// 门禁的刷新事件还在阅读器产物里，检查就成立。
-const readerArtifacts = [
-  readFile("dist/reader.bundle.js"),
-  ...collectFiles(path.join(frontendRoot, "dist", "chunks", "reader"), new Set([".js"]))
-    .map((file) => fs.readFileSync(file, "utf8")),
-];
-if (!readerArtifacts.some((source) => source.includes("credentials-changed"))) {
-  fail("Desktop reader bundle (含 chunks) missing credentials-changed gate refresh");
-}
 const appBundleJs = readFile("dist/workbench.bundle.js");
 if (!appBundleJs.includes("./vendor/") && !appBundleJs.includes("vendor/pdfjs")) {
   // bundle may inline resolver strings differently; require credentials gate markers

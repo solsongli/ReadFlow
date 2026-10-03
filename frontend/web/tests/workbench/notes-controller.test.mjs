@@ -96,7 +96,7 @@ test("annotation opening uses its own attachment and one-based resume page, incl
   const open = createReaderActions({ store, rowById: () => ({ id: "paper", title: "Paper", attachment_id: "first", read_page: 1 }), notify: () => {}, opened: async () => {},
     api: { nativeReader: async (id) => { openedAttachment = id; return { attachment: { reader_url: "./reader.html?document_id=demo" } }; } } });
   await open("paper", { attachmentId: "second", page: 5 });
-  assert.equal(openedAttachment, "second"); assert.equal(store.getSnapshot().tabs[0].resumePage, 5);
+  assert.equal(openedAttachment, undefined); assert.equal(store.getSnapshot().tabs[0].attachmentId, "second"); assert.equal(store.getSnapshot().tabs[0].resumePage, 5);
   const key = store.getSnapshot().tabs[0].navigationKey;
   await open("paper", { attachmentId: "second", page: 2 });
   assert.equal(store.getSnapshot().tabs[0].resumePage, 2);

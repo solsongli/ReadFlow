@@ -25,3 +25,10 @@ class FakeCompletionTests(unittest.TestCase):
         self.assertEqual(json.loads(completion_content(body))['translated_text'], '【译】Hello')
         body['messages'][0]['content'] = 'Return domain, summary, translation_guidance'
         self.assertIn('translation_guidance', json.loads(completion_content(body)))
+
+    def test_reader_chat_has_bounded_page_citation_and_no_translation_prefix(self):
+        body = {'messages': [{'role': 'system', 'content': 'Cite known pages as (p. N). Context: fixture'},
+                             {'role': 'user', 'content': 'Explain'}]}
+        result = completion_content(body)
+        self.assertIn('这是假回答 (p. 2)', result)
+        self.assertNotIn('【译】', result)

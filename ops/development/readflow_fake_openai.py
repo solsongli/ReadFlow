@@ -15,6 +15,8 @@ def completion_content(body):
     messages = body.get('messages', [])
     user = str(next((m.get('content', '') for m in reversed(messages) if m.get('role') == 'user'), ''))
     system = '\n'.join(str(m.get('content', '')) for m in messages if m.get('role') == 'system')
+    if 'Cite known pages as' in system and 'Context:' in system:
+        return '这是假回答 (p. 2)。\n\n' + '这是本地假服务的流式问答测试，不代表论文结论。' * 5
     schema = body.get('response_format', {}).get('json_schema', {}).get('schema')
     try:
         payload = json.loads(user)
@@ -73,10 +75,36 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(raw)
 
     def do_GET(self):
-        if self.path == '/v1/models':
+        if self.path == '/v1/runtime-config' and hasattr(self.server, 'runtime_config'):
+            self.send_json({'data': self.server.runtime_config})
+        elif self.path == '/v1/models':
             self.send_json({'object': 'list', 'data': [{'id': 'readflow-test', 'object': 'model', 'owned_by': 'local'}]})
         else:
             self.send_json({'error': {'message': 'Unsupported path'}}, 404)
+
+    def do_PUT(self):
+        if self.path != '/v1/runtime-config' or not hasattr(self.server, 'runtime_config'):
+            self.send_json({'detail': 'Unsupported fixture path'}, 404)
+            return
+        try:
+            size = int(self.headers.get('Content-Length', '0'))
+            if not 0 < size <= 16000:
+                raise ValueError()
+            value = json.loads(self.rfile.read(size))
+            config = self.server.runtime_config
+            if value.get('llm_base_url', config['llm_base_url']).rstrip('/') != self.server.model_base:
+                raise ValueError()
+            for key in ('llm_base_url', 'llm_model', 'llm_api_key'):
+                if key in value:
+                    config[key] = str(value[key])
+            config['configured_runtime'] = value.get('agent_runtime', 'python')
+            config['agent_confirmation_mode'] = value.get('agent_confirmation_mode', 'explicit')
+            config['configured_revision'] += 1
+            config['active_revision'] = config['configured_revision']
+            config['llm_api_key_configured'] = bool(config['llm_api_key'])
+            self.send_json({'data': config})
+        except (ValueError, TypeError):
+            self.send_json({'detail': 'Fixture accepts only its loopback model address'}, 400)
 
     def do_POST(self):
         if self.path != '/v1/chat/completions':
@@ -97,9 +125,12 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header('Content-Type', 'text/event-stream')
             self.send_header('Connection', 'close')
             self.end_headers()
-            for delta, reason in [({'role': 'assistant', 'content': content}, None), ({}, 'stop')]:
+            deltas = [({'role': 'assistant', 'content': content[i:i + 12]}, None) for i in range(0, len(content), 12)]
+            for delta, reason in [*deltas, ({}, 'stop')]:
                 chunk = {**metadata, 'object': 'chat.completion.chunk', 'choices': [{'index': 0, 'delta': delta, 'finish_reason': reason}]}
                 self.wfile.write(('data: ' + json.dumps(chunk, ensure_ascii=False) + '\n\n').encode())
+                self.wfile.flush()
+                time.sleep(.015)
             self.wfile.write(b'data: [DONE]\n\n')
             self.wfile.flush()
             self.close_connection = True
@@ -110,9 +141,25 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     parser = ArgumentParser(description=__doc__)
     parser.add_argument('--port', type=int, default=48991)
+    parser.add_argument('--ai-runtime-port', type=int, help='Optional loopback fake runtime-config service for offline preview')
     options = parser.parse_args()
     if not 1024 <= options.port <= 65535 or options.port == 23119:
         parser.error('Use a free local port between 1024 and 65535 other than 23119.')
+    runtime = None
+    if options.ai_runtime_port is not None:
+        if not 1024 <= options.ai_runtime_port <= 65535 or options.ai_runtime_port in (23119, options.port):
+            parser.error('Use a distinct free loopback AI fixture port, excluding 23119.')
+        import threading
+        runtime = ThreadingHTTPServer(('127.0.0.1', options.ai_runtime_port), Handler)
+        runtime.model_base = f'http://127.0.0.1:{options.port}/v1'
+        runtime.runtime_config = {
+            'configured_runtime': 'python', 'active_runtime': 'python', 'agent_confirmation_mode': 'explicit',
+            'llm_base_url': runtime.model_base, 'llm_model': 'readflow-test', 'llm_api_key': 'fixture-local',
+            'llm_api_key_configured': True, 'configured_revision': 1, 'active_revision': 1,
+            'restart_required': False, 'restart_state': 'active',
+        }
+        threading.Thread(target=runtime.serve_forever, daemon=True).start()
+        print(f'Offline runtime fixture ready: http://127.0.0.1:{options.ai_runtime_port}/v1/runtime-config', flush=True)
     with ThreadingHTTPServer(('127.0.0.1', options.port), Handler) as server:
         print(f'Offline fixture ready: http://127.0.0.1:{server.server_port}/v1', flush=True)
         server.serve_forever()

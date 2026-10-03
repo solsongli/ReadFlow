@@ -265,11 +265,11 @@ test("allows entry navigation but never extends that exception to API, iframe or
   const navigation = { Origin: "https://example.org", "Sec-Fetch-Site": "cross-site",
     "Sec-Fetch-Mode": "navigate", "Sec-Fetch-Dest": "document" };
   assert.equal((await requestGateway(`${base}/`, { headers: navigation })).status, 200);
-  assert.equal((await requestGateway(`${base}/reader.html`, { headers: navigation })).status, 200);
+  assert.equal((await requestGateway(`${base}/reader.html`, { headers: navigation })).status, 403);
   const readerFrame = await requestGateway(`${base}/reader.html`, { headers: {
     Origin: base, "Sec-Fetch-Site": "same-origin", "Sec-Fetch-Mode": "navigate", "Sec-Fetch-Dest": "iframe",
   } });
-  assert.equal(readerFrame.status, 200);
+  assert.equal(readerFrame.status, 404);
   assert.equal(readerFrame.headers["x-frame-options"], "SAMEORIGIN");
   assert.equal((await requestGateway(`${base}/api/research/items`, { headers: navigation })).status, 403);
   assert.equal((await requestGateway(`${base}/`, { method: "POST", headers: navigation })).status, 403);

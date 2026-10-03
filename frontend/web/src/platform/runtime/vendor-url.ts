@@ -24,10 +24,6 @@ export function resolvePdfjsVendorUrl(relativePath = "", options = {}) {
   return resolveVendorUrl(`pdfjs-dist/${normalizeVendorPath(relativePath)}`, options);
 }
 
-export function resolvePdfLibVendorUrl(relativePath = "", options = {}) {
-  return resolveVendorUrl(`pdf-lib/${normalizeVendorPath(relativePath)}`, options);
-}
-
 export function resolveMarkedVendorUrl(options = {}) {
   return resolveVendorUrl("marked/lib/marked.esm.js", options);
 }

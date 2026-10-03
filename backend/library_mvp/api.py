@@ -50,10 +50,11 @@ def create_app(data_root: Path, *, bridge: NativeBridge | None = None,
             yield
         finally:
             # Cancel consumers before closing the SQLite connection they share.
+            reader_stopped = await asyncio.to_thread(app.state.reader_assistance.close)
             agent_stopped = await asyncio.to_thread(app.state.library_agent.close)
             await asyncio.to_thread(app.state.ocr_jobs.close)
             await asyncio.to_thread(app.state.ocr_modules.close)
-            if agent_stopped:
+            if agent_stopped and reader_stopped:
                 store.close()
             if getattr(app.state, "workbench_translation", None) is not None:
                 app.state.workbench_translation.close()
@@ -93,7 +94,14 @@ def create_app(data_root: Path, *, bridge: NativeBridge | None = None,
 
     @app.get("/api/research/items/{item_id}")
     def get_item(item_id: str):
-        return item_view(store.get_item(item_id))
+        item = store.get_item(item_id)
+        store.annotations.migrate()
+        from .annotation_migration import LEGACY_PREDICATE
+        with store.lock:
+            free = {row[0] for row in store.db.execute('SELECT id FROM notes WHERE NOT ' + LEGACY_PREDICATE)}
+        item['notes'] = [note for note in item['notes'] if note['id'] in free]
+        item['notes'] += [note for note in store.annotations.notes() if note['item_id'] == item_id]
+        return item_view(item)
 
     @app.post("/api/research/items", status_code=201)
     async def create_item(request: Request):
@@ -154,11 +162,33 @@ def create_app(data_root: Path, *, bridge: NativeBridge | None = None,
 
     @app.patch("/api/research/notes/{note_id}")
     async def update_note(note_id: str, request: Request):
-        return store.update_note(note_id, await json_body(request))
+        data = await json_body(request)
+        with store.lock:
+            legacy = store.db.execute('SELECT 1 FROM notes WHERE id=?', (note_id,)).fetchone()
+        if legacy:
+            # Preserve the standalone reader's validation contract. The new table remains
+            # authoritative for all ReadFlow reads after this compatibility write.
+            result = store.update_note(note_id, data)
+            store.annotations.migrate()
+            with store.transaction():
+                store.db.execute('UPDATE annotations SET note=?,updated_at=? WHERE source_id=?',
+                                 (result['body'], result['updated_at'], note_id))
+            return result
+        from .annotation_model import note_view
+        row = store.annotations.get(note_id)
+        if set(data) != {'body'}:
+            raise StoreError('INVALID_NOTE', '批注说明只接受 body。')
+        return note_view(store.annotations.save(row['item_id'], {'note': data['body']}, note_id))
 
     @app.delete("/api/research/notes/{note_id}", status_code=204)
-    def delete_note(note_id: str):
-        store.delete_note(note_id)
+    def delete_note(note_id: str, canvas_policy: str = ""):
+        store.annotations.migrate()
+        with store.lock:
+            annotation = store.db.execute('SELECT 1 FROM annotations WHERE id=?', (note_id,)).fetchone()
+        if annotation:
+            store.annotations.remove(note_id, canvas_policy)
+        else:
+            store.delete_note(note_id)
         return Response(status_code=204)
 
     @app.get("/api/research/items/{item_id}/export")
@@ -224,5 +254,16 @@ def create_app(data_root: Path, *, bridge: NativeBridge | None = None,
 
     from .workbench_translate import register_translation_routes
     register_translation_routes(app, store, json_body)
+
+    from .paper_reader import register_paper_reader
+    register_paper_reader(app, store, json_body)
+    from .annotation_routes import register_annotation_routes
+    register_annotation_routes(app, store, json_body)
+    from .canvas_routes import register_canvas_routes
+    register_canvas_routes(app, store, json_body)
+    from .flashcard_routes import register_flashcard_routes
+    register_flashcard_routes(app, store, json_body)
+    from .reader_assistance import register_reader_assistance
+    register_reader_assistance(app, store, json_body, allowed=allow_external_models)
 
     return app

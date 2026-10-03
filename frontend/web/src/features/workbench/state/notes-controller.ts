@@ -117,18 +117,18 @@ export function createNotesController({ api, store, now = () => new Date(), chan
       void refresh();
     });
   }
-  async function remove() {
+  async function remove(policy?: "keep" | "remove") {
     stopTimer();
     if (saving) await saving;
     const draft = get().draft;
     if (!draft) return;
     try {
-      if (!draft.isNew) await api.deleteNote(draft.note.id);
+      if (!draft.isNew) await api.deleteNote(draft.note.id, policy);
       patch({ draft: null });
       hadSaveError = false;
       if (!draft.isNew) { notify("笔记已删除。", "success"); void changed(draft.note.item_id); }
       await refresh();
-    } catch (error) { reportFailure(error, remove); }
+    } catch (error) { reportFailure(error, () => remove(policy)); }
   }
   async function exportAll() {
     if (!await flush()) return;

@@ -2,7 +2,7 @@ import type { WorkbenchApi } from "@/platform/api/workbench.js";
 import type { WorkbenchRow } from "@/platform/contracts/workbench.js";
 import type { WorkbenchStore } from "../domain/workbench-store.js";
 
-export interface ReaderTarget { page?: number; attachmentId?: string }
+export interface ReaderTarget { page?: number; attachmentId?: string; annotationId?: string }
 export function createReaderActions({ api, store, rowById, notify, failure, opened }: {
   api: WorkbenchApi; store: WorkbenchStore; rowById: (id: string) => WorkbenchRow | undefined;
   notify: (text: string, tone: "error") => void; opened: (id: string) => Promise<void>;
@@ -25,27 +25,13 @@ export function createReaderActions({ api, store, rowById, notify, failure, open
       if (sameAttachment && page == null) { store.actions.patch({ activeTab: tabId }); return true; }
       if (sameAttachment && existing.url && page != null) {
         // An explicit note jump reopens via the existing page_idx anchor; normal tab switches never reload.
-        store.actions.updateTab(tabId, { resumePage: page, navigationKey: (existing.navigationKey ?? 0) + 1 });
+        store.actions.updateTab(tabId, { resumePage: page, annotationId: target.annotationId, navigationKey: (existing.navigationKey ?? 0) + 1 });
         store.actions.patch({ activeTab: tabId }); return true;
       }
-      store.actions.openTab({ id: tabId, itemId, title, url: null, status: "loading", error: null, row, attachmentId,
-        resumePage: page ?? row?.read_page ?? null, navigationKey: (existing?.navigationKey ?? 0) + 1 });
-      try {
-        const result = await api.nativeReader(attachmentId);
-        let url = result.attachment?.reader_url ?? null;
-        if (url && row?.translation.status === "done" && row.translation.job_id) {
-          const parsed = new URL(url, "http://reader.invalid");
-          parsed.searchParams.set("job_id", row.translation.job_id);
-          url = parsed.pathname + parsed.search;
-        }
-        if (!url) throw new Error(result.native_bridge?.message || "阅读器暂不可用。");
-        store.actions.updateTab(tabId, { url, status: "ready" });
-        void opened(itemId); return true;
-      } catch (error) {
-        store.actions.updateTab(tabId, { status: "error", error: error instanceof Error ? error.message : "阅读器暂不可用。" });
-        failure?.(error, async () => { store.actions.closeTab(tabId); return openReader(itemId, target); });
-        return false;
-      }
+      if (!row) throw new Error("无法读取文献信息。");
+      store.actions.openTab({ id: tabId, itemId, title, url: `/api/research/attachments/${encodeURIComponent(attachmentId)}/pdf`, status: "ready", error: null, row, attachmentId,
+        annotationId: target.annotationId, resumePage: page ?? row.read_page ?? null, navigationKey: (existing?.navigationKey ?? 0) + 1 });
+      void opened(itemId); return true;
     } catch (error) { if (failure) failure(error, () => openReader(itemId, target)); else notify(error instanceof Error ? error.message : "阅读器暂不可用。", "error"); return false; }
   };
 }

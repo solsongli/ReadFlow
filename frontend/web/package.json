@@ -19,7 +19,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "smoke:config-resolution": "node --import ./tests/helpers/register-jsx.mjs --test --test-force-exit tests/shared/config-resolution.test.mjs",
     "pretest": "npm run prepare:workspace",
-    "test": "node --import ./tests/helpers/register-jsx.mjs --test --test-force-exit --test-concurrency=4",
+    "test": "node --import ./tests/helpers/register-jsx.mjs --test --test-concurrency=2",
     "watch:css": "node ./scripts/build-css.mjs --watch",
     "watch:js": "node ./scripts/build-js-bundle.mjs --watch",
     "smoke:workbench-settings": "node --import ./tests/helpers/register-jsx.mjs --test --test-force-exit tests/workbench/settings-domain.test.mjs tests/workbench/translation-settings.test.mjs tests/workbench/connector-settings.test.mjs"
@@ -38,26 +38,17 @@
     "typescript": "^7.0.2"
   },
   "dependencies": {
-    "@assistant-ui/react": "^0.15.16",
     "@retainpdf/api": "0.1.0",
     "@retainpdf/contracts": "0.1.0",
     "@retainpdf/domain": "0.1.0",
-    "@retainpdf/reader": "0.1.0",
     "@retainpdf/ui": "0.1.0",
-    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "lottie-web": "^5.13.0",
     "lucide-react": "^1.24.0",
     "marked": "^18.0.10",
-    "mathjax-full": "^3.2.1",
-    "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^4.8.69",
     "radix-ui": "^1.6.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-pdf": "^9.2.1",
-    "react-resizable-panels": "4.12.1",
-    "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0"
   },
   "engines": {

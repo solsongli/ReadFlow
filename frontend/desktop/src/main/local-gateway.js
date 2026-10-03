@@ -94,7 +94,7 @@ function createLocalGateway(options = {}) {
       return;
     }
     if (path.extname(filePath).toLowerCase() === ".html"
-      && !["workbench.html", "reader.html"].includes(path.relative(frontendRoot, filePath))) {
+      && !["workbench.html"].includes(path.relative(frontendRoot, filePath))) {
       res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
       res.end("not found");
       return;
@@ -197,7 +197,7 @@ function createLocalGateway(options = {}) {
     }
     const urlPath = rawPath.split("?")[0];
     const entryNavigation = req.method === "GET"
-      && ["/", "/workbench.html", "/reader.html"].includes(urlPath)
+      && ["/", "/workbench.html"].includes(urlPath)
       && req.headers["sec-fetch-mode"] === "navigate" && req.headers["sec-fetch-dest"] === "document";
     const origin = req.headers.origin;
     if (origin) {

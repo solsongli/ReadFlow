@@ -125,13 +125,13 @@ def prepare(root: Path) -> Path:
     target.mkdir(parents=True, exist_ok=True)
     # Delete obsolete generated HTML and bundles; never touch the profile/data.
     for old_page in target.glob("*.html"):
-        if old_page.name not in {"workbench.html", "reader.html"}:
+        if old_page.name not in {"workbench.html"}:
             old_page.unlink()
     for name in ["dist", "decor", "src/assets"]:
         if (target / name).is_dir():
             shutil.rmtree(target / name)
     (target / "styles.css").unlink(missing_ok=True)
-    for name in ["reader.html", "workbench.html", "runtime-config.js"]:
+    for name in ["workbench.html", "runtime-config.js"]:
         shutil.copy2(web / name, target / name)
     # Never copy an existing local runtime config, user keys or desktop state.
     (target / "runtime-config.local.js").write_text("// Empty isolated preview override.\n")
@@ -207,9 +207,31 @@ def stop(root: Path, value: dict | None) -> None:
     print("原壳预览已停止，新文献库和笔记保留。")
 
 
+def recover(root: Path) -> dict:
+    """Rebuild only this profile's owner record, from verified kernel identity (host terminal)."""
+    lock = root / "profile/chromium/SingletonLock"
+    if not lock.is_symlink():
+        raise ValueError("没有本 profile 的单实例锁，未修改进程记录。")
+    raw = str(lock.readlink()).rpartition("-")[2]
+    if not raw.isdigit() or int(raw) <= 1:
+        raise ValueError("单实例锁没有有效进程号。")
+    pid = int(raw)
+    candidate = {"application": OWNER["application"], "pid": pid, "start_ticks": tick(pid)}
+    if not candidate["start_ticks"] or not alive(candidate):
+        raise ValueError("当前环境无法验证该预览进程；请在宿主终端执行 recover。")
+    log = Path(f"/proc/{pid}/fd/1").readlink()
+    if log.parent != root or not log.name.startswith("native-") or log.suffix != ".log":
+        raise ValueError("进程未使用本启动器日志，未修改记录。")
+    candidate["log"] = str(log)
+    if not alive(candidate):
+        raise ValueError("预览进程身份已变化，未修改记录。")
+    (root / "process.json").write_text(json.dumps(candidate))
+    return candidate
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="手动启动原RetainPDF壳的隔离文献管理预览；不设置自启。")
-    parser.add_argument("action", choices=["prepare", "start", "status", "stop", "restart"])
+    parser.add_argument("action", choices=["prepare", "start", "status", "stop", "restart", "recover"])
     parser.add_argument("--no-sandbox", action="store_true", help="仅当本机Electron沙箱不可用时显式选择")
     parser.add_argument("--connector", action="store_true", help="显式启用实验性Connector端口，冲突时不抢占")
     parser.add_argument("--debug-port", type=int, help="仅本机隔离preview浏览器验收端口，默认不开放")
@@ -221,6 +243,10 @@ def main() -> int:
     try:
         root = own_root()
         value = state(root)
+        if options.action == "recover":
+            recover(root)
+            print("已核验并恢复 profile/chromium 的预览进程记录；没有启停进程。")
+            return 0
         if options.action == "status":
             print(json.dumps({"alive": alive(value), "ready": ready(value), "pid": value["pid"] if value else None,
                               "url": url(value), "profile": str(root / "profile")}, ensure_ascii=False))
@@ -253,6 +279,7 @@ def main() -> int:
                 args.extend(["--remote-debugging-address=127.0.0.1", "--remote-debugging-port=" + str(options.debug_port)])
             if options.no_sandbox:
                 args.append("--no-sandbox")
+            previous = state(root)
             with log.open("xb") as stream:
                 child = subprocess.Popen(args, cwd=root / "runtime", env=env, stdin=subprocess.DEVNULL,
                                          stdout=stream, stderr=subprocess.STDOUT, start_new_session=True)
@@ -261,6 +288,10 @@ def main() -> int:
             deadline = time.monotonic() + 50
             while time.monotonic() < deadline:
                 if child.poll() is not None:
+                    if previous is None:
+                        (root / "process.json").unlink(missing_ok=True)
+                    else:
+                        (root / "process.json").write_text(json.dumps(previous))
                     raise ValueError(f"原壳启动退出；请检查本预览日志 {log}。")
                 if ready(value):
                     print("原RetainPDF界面已就绪：" + url(value))

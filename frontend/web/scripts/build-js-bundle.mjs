@@ -62,11 +62,6 @@ function jsToTsResolvePlugin() {
 
 // 工作台与阅读器各自打包，避免跨页共享 chunk 引入无关代码。
 const PAGE_BUNDLES = [
-  {
-    name: "reader",
-    entry: path.join(frontendRoot, "src/app/reader/entry.tsx"),
-    out: "reader.bundle",
-  },
   //   workbench.html → src/app/workbench/entry.tsx → dist/workbench.bundle.js
   {
     name: "workbench",
@@ -75,36 +70,7 @@ const PAGE_BUNDLES = [
   },
 ];
 
-// mathjax-full/js/components/version.js 在未定义 PACKAGE_VERSION 时会
-// eval('require') 读 package.json —— 浏览器 ESM 里直接炸，导致全部公式回退。
-// 故三 bundle 统一经 define 注入 PACKAGE_VERSION（取自 mathjax-full 的
-// package.json 版本，读不到回退 3.2.1），HTML 侧无需再管。
-function resolveMathJaxPackageVersion() {
-  try {
-    const pkgPath = path.join(
-      frontendRoot,
-      "node_modules/mathjax-full/package.json",
-    );
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
-    return typeof pkg.version === "string" ? pkg.version : "3.2.1";
-  } catch {
-    return "3.2.1";
-  }
-}
-
-// splitting 是必需的,不是优化选项:packages/reader 用 lazy()/动态 import()
-// 把 AI 面板、Markdown 面板和 mathjax-full 排在首屏之外,单 outfile 构建会把
-// 这些动态 import 全部内联回主包 —— 光 mathjax-full 就是 1.7MB(占 reader
-// 包 40%),而文档没有公式时它一行都用不到。开启后 reader 首屏 4.3MB → 1.2MB,
-// 产物总量基本不变,只是改为按需取用。
-//
-// 每页单独构建、chunk 各自进 dist/chunks/<页>/:三页合批会让 esbuild 生成跨页
-// 共享 chunk,detail 没有任何懒加载点,却要为此拉入 home 才用得到的公共代码
-// (实测 +13%)。隔离后每页只按自身依赖图拆分;跨页重复的 React 等在合批前就
-// 已各自打包一份,故隔离不劣于原状态。
-//
-// 入口名由 entryPoints 的 { in, out } 指定,故仍写出 dist/<页>.bundle.js;
-// chunk 名带内容哈希,天然缓存安全,无需 stamp。
+// Native reader and workspace share one bundle; dynamic chunks retain content hashes.
 function bundleOptions({ entry, out }) {
   return {
     entryPoints: [{ in: entry, out }],
@@ -115,15 +81,6 @@ function bundleOptions({ entry, out }) {
     format: "esm",
     platform: "browser",
     target: ["es2022"],
-    // Markstream 的图表/增强代码块运行时是 optional peers。本产品当前只启用
-    // KaTeX + plain <pre>，未安装的可选模块保持动态 external，不能为了让
-    // esbuild 解析成功而把 Mermaid/D2/Infographic 整套塞进基础包。
-    external: [
-      "@antv/infographic",
-      "@terrastruct/d2",
-      "mermaid",
-      "stream-diffs",
-    ],
     jsx: "automatic",
     alias: {
       "@": path.join(frontendRoot, "src"),
@@ -133,9 +90,7 @@ function bundleOptions({ entry, out }) {
     // Reader 与其它 workspace 包一样只通过 package.json exports 消费；
     // 禁止在宿主构建里维护第二份 subpath→源码路径映射。
     plugins: [jsToTsResolvePlugin()],
-    define: {
-      PACKAGE_VERSION: JSON.stringify(resolveMathJaxPackageVersion()),
-    },
+
     loader: {
       ".html": "text",
       ".ts": "ts",

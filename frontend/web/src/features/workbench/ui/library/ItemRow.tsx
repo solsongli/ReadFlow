@@ -32,7 +32,10 @@ export const ItemRow = memo(function ItemRow({ id, position, total, row, density
       aria-selected={selected}
       aria-label={row.title}
       draggable
-      onDragStart={(event) => writeDraggedIds(event.dataTransfer, selected && selection.length ? selection : [row.id])}
+      onDragStart={(event) => {
+        writeDraggedIds(event.dataTransfer, selected && selection.length ? selection : [row.id]);
+        event.dataTransfer.setData("application/x-readflow-canvas", JSON.stringify({ type: "paper", itemId: row.id }));
+      }}
       onClick={(event) => onSelect(row.id, event)}
       onDoubleClick={() => onOpen(row.id)}
       className={cn("wb-transition flex h-full cursor-default select-none gap-2.5 rounded-[10px] px-3 pl-2", compact ? "items-center py-2" : "py-2.5", selected ? "bg-wb-accent-soft" : "hover:bg-wb-hover")}

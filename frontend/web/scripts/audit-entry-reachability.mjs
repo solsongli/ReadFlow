@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 
 const repo = fileURLToPath(new URL("../../../", import.meta.url));
-const roots = ["frontend/web/src/app/workbench/entry.tsx", "frontend/web/src/app/reader/entry.tsx"];
+const roots = ["frontend/web/src/app/workbench/entry.tsx"];
 const packages = new Map();
 for (const name of fs.readdirSync(path.join(repo, "frontend/packages"))) {
   const dir = `frontend/packages/${name}`;
@@ -45,8 +45,7 @@ const result = await build({
 });
 const runtime = Object.keys(result.metafile.inputs).filter((p) => p.startsWith("frontend/") && !p.includes("node_modules"));
 const visited = new Set();
-const queue = [...roots, "frontend/web/src/styles/entries/workbench.css", "frontend/web/src/styles/entries/reader.css",
-  "frontend/packages/reader/scripts/styles.css", "frontend/packages/reader/scripts/ai.css"]
+const queue = [...roots, "frontend/web/src/styles/entries/workbench.css"]
   .map((p) => path.join(repo, p));
 while (queue.length) {
   const file = queue.pop();
@@ -64,7 +63,7 @@ function walk(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => e.isDirectory()
     ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)]);
 }
-const sourceRoots = ["frontend/web/src", ...[...packages.values()].map(({ dir }) => `${dir}/src`), "frontend/packages/reader/styles"];
+const sourceRoots = ["frontend/web/src", ...[...packages.values()].map(({ dir }) => `${dir}/src`)];
 const candidates = sourceRoots.flatMap((p) => walk(path.join(repo, p))).filter((p) => /\.(?:tsx?|jsx?|css|html)$/.test(p));
 const unreachable = candidates.filter((p) => !visited.has(p)).map((p) => path.relative(repo, p));
 const report = { roots, runtime, reachable: [...visited].map((p) => path.relative(repo, p)).sort(), unreachable };

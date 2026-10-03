@@ -26,19 +26,7 @@ export function WindowDropZone() {
       target.addEventListener("dragleave", leave, true); target.addEventListener("drop", drop, true);
       return () => { target.removeEventListener("dragenter", enter, true); target.removeEventListener("dragover", over, true); target.removeEventListener("dragleave", leave, true); target.removeEventListener("drop", drop, true); };
     }
-    const rootCleanup = bind(window), frames = new Map<HTMLIFrameElement, () => void>();
-    const scan = () => {
-      for (const [frame, cleanup] of frames) if (!frame.isConnected) { cleanup(); frames.delete(frame); }
-      document.querySelectorAll("iframe").forEach((frame) => {
-        if (frames.has(frame)) return;
-        let childCleanup: (() => void) | undefined;
-        const loaded = () => { childCleanup?.(); try { if (frame.contentWindow?.location.origin === location.origin) childCleanup = bind(frame.contentWindow); } catch { /* Only owned same-origin documents can participate. */ } };
-        frame.addEventListener("load", loaded); loaded();
-        frames.set(frame, () => { frame.removeEventListener("load", loaded); childCleanup?.(); });
-      });
-    };
-    const observer = new MutationObserver(scan); observer.observe(document.body, { childList: true, subtree: true }); scan();
-    return () => { observer.disconnect(); rootCleanup(); frames.forEach((cleanup) => cleanup()); };
+    return bind(window);
   }, [wb]);
   return description ? <div role="status" aria-label="文件拖放导入" className="pointer-events-none fixed inset-0 z-[100] flex items-center justify-center bg-wb-overlay backdrop-blur-sm"><div className="flex items-center gap-3 rounded-xl bg-wb-panel px-7 py-5 text-[1rem] font-medium shadow-wb-pop"><FileUp size={24} aria-hidden="true" />{description}</div></div> : null;
 }

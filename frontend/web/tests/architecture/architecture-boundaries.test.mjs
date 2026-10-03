@@ -12,7 +12,7 @@ const DOMAIN_JOB_SOURCE_ROOT = join(PROJECT_ROOT, "../../frontend/packages/domai
 // platform/contracts、store 归 app/home/state、idle 视图归 app/home/composition、
 // resetStatusDetailRuntimeView 归 features/job-detail。以它为扫描根的四条规则
 // 见下方逐条说明（两条重定向到新位置，四条删除并注明被谁接管）。
-const BOOTSTRAP_ROOT = join(PROJECT_ROOT, "src/app/bootstrap");
+const BOOTSTRAP_ROOT = join(PROJECT_ROOT, "src/app/workbench");
 // 新世界功能层（按功能重组后的 src/features/*），承接原 FEATURE_ROOT 仍然成立的规则。
 const FEATURE_LAYER_ROOT = join(PROJECT_ROOT, "src/features");
 const SOURCE_ROOTS = {

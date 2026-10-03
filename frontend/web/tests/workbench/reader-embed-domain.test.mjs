@@ -1,7 +1,5 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseWorkbenchEmbed, parseWorkbenchSchemeMessage, parseWorkbenchReaderMessage, trustedWorkbenchMessage, validReaderProgress, SOFT_READER_CLOSE_MESSAGE } from "../../../../frontend/packages/reader/src/domain/workbench-embed.ts";
-import { workbenchReaderUrl, resolveWorkbenchScheme } from "@/features/workbench/domain/reader-messages.js";
 import { mergeReaderRow } from "@/features/workbench/domain/reader-state.js";
 import { createWorkbenchStore } from "@/features/workbench/domain/workbench-store.js";
 import { createReaderSync } from "@/features/workbench/state/reader-sync.js";
@@ -16,51 +14,6 @@ function prepared() {
   store.actions.openTab({ id: `reader:${ID}`, itemId: ID, title: row.title, status: "ready", row });
   return store;
 }
-
-test("embedding is explicit; invalid paper IDs do not disable theme isolation", () => {
-  assert.equal(parseWorkbenchEmbed("?scheme=dark"), null);
-  assert.equal(parseWorkbenchEmbed("?embed=soft"), null);
-  assert.deepEqual(parseWorkbenchEmbed(`?embed=workbench&scheme=dark&research_item_id=${ID}`), { scheme: "dark", itemId: ID });
-  assert.deepEqual(parseWorkbenchEmbed("?embed=workbench&scheme=night&research_item_id=bad"), { scheme: "light", itemId: null });
-});
-
-test("scheme messages accept exactly the declared type and light/dark value", () => {
-  assert.deepEqual(parseWorkbenchSchemeMessage({ type: "readflow:scheme", scheme: "dark" }), { type: "readflow:scheme", scheme: "dark" });
-  for (const value of [null, [], "dark", { type: "readflow:scheme", scheme: "night" }, { type: "readflow:scheme", scheme: "dark", extra: true }]) assert.equal(parseWorkbenchSchemeMessage(value), null);
-});
-
-test("host messages bind identity, integer page bounds and exact fields", () => {
-  const progress = { type: "readflow:reader-progress", itemId: ID, page: 25, pages: 32 };
-  assert.deepEqual(parseWorkbenchReaderMessage(progress, ID), progress);
-  for (const patch of [{ itemId: OTHER }, { page: 0 }, { page: 33 }, { pages: 0 }, { page: 1.5 }, { page: "1" }, { pages: Infinity }, { pages: 100001 }, { extra: true }]) assert.equal(parseWorkbenchReaderMessage({ ...progress, ...patch }, ID), null);
-  for (const type of ["readflow:notes-changed", "readflow:reader-ready"]) assert.deepEqual(parseWorkbenchReaderMessage({ type, itemId: ID }, ID), { type, itemId: ID });
-  assert.deepEqual(parseWorkbenchReaderMessage({ type: SOFT_READER_CLOSE_MESSAGE }, ID), { type: SOFT_READER_CLOSE_MESSAGE });
-  assert.equal(parseWorkbenchReaderMessage({ type: SOFT_READER_CLOSE_MESSAGE, itemId: OTHER }, ID), null);
-  assert.equal(validReaderProgress(NaN, 3), false);
-});
-
-test("origin alone never proves frame ownership", () => {
-  const own = {}, foreign = {};
-  assert.equal(trustedWorkbenchMessage({ origin: "http://local", source: own }, "http://local", own), true);
-  assert.equal(trustedWorkbenchMessage({ origin: "http://evil", source: own }, "http://local", own), false);
-  assert.equal(trustedWorkbenchMessage({ origin: "http://local", source: foreign }, "http://local", own), false);
-  assert.equal(trustedWorkbenchMessage({ origin: "http://local", source: null }, "http://local", null), false);
-});
-
-test("embed URL uses zero-based page_idx and never admits foreign navigation", () => {
-  const base = "http://local/workbench.html";
-  const url = new URL(workbenchReaderUrl("./reader.html?document_id=hash&attachment_id=a&block_id=old&page=3", base, ID, "dark", 25));
-  assert.equal(url.searchParams.get("page_idx"), "24");
-  assert.equal(url.searchParams.get("block_id"), null);
-  assert.equal(url.searchParams.get("page"), null);
-  assert.equal(url.searchParams.get("research_item_id"), ID);
-  assert.equal(url.searchParams.get("attachment_id"), "a");
-  assert.equal(url.searchParams.get("scheme"), "dark");
-  assert.equal(workbenchReaderUrl("https://foreign/reader.html", base, ID, "light"), null);
-  assert.equal(workbenchReaderUrl("./workbench.html", base, ID, "light"), null);
-  assert.equal(resolveWorkbenchScheme("system", true), "dark");
-  assert.equal(resolveWorkbenchScheme("light", true), "light");
-});
 
 test("incremental row update retains query, selection, order and sibling identity", () => {
   const store = prepared();

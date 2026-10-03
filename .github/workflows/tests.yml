@@ -104,12 +104,6 @@ jobs:
       - name: Build @retainpdf/api
         run: npm --prefix frontend/packages/api run build
 
-      - name: Typecheck @retainpdf/reader
-        run: npm --prefix frontend/packages/reader run typecheck
-
-      - name: Build @retainpdf/reader
-        run: npm --prefix frontend/packages/reader run build
-
   frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -134,7 +128,6 @@ jobs:
           npm --prefix frontend/packages/domain run build
           npm --prefix frontend/packages/ui run build
           npm --prefix frontend/packages/api run build
-          npm --prefix frontend/packages/reader run build
 
       - name: Frontend Typecheck
         # deps were just built above, so skip the pretypecheck ->

@@ -1,44 +1,84 @@
-import { ReaderTranslation } from "./ReaderTranslation.js";
-import { CircleAlert, LoaderCircle } from "lucide-react";
+import { useReaderAssistance } from "./useReaderAssistance.js";
+import { useReaderCanvas } from "./useReaderCanvas.js";
+import { Settings } from "lucide-react";
+import { IconButton } from "@/ui/wb/Button.js";
+import { PaperReader, quoteReference } from "@/features/paper-reader/index.js";
+import { buildApiHeaders, buildApiUrl } from "@/platform/config/runtime.js";
 import { cn } from "@/ui/lib/utils.js";
-import { Button } from "@/ui/wb/Button.js";
-import { WbEmptyState } from "@/ui/wb/EmptyState.js";
 import type { ReaderTab } from "../../domain/workbench-store.js";
-import { ReaderFrame } from "./ReaderFrame.js";
-import { useWorkbench } from "../context.js";
-
-/**
- * One tab = one same-origin iframe of the existing reader (阶段 2 会换成新阅读器).
- * Iframes stay mounted while hidden so switching tabs keeps scroll position and annotations.
- * When the legacy reader navigates away (its own 关闭 button goes back to the old home page),
- * the tab closes instead of showing the old UI inside the workbench.
- */
+import { formatGbt7714 } from "../../domain/citation.js";
+import { activeTranslation, translationProgress } from "../../domain/translation.js";
+import { useWb, useWorkbench } from "../context.js";
 export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean }) {
   const wb = useWorkbench();
-
+  const annotationSemantics = useWb((state) => state.annotationSemantics);
+  const tone = useWb((state) => state.paperTone);
+  const row = tab.row;
+  const canvas = useReaderCanvas(tab.itemId, active, row?.notes_count ?? 0);
+  const assistance = useReaderAssistance(tab.itemId, row?.title || "", canvas.addText);
+  if (!row || !tab.attachmentId) {
+    return (
+      <div role="status" className={cn("p-6 text-wb-text-3", !active && "hidden")}>
+        论文信息尚未就绪，请重新打开文献。
+      </div>
+    );
+  }
+  const headers = buildApiHeaders();
+  const job = row.translation.status === "done" ? row.translation.job_id : null;
   return (
-    <div data-wb-reader-active={active} className={cn("absolute inset-0 flex flex-col bg-wb-bg", !active && "hidden")}>
-      <ReaderTranslation tab={tab} />
-      {tab.status === "loading" ? (
-        <WbEmptyState className="flex-1" icon={<LoaderCircle size={22} />} title="正在准备阅读器…" hint={tab.title} />
-      ) : null}
-      {tab.status === "error" ? (
-        <WbEmptyState
-          className="flex-1"
-          icon={<CircleAlert size={24} />}
-          title="这篇文献暂时打不开"
-          hint={tab.error ?? undefined}
-          action={
-            <div className="flex gap-1.5">
-              <Button onClick={() => { wb.closeTab(tab.id); void wb.openReader(tab.itemId, { attachmentId: tab.attachmentId, page: tab.resumePage ?? undefined }); }}>重试</Button>
-              <Button variant="ghost" onClick={() => wb.closeTab(tab.id)}>关闭标签页</Button>
-            </div>
-          }
-        />
-      ) : null}
-      {tab.status === "ready" && tab.url ? (
-        <ReaderFrame key={`${tab.url}:${tab.navigationKey ?? 0}`} tab={tab} />
-      ) : null}
+    <div data-wb-reader-active={active} className={cn("absolute inset-0", !active && "hidden")}>
+      <PaperReader
+        assistance={assistance}
+        {...canvas.ports}
+        canvas={canvas.dock}
+        panels={{ 画布: canvas.dock }}
+        flashAnnotationId={tab.annotationId}
+        attachmentId={tab.attachmentId}
+        annotationSemantics={annotationSemantics}
+        annotationsChanged={() => {
+          void wb.readerNotesChanged(tab.itemId);
+          canvas.changed();
+        }}
+        key={tab.attachmentId}
+        toolbarTools={
+          <IconButton label="工作台设置" title="工作台设置（Ctrl ,）" onClick={() => wb.openSettings()}>
+            <Settings size={16} />
+          </IconButton>
+        }
+        onFocusChange={(focused) => wb.store.actions.updateTab(tab.id, { focused })}
+        metadata={row}
+        active={active}
+        tone={tone}
+        setTone={(paperTone) => wb.setPrefs({ paperTone })}
+        lastReadPage={row.read_page}
+        resumePage={tab.resumePage}
+        navigationKey={tab.navigationKey}
+        source={{
+          url: buildApiUrl("/api/research", `/attachments/${encodeURIComponent(tab.attachmentId)}/pdf`),
+          headers,
+        }}
+        translated={
+          job ? { url: buildApiUrl("/api/v1", `/jobs/${encodeURIComponent(job)}/pdf`), headers } : undefined
+        }
+        progress={(page, pages) => void wb.readerProgress({ itemId: tab.itemId, page, pages })}
+        quote={(text, page, format) =>
+          quoteReference(text, row.authors, row.year, page, format === "gbt" ? formatGbt7714(row) : undefined)
+        }
+        lookup={async (query) =>
+          (await wb.api.list({ view: "all", query, sort: "title", order: "asc" })).items.map(
+            ({ id, title }) => ({ id, title }),
+          )
+        }
+        reveal={(id) => void wb.revealNotePaper(id)}
+        translation={{
+          label: translationProgress(row.translation),
+          running: activeTranslation(row.translation),
+          percent: row.translation.percent,
+          start: () => void wb.translations.start([row.id]),
+          cancel: () => void wb.translations.cancel(row.id),
+        }}
+      />
+      {canvas.picker}
     </div>
   );
 }

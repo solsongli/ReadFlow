@@ -55,7 +55,6 @@ class LocalOriginTests(unittest.IsolatedAsyncioTestCase):
         app = FastAPI()
         @app.get("/")
         @app.get("/workbench.html")
-        @app.get("/reader.html")
         @app.get("/healthz")
         async def health():
             return {"ok": True}
@@ -99,10 +98,10 @@ class LocalOriginTests(unittest.IsolatedAsyncioTestCase):
         response = await self.request({"Origin": "https://["})
         self.assertEqual(response.status_code, 403)
 
-    async def test_reader_can_only_be_framed_by_the_same_origin(self):
+    async def test_removed_reader_is_not_served_or_frameable(self):
         response = await self.request({"Origin": "http://127.0.0.1:41030", "Sec-Fetch-Site": "same-origin"}, path="/reader.html")
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("frame-ancestors 'self'", response.headers["content-security-policy"])
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("frame-ancestors 'none'", response.headers["content-security-policy"])
         denied = await self.request({"Origin": "https://foreign.example", "Sec-Fetch-Site": "cross-site", "Sec-Fetch-Mode": "navigate", "Sec-Fetch-Dest": "iframe"}, path="/reader.html")
         self.assertEqual(denied.status_code, 403)
 

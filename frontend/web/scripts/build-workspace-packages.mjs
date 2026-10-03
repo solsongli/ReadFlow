@@ -7,7 +7,6 @@ const buildOrder = [
   "@retainpdf/domain",
   "@retainpdf/ui",
   "@retainpdf/api",
-  "@retainpdf/reader",
 ];
 
 function runNpm(args) {

@@ -1,3 +1,4 @@
+const { confirmedExternalUrl } = require("./src/main/external-links");
 const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
 const { spawn } = require("child_process");
 const fs = require("fs");
@@ -699,6 +700,7 @@ app.on("window-all-closed", () => {
 
 ipcMain.handle("desktop:invoke", async (_event, command, args = {}) => {
   switch (command) {
+    case "open_confirmed_external": await shell.openExternal(confirmedExternalUrl(args.url)); return { ok: true };
     case "list_installed_fonts": return installedFonts.list();
     case "load_connector_settings": return connectorSettings.preferences();
     case "save_connector_settings": return connectorSettings.save(args.enabled);

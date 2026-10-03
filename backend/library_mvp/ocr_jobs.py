@@ -11,6 +11,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from fastapi import Request
+from .data_layout import OCR_MODULES
 from .store import StoreError, encode, fingerprint, new_id, now, MAX_EXTRACTED_CHARACTERS
 from .ocr_modules import OcrModules
 
@@ -239,7 +240,7 @@ class OcrJobs:
 
 def register_ocr_routes(app, store, *, allow_download=False, manifest_path=None):
     from .api import json_body
-    modules = OcrModules(store.data_root / 'optional-ocr', manifest_path, allow_download=allow_download)
+    modules = OcrModules(store.data_root / OCR_MODULES, manifest_path, allow_download=allow_download)
     jobs = OcrJobs(store, modules)
     app.state.ocr_modules, app.state.ocr_jobs = modules, jobs
     base = '/api/research/ocr'

@@ -1,7 +1,7 @@
 import { listFonts } from "@retainpdf/api/fonts";
 import { API_PREFIX } from "@/platform/config/api-constants.js";
 import { getStoredFontFamily, setStoredFontFamily, RENDER_FONT_STORAGE_KEY, RENDER_FONT_CHANGE_EVENT } from "@/features/settings/domain.js";
-import { validWorkbenchFontFamily } from "@retainpdf/reader/contracts";
+import { validWorkbenchFontFamily } from "../domain/interface-fonts.js";
 
 export interface InstalledFont { family: string; chinese: boolean }
 function fontBridge() {

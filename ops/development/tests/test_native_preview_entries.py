@@ -25,7 +25,7 @@ class PreviewEntriesTests(unittest.TestCase):
                 (desktop / name).mkdir(parents=True)
             web = repo / "frontend/web"
             web.mkdir()
-            for name in ["reader.html", "workbench.html", "runtime-config.js"]:
+            for name in ["workbench.html", "runtime-config.js"]:
                 (web / name).write_text("fixture")
             (web / "dist").mkdir()
             (web / "dist/workbench.bundle.js").write_text("fixture")
@@ -39,7 +39,7 @@ class PreviewEntriesTests(unittest.TestCase):
             sentinel.write_text("preserve")
             with patch.multiple(preview, REPO=repo, DESKTOP=desktop, SOURCE=source), patch.object(preview, "alive", return_value=False):
                 preview.prepare(root)
-            self.assertEqual(sorted(p.name for p in target.glob("*.html")), ["reader.html", "workbench.html"])
+            self.assertEqual(sorted(p.name for p in target.glob("*.html")), ["workbench.html"])
             self.assertFalse((target / "dist/stale.bundle.js").exists())
             self.assertTrue((target / "dist/workbench.bundle.js").exists())
             self.assertEqual(sentinel.read_text(), "preserve")
@@ -74,3 +74,51 @@ class PreviewEntriesTests(unittest.TestCase):
             self.assertEqual(child_env["RETAIN_PDF_RESEARCH_CODE_ROOT"], str(preview.REPO))
             self.assertEqual(child_env["RETAIN_PDF_START_PAGE"], "workbench.html")
             self.assertEqual(child_env["RETAIN_PDF_RESEARCH_CONNECTOR_PORT"], "")
+
+    def test_recover_requires_exact_owned_executable_profile_and_log(self):
+        import json
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'profile/chromium').mkdir(parents=True)
+            (root / 'profile/chromium/SingletonLock').symlink_to('fixture-12345')
+            log = root / 'native-fixture.log'
+            log.write_text('fixture')
+            original_readlink = Path.readlink
+            def link(path):
+                if str(path) == '/proc/12345/fd/1': return log
+                return original_readlink(path)
+            with patch.object(preview, 'tick', return_value='start'), patch.object(preview, 'alive', return_value=True), patch.object(Path, 'readlink', link):
+                saved = preview.recover(root)
+            self.assertEqual(saved['pid'], 12345)
+            self.assertEqual(json.loads((root/'process.json').read_text())['start_ticks'], 'start')
+            before = (root/'process.json').read_bytes()
+            with patch.object(preview, 'tick', return_value=None):
+                with self.assertRaises(ValueError): preview.recover(root)
+            self.assertEqual((root/'process.json').read_bytes(), before)
+
+    def test_failed_start_restores_previous_owner_record(self):
+        import json
+        from unittest.mock import Mock
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root/'runtime').mkdir()
+            previous = {'application': preview.OWNER['application'], 'pid': 9000, 'start_ticks': 'original', 'log': str(root/'native-original.log')}
+            (root/'process.json').write_text(json.dumps(previous))
+            child = Mock(pid=42)
+            child.poll.return_value = 0
+            with patch.object(preview.sys, 'argv', ['preview', 'start']), patch.object(preview, 'own_root', return_value=root), \
+                 patch.object(preview, 'alive', return_value=False), patch.object(preview, 'prepare', return_value=root/'runtime/fake-shell'), \
+                 patch.object(preview, 'tick', return_value='new'), patch.object(preview.os, 'environ', {}), \
+                 patch.object(preview.subprocess, 'Popen', return_value=child):
+                self.assertEqual(preview.main(), 1)
+            self.assertEqual(json.loads((root/'process.json').read_text()), previous)
+
+
+class FakeRuntimeInstructionsTests(unittest.TestCase):
+    def test_preview_must_allocate_before_fake_runtime_binds(self):
+        guide = (ENTRY.parents[2] / 'docs/readflow/选段翻译与AI伴读.md').read_text()
+        self.assertLess(guide.index('native_retain_preview.py restart'),
+                        guide.index('readflow_fake_openai.py --port'))
+        self.assertIn('实际 AI 端口', guide)
+        self.assertIn('已切换到 41161', guide)
+        self.assertIn('不要先启动假运行时再重启预览', guide)

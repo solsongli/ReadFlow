@@ -11,7 +11,6 @@
   ],
   "scripts": {
     "build:web": "npm run build --workspace=front-tailwind-ui",
-    "build:reader": "npm run build --workspace=@retainpdf/reader",
     "dev:desktop": "npm --workspace=retain-pdf-desktop run dev --",
     "test:desktop": "npm test --workspace=retain-pdf-desktop",
     "test:desktop:windows": "npm run test:desktop && node frontend/desktop/scripts/remote-windows.mjs",

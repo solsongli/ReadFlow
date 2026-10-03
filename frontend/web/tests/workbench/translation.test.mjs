@@ -33,14 +33,15 @@ test('unconfigured translation offers settings without submitting', async () => 
   assert.equal(await h.translations.start(['paper']), false);
   assert.equal(h.calls.length, 0); assert.equal(h.store.getSnapshot().translationIssue.error.settings, 'translation');
 });
-test('submission, progress and completion update only the paper and reload its reader preserving the page', async () => {
+test('submission, progress and completion update only the paper and update native reader data without remounting it', async () => {
   const h = fixture(); await h.translations.start(['paper', 'paper']);
   assert.equal(h.calls.length, 1);
   await h.translations.poll();
   assert.equal(h.store.getSnapshot().list.result.items[0].translation.percent, 40);
   h.next({ status: 'done', job_id: 'task', percent: 100 }); await h.translations.poll();
   const tab = h.store.getSnapshot().tabs.find((t) => t.itemId === 'paper');
-  assert.match(tab.url, /job_id=task/); assert.equal(tab.resumePage, 4);
+  assert.equal(tab.row.translation.job_id, "task"); assert.equal(tab.row.read_page, 4);
+  assert.equal(tab.navigationKey, undefined, "completion does not remount native reader");
   assert.equal(h.notices.at(-1)[0], '《Synthetic paper》翻译完成');
   assert.equal(h.notices.at(-1)[3], '对照阅读');
   await h.translations.poll(); assert.equal(h.notices.filter((n) => n[1] === 'success').length, 1);

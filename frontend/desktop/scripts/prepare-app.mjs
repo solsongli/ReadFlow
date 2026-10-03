@@ -576,7 +576,6 @@ if (frontendOnly) {
 }
 
 const desktopFrontendRuntimeEntries = new Set([
-  "reader.html",
   "workbench.html",
   "dist",
   "src",
@@ -630,9 +629,7 @@ function copyFrontendRuntimeDependency(packageName, entries, targetDirName = pac
   }
 }
 
-copyFrontendRuntimeDependency("pdf-lib", [
-    "dist/pdf-lib.esm.js",
-  ]);
+
 
   copyFrontendRuntimeDependency("pdfjs-dist", [
     "build/pdf.mjs",
@@ -652,12 +649,6 @@ function rewriteDesktopFrontendRuntimeImports() {
     const htmlPath = path.join(outputFrontendRoot, entry.name);
     let html = fs.readFileSync(htmlPath, "utf8");
     html = html.replace('\n    <script src="./runtime-config.local.js"></script>', "");
-    if (entry.name === "reader.html") {
-      html = html.replaceAll(
-        "./node_modules/pdfjs-dist/web/pdf_viewer.css",
-        "./vendor/pdfjs-dist/web/pdf_viewer.css",
-      );
-    }
     fs.writeFileSync(htmlPath, html, "utf8");
   }
 

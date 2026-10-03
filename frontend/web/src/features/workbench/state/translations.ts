@@ -36,11 +36,6 @@ export function createTranslations({ api, store, notify, openReader, refreshDesk
         queued: Math.max(0, summary.queued + Number(row.translation.status === "queued") - Number(old.translation.status === "queued")) } } } });
     }
     if (!submitted && activeTranslation(old.translation) && row.translation.status === "done") {
-      for (const tab of store.getSnapshot().tabs.filter((tab) => tab.itemId === id && tab.url)) {
-        const url = new URL(tab.url!, "http://reader.invalid");
-        url.searchParams.set("job_id", row.translation.job_id!);
-        store.actions.updateTab(tab.id, { url: url.pathname + url.search, resumePage: latest.read_page, navigationKey: (tab.navigationKey ?? 0) + 1 });
-      }
       notify(`《${row.title}》翻译完成`, "success", () => void openReader(id), "对照阅读");
       await refreshDesk();
     }

@@ -1,3 +1,4 @@
+import { DEFAULT_SEMANTICS, type Semantics } from "@/features/paper-reader/domain.js";
 // 工作台状态（纯 reducer）。副作用在 controller.ts；本文件不 import React、不访问网络。
 import type { SettingsSection } from "./settings.js";
 import { DEFAULT_TYPOGRAPHY, type TypographyPrefs } from "./typography.js";
@@ -13,13 +14,18 @@ import type {
   WorkbenchView,
 } from "@/platform/contracts/workbench.js";
 
-export type MainView = "desk" | "library" | "notes" | "settings";
+export type MainView = "desk" | "library" | "notes" | "settings" | "review";
 export type ListLayout = "list" | "grouped";
 export type Density = "bilingual" | "compact";
 export type ThemePreference = "system" | "light" | "dark";
 export type LoadStatus = "idle" | "loading" | "ready" | "error";
 
 export interface ReaderTab {
+  kind?: "canvas";
+  canvasId?: string;
+  canvasNode?: string;
+  annotationId?: string;
+  focused?: boolean;
   row?: WorkbenchRow;
   resumePage?: number | null;
   id: string;
@@ -41,6 +47,10 @@ export interface Notice {
 }
 
 export interface Prefs extends TypographyPrefs {
+  reviewNewLimit: number;
+  reviewLimit: number;
+  annotationSemantics: Semantics;
+  paperTone: "auto" | "white" | "sepia" | "night";
   sort: WorkbenchSort;
   order: SortOrder;
   layout: ListLayout;
@@ -56,7 +66,7 @@ export interface WorkbenchState extends Prefs {
   translatingIds?: string[];
   main: MainView;
   settingsSection: SettingsSection;
-  settingsReturn: { main: "desk" | "library" | "notes"; activeTab: string };
+  settingsReturn: { main: "desk" | "library" | "notes" | "review"; activeTab: string };
   notes: NotesState;
   view: WorkbenchView;
   groupId: string | null;
@@ -84,6 +94,10 @@ export interface WorkbenchState extends Prefs {
 export const LIBRARY_TAB = "library";
 
 export const DEFAULT_PREFS: Prefs = {
+  reviewNewLimit: 20,
+  reviewLimit: 200,
+  paperTone: "auto",
+  annotationSemantics: { ...DEFAULT_SEMANTICS },
   ...DEFAULT_TYPOGRAPHY,
   sort: "added",
   order: "desc",
@@ -202,6 +216,6 @@ export function createWorkbenchStore(prefs: Partial<Prefs> = {}) {
 export type WorkbenchStore = ReturnType<typeof createWorkbenchStore>;
 
 export function prefsOf(state: S): Prefs {
-  const { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont } = state;
-  return { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont };
+  const { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit } = state;
+  return { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit };
 }

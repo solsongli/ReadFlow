@@ -24,7 +24,7 @@ const PROJECT_ROOT = process.cwd();
 const WEB_SRC = join(PROJECT_ROOT, "src");
 
 /** 本包所有公开入口（与 packages/domain/package.json 的 exports 一一对应）。 */
-const PACKAGE_ENTRIES = ["@retainpdf/domain/job", "@retainpdf/domain/ai", "@retainpdf/domain/session"];
+const PACKAGE_ENTRIES = ["@retainpdf/domain/job"];
 
 /**
  * 已审阅的重名登记表。每条要么带 fixtures（断言行为一致），要么带

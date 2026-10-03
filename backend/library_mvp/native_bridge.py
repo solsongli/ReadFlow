@@ -131,6 +131,23 @@ class NativeBridge:
             raise error
         return self._json(response)
 
+    def reader_runtime_config(self) -> dict:
+        response = self._client.get(f"{self.base_url}/api/v1/ai/runtime-config", headers=self._headers)
+        if not 200 <= response.status_code < 300:
+            error = NativeBridgeError('AI_RUNTIME_CONFIG_UNAVAILABLE', 'AI 运行时设置暂不可用。')
+            error.status_code = response.status_code
+            raise error
+        value = self._json(response)
+        return value.get('data', value)
+
+    def reader_glossary(self, identity: str) -> dict:
+        if not isinstance(identity, str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,160}', identity):
+            raise NativeBridgeError('INVALID_GLOSSARY', '术语表标识无效。')
+        response = self._client.get(f"{self.base_url}/api/v1/glossaries/{identity}", headers=self._headers)
+        self._status(response)
+        value = self._json(response)
+        return value.get('data', value)
+
     def translation_job(self, job_id: str) -> dict:
         if not re.fullmatch(r"[A-Za-z0-9_-]{1,160}", job_id):
             raise NativeBridgeError("INVALID_JOB", "任务编号无效")

@@ -26,9 +26,7 @@ sys.path.insert(0, str(BACKEND_ROOT))
 
 NATIVE_MARKER = {"application": "retainpdf-native-research-library", "schema_version": 1}
 STORE_MARKER = {"application": "retainpdf-research-library", "schema_version": 1}
-OWNED_FILES = {"native-library-runtime.json", "research-library.json", "library.sqlite3",
-               "library.sqlite3-wal", "library.sqlite3-shm", "blobs", ".gitignore",
-               "optional-ocr", "agent-config.json"}
+from library_mvp.data_layout import OWNED_FILES
 READY_PREFIX = "RETAINPDF_RESEARCH_READY="
 
 

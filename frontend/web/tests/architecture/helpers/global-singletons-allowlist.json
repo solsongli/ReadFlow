@@ -1,7 +1,5 @@
 [
   "src/features/ingest/domain/upload/state.ts::let-var::defaultUploadStatePort",
-  "src/features/jobs/domain/runtime/current-job-state.ts::symbol-for-store::CURRENT_JOB_STORE_KEY",
-  "src/features/jobs/domain/runtime/secondary-resource-store.ts::symbol-for-store::SECONDARY_RESOURCE_STORE_KEY",
   "src/platform/config/desktop-persistence.ts::let-var::desktopPersistedSnapshot",
   "src/platform/config/runtime.ts::let-var::runtimeConfig",
   "src/platform/contracts/credentials-contract.ts::let-var::_defaultCredentialsStatePort",

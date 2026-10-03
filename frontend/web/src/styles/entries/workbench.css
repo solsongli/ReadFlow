@@ -8,6 +8,8 @@
 @source "../../../workbench.html";
 @source "../../app/workbench/**/*.{ts,tsx}";
 @source "../../features/workbench/**/*.{ts,tsx}";
+@source "../../features/paper-reader/**/*.{ts,tsx}";
+@source "../../features/flashcards/**/*.{ts,tsx}";
 @source "../../ui/wb/**/*.{ts,tsx}";
 
 @theme inline {
@@ -189,3 +191,56 @@
 @layer utilities {
   :root :focus-visible { outline: 2px solid var(--wb-link); outline-offset: 2px; }
 }
+
+/* Native paper surfaces and pdf.js text geometry. */
+.pr-desk { background: var(--pr-desk); scrollbar-gutter: stable; overflow-anchor: none; }
+.pr-page { background: var(--pr-paper); box-shadow: var(--pr-shadow); }
+.pr-page canvas { filter: var(--pr-page-filter); mix-blend-mode: var(--pr-page-blend); }
+.pr-text-layer { position: absolute; inset: 0; overflow: hidden; line-height: 1; text-align: initial; transform-origin: 0 0; z-index: 1; }
+.pr-text-layer :is(span,br) { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0 0; }
+.pr-text-layer span.markedContent { top: 0; height: 0; }
+.pr-text-layer .pr-search-hit { background: var(--pr-search); }
+.pr-text-layer ::selection { background: var(--wb-accent-tint); }
+.pr-link { z-index: 2; cursor: pointer; }
+.pr-link:hover { background: var(--wb-accent-soft); }
+.pr-focus-edge { display: none; }
+.pr-reader[data-focus="true"] .pr-focus-edge { display: block; position: absolute; z-index: 31; height: 14px; inset: 0 0 auto; }
+.pr-reader[data-focus="true"] .pr-toolbar { position: absolute; inset: 0 0 auto; z-index: 30; visibility: hidden; }
+.pr-reader[data-focus="true"] :is(.pr-focus-edge:hover + .pr-toolbar,.pr-toolbar:hover,.pr-toolbar:focus-within) { visibility: visible; }
+@media (max-width: 1000px) { .pr-reader [aria-label="论文面板"] { position: absolute; right: 0; top: 54px; bottom: 2px; z-index: 15; box-shadow: var(--wb-shadow-pop); } }
+
+[data-annotation-color="yellow"] { --pr-color: var(--pr-yellow); }
+[data-annotation-color="blue"] { --pr-color: var(--pr-blue); }
+[data-annotation-color="green"] { --pr-color: var(--pr-green); }
+[data-annotation-color="red"] { --pr-color: var(--pr-red); }
+[data-annotation-color="purple"] { --pr-color: var(--pr-purple); }
+.pr-color { background: var(--pr-color); }
+.pr-annotations { z-index: 8; touch-action: none; }
+.pr-mark, .pr-ink-preview { color: var(--pr-color); }
+.pr-mark-highlight { fill: currentColor; fill-opacity: var(--pr-highlight-opacity); }
+.pr-mark-underline { fill: currentColor; }
+.pr-mark-region { fill: currentColor; fill-opacity: .08; stroke: currentColor; stroke-width: 2; }
+.pr-mark-sticky { fill: currentColor; fill-opacity: .32; stroke: currentColor; stroke-width: 1; }
+.pr-mark[data-active="true"] { filter: drop-shadow(0 0 2px currentColor); }
+.pr-mark[data-active="true"] rect { stroke: currentColor; stroke-width: 2; }
+.pr-annotation-card { border-color: var(--pr-color); }
+.pr-annotation-card select { background: var(--wb-fill); color: var(--wb-text); }
+.pr-mark[data-flash="true"] { animation: pr-annotation-flash 180ms ease-in-out 2; }
+@keyframes pr-annotation-flash { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .pr-mark[data-flash="true"] { animation: none; } }
+@source "../../features/thought-canvas/**/*.{ts,tsx}";
+.tc-surface { background-color: var(--wb-sidebar); background-image: radial-gradient(var(--tc-dot) 1px, transparent 1px); touch-action: none; }
+.tc-card { background: var(--wb-panel); border: 1px solid var(--wb-line-soft); box-shadow: var(--wb-shadow-card); color: var(--wb-text); }
+.tc-card[data-selected="true"] { outline: 2px solid var(--wb-accent); outline-offset: 2px; }
+.tc-card[data-kind="excerpt"], .tc-card[data-kind="image"] { border-left: 4px solid var(--pr-color, var(--wb-accent)); }
+.tc-card[data-kind="sticky"] { background: var(--tc-sticky); transform: rotate(-.5deg); }
+.tc-card[data-kind="todo"] { border: 1.5px solid var(--tc-todo); }
+.tc-card[data-kind="text"] { background: transparent; box-shadow: none; border-color: transparent; }
+.tc-card[data-kind="group"] { background: var(--tc-group); box-shadow: none; border: 1px dashed var(--wb-accent); }
+.tc-port { background: var(--wb-accent); border: 1px solid var(--wb-panel); }
+.tc-marquee { background: var(--tc-group); border: 1px solid var(--wb-accent); }
+.tc-markdown :is(h1,h2,h3,h4) { font-size: inherit; font-weight: 600; margin: .3em 0; }
+.tc-markdown p { margin: 0 0 .3em; }
+.tc-markdown :is(ul,ol) { padding-left: 1.25em; margin: .3em 0; }
+.tc-markdown a { color: var(--wb-link); }
+.tc-edge-label { background: var(--tc-edge-label-bg); color: var(--tc-edge-label-text); }

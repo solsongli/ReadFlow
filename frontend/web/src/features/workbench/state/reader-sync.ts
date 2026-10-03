@@ -1,5 +1,6 @@
 import type { WorkbenchApi } from "@/platform/api/workbench.js";
-import { validReaderProgress, type ReaderProgressMessage } from "@retainpdf/reader/contracts";
+interface ReaderProgressMessage { itemId: string; page: number; pages: number }
+function validReaderProgress(page: number, pages: number) { return Number.isInteger(page) && Number.isInteger(pages) && page >= 1 && page <= pages && pages <= 100000; }
 import { mergeReaderRow } from "../domain/reader-state.js";
 import type { WorkbenchStore } from "../domain/workbench-store.js";
 

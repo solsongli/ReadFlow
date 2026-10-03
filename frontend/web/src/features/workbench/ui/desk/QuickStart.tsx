@@ -23,7 +23,7 @@ export function QuickStart() {
   return (
     <section aria-label="快速开始" className="grid grid-cols-2 gap-3 @min-[550px]:grid-cols-3 @min-[820px]:grid-cols-6">
       <PaperLauncher kind="translate"><QuickCard name="翻译 PDF" description="选择文献，开始全文翻译" icon={Languages} tone="bg-wb-tool-translate" /></PaperLauncher>
-      <PaperLauncher kind="ai"><QuickCard name="AI 伴读" description="围绕论文，在阅读器右侧提问" icon={MessageSquare} tone="bg-wb-tool-ai" disabled={!total} title={!total ? "先导入文献再开始 AI 伴读" : undefined} /></PaperLauncher>
+      <PaperLauncher kind="ai"><QuickCard name="AI 伴读" description="围绕当前论文提问" icon={MessageSquare} tone="bg-wb-tool-ai" disabled={!total} /></PaperLauncher>
       <ImportMenu><QuickCard name="导入文献" description="PDF、Zotero / CSL JSON 与 Connector" icon={FileUp} tone="bg-wb-tool-import" /></ImportMenu>
       <OcrLauncher><QuickCard name="本地 OCR" description="识别扫描版 PDF 中的文字" icon={ScanText} tone="bg-wb-tool-ocr" /></OcrLauncher>
       <QuickCard name="笔记" description="集中查看论文的笔记与批注" icon={NotebookPen} tone="bg-wb-tool-notes" onClick={() => void wb.notes.open()} />

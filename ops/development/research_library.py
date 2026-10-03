@@ -115,7 +115,7 @@ def add_local_browser_guard(app, port: int) -> None:
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "no-referrer"
-        frame_ancestors = "'self'" if request.url.path == "/reader.html" else "'none'"
+        frame_ancestors = "'none'"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
             "img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; "
@@ -142,10 +142,6 @@ def create_preview_app(data_root: Path, *, port: int = 41030):
         return FileResponse(web / "workbench.html")
 
     app.mount("/vendor", StaticFiles(directory=web / "vendor"), name="reader-vendor")
-
-    @app.get("/reader.html", include_in_schema=False)
-    def reader():
-        return FileResponse(web / "reader.html")
 
     @app.get("/runtime-config.js", include_in_schema=False)
     def runtime_config():

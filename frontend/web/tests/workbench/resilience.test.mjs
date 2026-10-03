@@ -41,8 +41,8 @@ test("file drops filter PDF candidates and browser titles track the active works
   assert.equal(dropDescription([{ name: "text.txt", type: "text/plain" }]), "仅支持 PDF 文件");
   assert.equal(workbenchTitle("library"), "文献库 — ReadFlow"); assert.equal(workbenchTitle("desk", "论文"), "论文 — ReadFlow");
 });
-test("shortcut definitions are shared and uniquely identify all four groups", () => {
+test("shortcut definitions are shared and uniquely identify all five groups", () => {
   assert.equal(new Set(SHORTCUTS.map((entry) => entry.id)).size, SHORTCUTS.length);
-  assert.deepEqual([...new Set(SHORTCUTS.map((entry) => entry.group))], ["通用", "文献库", "阅读", "笔记"]);
+  assert.deepEqual([...new Set(SHORTCUTS.map((entry) => entry.group))], ["通用", "文献库", "阅读", "复习", "画布", "笔记"]);
   assert.equal(shortcutKeys("shortcuts"), "Ctrl /"); assert.equal(shortcutKeys("settings"), "Ctrl ,");
 });

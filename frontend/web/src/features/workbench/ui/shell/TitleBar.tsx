@@ -1,4 +1,4 @@
-import { FileText, Library, X } from "lucide-react";
+import { FileText, Library, PanelsTopLeft, X } from "lucide-react";
 import { cn } from "@/ui/lib/utils.js";
 import { IconButton } from "@/ui/wb/Button.js";
 import { LIBRARY_TAB } from "../../domain/workbench-store.js";
@@ -16,13 +16,18 @@ export function TitleBar() {
       {entries.map((tab) => (
         <div key={tab.id} className={cn("group wb-transition flex h-7 min-w-[100px] max-w-[220px] flex-1 items-center gap-1 rounded-lg px-1", activeTab === tab.id ? "bg-wb-panel text-wb-text" : "text-wb-text-3 hover:bg-wb-hover")}>
           <button
+            onDragEnter={event => {
+              if (tab.id.startsWith("canvas:") && event.dataTransfer.types.includes("application/x-readflow-canvas")) {
+                wb.activateTab(tab.id);
+              }
+            }}
             type="button"
             aria-current={activeTab === tab.id ? "page" : undefined}
             title={tab.title}
             onClick={() => tab.id === LIBRARY_TAB ? wb.setMain("library") : wb.activateTab(tab.id)}
             className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-md border-0 bg-transparent px-2 text-[0.75rem]"
           >
-            {tab.id === LIBRARY_TAB ? <Library size={13} className="shrink-0" aria-hidden="true" /> : <FileText size={13} className="shrink-0" aria-hidden="true" />}
+            {tab.id === LIBRARY_TAB ? <Library size={13} className="shrink-0" aria-hidden="true" /> : tab.id.startsWith("canvas:") ? <PanelsTopLeft size={13} className="shrink-0" aria-hidden="true" /> : <FileText size={13} className="shrink-0" aria-hidden="true" />}
             <span className="wb-truncate">{tab.title}</span>
           </button>
           {tab.id !== LIBRARY_TAB ? (

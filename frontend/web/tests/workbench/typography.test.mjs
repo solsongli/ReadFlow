@@ -3,8 +3,6 @@ import test from "node:test";
 import { DEFAULT_TYPOGRAPHY, WORKBENCH_TEXT_SCALES, normalizeTypography, stepTextScale, textScaleShortcut, typographyVariables, readerAppearance } from "@/features/workbench/domain/typography.js";
 import { parseWorkbenchPrefs, PREFS_KEY } from "@/features/workbench/domain/preferences.js";
 import { createWorkbench } from "@/features/workbench/state/controller.js";
-import { readerSchemeMessages } from "@/features/workbench/domain/reader-messages.js";
-import { parseWorkbenchSchemeMessage } from "../../../../frontend/packages/reader/src/domain/workbench-embed.ts";
 import { createSettingsFonts } from "@/features/workbench/state/settings-fonts.js";
 import { getFontFamily, RENDER_FONT_STORAGE_KEY } from "@/features/settings/domain.js";
 
@@ -29,17 +27,6 @@ test("old or invalid preferences fall back safely and custom family values are q
   const vars = typographyVariables({ ...DEFAULT_TYPOGRAPHY, uiFont: "custom", customFont: 'Name "Quoted"', textScale: 120, noteFont: "mono" });
   assert.match(vars["--wb-ui-font"], /^"Name \\"Quoted\\""/);
   assert.equal(vars["--wb-ui-scale"], "1.2"); assert.match(vars["--wb-note-font"], /monospace/);
-});
-
-test("appearance messages remain compatible with old theme messages and reject unsafe fields", () => {
-  const old = { type: "readflow:scheme", scheme: "light" };
-  assert.deepEqual(parseWorkbenchSchemeMessage(old), old);
-  const message = { ...old, appearance: readerAppearance({ ...DEFAULT_TYPOGRAPHY, uiFont: "custom", customFont: "AR PL UKai CN", textScale: 130 }) };
-  assert.deepEqual(readerSchemeMessages("light", message.appearance), [old, message]);
-  assert.deepEqual(parseWorkbenchSchemeMessage(message), message);
-  for (const appearance of [null, {}, { font: "bad", textScale: 100 }, { font: "serif", textScale: 1000 }, { font: "custom", family: "unsafe;", textScale: 100 }, { font: "default", textScale: "100" }, { font: "serif", textScale: 100, extra: true }]) {
-    assert.equal(parseWorkbenchSchemeMessage({ ...old, appearance }), null);
-  }
 });
 
 test("typography persists and synchronizes without echo writes or changing library selection", () => {

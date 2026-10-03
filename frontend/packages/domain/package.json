@@ -9,14 +9,6 @@
     "./job": {
       "types": "./dist/job/index.d.ts",
       "import": "./dist/job/index.js"
-    },
-    "./ai": {
-      "types": "./dist/ai/index.d.ts",
-      "import": "./dist/ai/index.js"
-    },
-    "./session": {
-      "types": "./dist/session/index.d.ts",
-      "import": "./dist/session/index.js"
     }
   },
   "files": [

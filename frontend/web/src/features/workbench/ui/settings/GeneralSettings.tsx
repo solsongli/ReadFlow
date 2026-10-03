@@ -1,3 +1,4 @@
+import { AnnotationSettings } from "./AnnotationSettings.js";
 import { cn } from "@/ui/lib/utils.js";
 import type { Density, ThemePreference } from "../../domain/workbench-store.js";
 import { useWb, useWorkbench } from "../context.js";
@@ -14,6 +15,8 @@ function ThemePreview({ dark }: { dark: boolean }) {
 }
 export function GeneralSettings() {
   const wb = useWorkbench();
+  const newLimit = useWb((s) => s.reviewNewLimit);
+  const reviewLimit = useWb((s) => s.reviewLimit);
   const theme = useWb((state) => state.theme);
   const density = useWb((state) => state.density);
   const startView = useWb((state) => state.startView);
@@ -30,6 +33,15 @@ export function GeneralSettings() {
       </div>
     </SettingsCard>
     <TypographySettings />
+    <AnnotationSettings />
+    <SettingsCard title="闪卡复习" description="按本地时间凌晨 4 点切换学习日。">
+      <SettingsRow label="每日新卡上限"><input type="number" min="0" max="1000" aria-label="每日新卡上限"
+        className={SETTINGS_INPUT} value={newLimit}
+        onChange={(e) => wb.setPrefs({ reviewNewLimit: Math.max(0, Math.min(1000, Number(e.target.value))) })} /></SettingsRow>
+      <SettingsRow label="每日复习上限"><input type="number" min="0" max="5000" aria-label="每日复习上限"
+        className={SETTINGS_INPUT} value={reviewLimit}
+        onChange={(e) => wb.setPrefs({ reviewLimit: Math.max(0, Math.min(5000, Number(e.target.value))) })} /></SettingsRow>
+    </SettingsCard>
     <SettingsCard title="使用习惯" description="更改会自动保存在本机。">
       <SettingsRow label="文献列表默认密度"><select aria-label="文献列表默认密度" className={SETTINGS_INPUT} value={density} onChange={(event) => wb.setPrefs({ density: event.target.value as Density })}><option value="bilingual">双语</option><option value="compact">紧凑</option></select></SettingsRow>
       <SettingsRow label="启动时显示"><select aria-label="启动时显示" className={SETTINGS_INPUT} value={startView} onChange={(event) => wb.setPrefs({ startView: event.target.value as "desk" | "library" })}><option value="desk">书桌</option><option value="library">文献库</option></select></SettingsRow>

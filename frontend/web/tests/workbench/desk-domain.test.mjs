@@ -82,13 +82,14 @@ test("OCR starts eligible selection once, skips queued items and reports partial
 test("opening a picker result outside all cached lists loads the correct attachment", async () => {
   const requests = [];
   const wb = createWorkbench({ api: {
-    item: async (id) => { requests.push(["item", id]); return { id, title: "Uncached", attachments: [{ id: "correct-pdf" }] }; },
+    row: async (id) => { requests.push(["row", id]); return { id, title: "Uncached", attachment_id: "correct-pdf", translation: { status: "none" } }; },
     nativeReader: async (id) => { requests.push(["reader", id]); return { attachment: { reader_url: "./reader.html?job_id=test" } }; },
     markOpened: async () => ({}), list: async () => ({ items: [] }),
   } });
   wb.store.actions.detailLoaded({ id: "wrong", title: "Wrong", attachments: [{ id: "wrong-pdf" }] });
   assert.equal(await wb.openReader("right"), true);
-  assert.deepEqual(requests, [["item", "right"], ["reader", "correct-pdf"]]);
+  assert.deepEqual(requests, [["row", "right"]]);
+  assert.equal(wb.store.getSnapshot().tabs[0].attachmentId, "correct-pdf");
   assert.equal(wb.store.getSnapshot().tabs[0].itemId, "right");
 });
 

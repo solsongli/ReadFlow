@@ -37,10 +37,6 @@
       "types": "./dist/translation-debug.d.ts",
       "import": "./dist/translation-debug.js"
     },
-    "./live-translation": {
-      "types": "./dist/live-translation.d.ts",
-      "import": "./dist/live-translation.js"
-    },
     "./ai": {
       "types": "./dist/ai.d.ts",
       "import": "./dist/ai.js"
@@ -48,10 +44,6 @@
     "./document-operations": {
       "types": "./dist/document-operations.d.ts",
       "import": "./dist/document-operations.js"
-    },
-    "./agent-operation-model": {
-      "types": "./dist/agent-operation-model.d.ts",
-      "import": "./dist/agent-operation-model.js"
     },
     "./agent-runtime-settings": {
       "types": "./dist/agent-runtime-settings.d.ts",
@@ -80,10 +72,6 @@
     "./providers": {
       "types": "./dist/providers.d.ts",
       "import": "./dist/providers.js"
-    },
-    "./reader": {
-      "types": "./dist/reader.d.ts",
-      "import": "./dist/reader.js"
     },
     "./search": {
       "types": "./dist/search.d.ts",

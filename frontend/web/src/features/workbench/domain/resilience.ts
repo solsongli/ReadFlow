@@ -5,7 +5,7 @@ export function isLibraryUnavailable(error: unknown): boolean {
 }
 export function retryDelay(attempt: number): number { return Math.min(30000, 1000 * 2 ** Math.max(0, Math.min(5, Math.floor(attempt)))); }
 export function workbenchTitle(main: string, readerTitle?: string): string {
-  const title = readerTitle || ({ library: "文献库", desk: "书桌", notes: "笔记", settings: "设置" } as Record<string, string>)[main];
+  const title = readerTitle || ({ library: "文献库", desk: "书桌", notes: "笔记", settings: "设置", review: "复习" } as Record<string, string>)[main];
   return title ? `${title} — ReadFlow` : "ReadFlow";
 }
 export function pdfFiles<T extends { name: string; type: string }>(files: readonly T[]): T[] {

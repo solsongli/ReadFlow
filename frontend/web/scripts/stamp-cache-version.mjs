@@ -8,7 +8,6 @@ const FRONTEND_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 // 每页 HTML 引用的资源(相对 frontend 根),stamp 会把这些 href/src 上的 ?v=
 // 改写成对应文件的内容哈希。
 const PAGES = [
-  { html: "reader.html", assets: ["dist/css/reader.css", "dist/reader.bundle.js"] },
   { html: "workbench.html", assets: ["dist/css/workbench.css", "dist/workbench.bundle.js"] },
 ];
 

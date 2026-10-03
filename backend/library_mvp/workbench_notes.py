@@ -35,6 +35,7 @@ def list_notes(store: Store, *, item_id: str = "", q: str = "", kind: str = "all
         raise StoreError("INVALID_NOTE_LIMIT", "limit must be between 1 and 1000.")
     if type(offset) is not int or offset < 0:
         raise StoreError("INVALID_NOTE_OFFSET", "offset must be non-negative.")
+    store.annotations.migrate()
     item_id, query = text(item_id, "item_id", 100), text(q, "q", 500).strip().casefold()
     where, args = ["s.deleted_at IS NULL"], []
     if item_id:
@@ -44,7 +45,7 @@ def list_notes(store: Store, *, item_id: str = "", q: str = "", kind: str = "all
         fields = ("n.body", "n.quote", "n.translated_quote", "i.title", "COALESCE(s.title_translated,'')")
         where.append("(" + " OR ".join(f"instr(readflow_casefold({field}),?)>0" for field in fields) + ")")
         args.extend([query] * len(fields))
-    source = " FROM notes n JOIN items i ON i.id=n.item_id LEFT JOIN item_state s ON s.item_id=n.item_id WHERE "
+    source = " FROM effective_notes n JOIN items i ON i.id=n.item_id LEFT JOIN item_state s ON s.item_id=n.item_id WHERE "
     filtered = source + " AND ".join(where)
     with store.lock:
         # Search scans text in SQLite, but only the requested page is materialized in Python.

@@ -216,3 +216,58 @@
     --wb-tag-7: #98989d;
   }
 }
+
+/* Native paper reader: PDF filters affect only page canvases, never interface text. */
+.pr-reader { --pr-desk: #eeeef0; --pr-paper: #fff; --pr-page-filter: none; --pr-page-blend: normal; --pr-search: rgba(255, 204, 0, .38); --pr-shadow: 0 1px 5px rgba(0, 0, 0, .12); }
+[data-wb-theme="dark"] .pr-reader { --pr-desk: #19191b; }
+.pr-reader[data-tone="sepia"] { --pr-paper: #f7f0de; --pr-page-filter: none; --pr-page-blend: multiply; }
+.pr-reader[data-tone="night"], [data-wb-theme="dark"] .pr-reader[data-tone="auto"] { --pr-desk: #19191b; --pr-paper: #141416; --pr-page-filter: invert(.9) hue-rotate(180deg); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-wb-theme="light"]) .pr-reader { --pr-desk: #19191b; }
+  :root:not([data-wb-theme="light"]) .pr-reader[data-tone="auto"] { --pr-paper: #141416; --pr-page-filter: invert(.9) hue-rotate(180deg); }
+}
+
+/* Annotation hues are semantic and independent from the PDF inversion filter. */
+:root {
+  --pr-yellow: #c99712;
+  --pr-blue: #2580c9;
+  --pr-green: #309359;
+  --pr-red: #d54f53;
+  --pr-purple: #9461c7;
+  --pr-highlight-opacity: .28;
+}
+[data-wb-theme="dark"],
+[data-tone="night"] {
+  --pr-yellow: #ddbd57;
+  --pr-blue: #70a7da;
+  --pr-green: #75bb91;
+  --pr-red: #d88589;
+  --pr-purple: #b195d0;
+  --pr-highlight-opacity: .25;
+}
+
+:root, [data-wb-theme="light"] {
+  --tc-dot: rgba(0, 0, 0, .13);
+  --tc-sticky: #fff5cb;
+  --tc-group: rgba(0, 113, 227, .045);
+  --tc-todo: #ce5555;
+}
+[data-wb-theme="dark"] {
+  --tc-dot: rgba(255, 255, 255, .16);
+  --tc-sticky: #403922;
+  --tc-group: rgba(10, 132, 255, .09);
+  --tc-todo: #d88589;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-wb-theme="light"]) {
+    --tc-dot: rgba(255, 255, 255, .16);
+    --tc-sticky: #403922;
+    --tc-group: rgba(10, 132, 255, .09);
+    --tc-todo: #d88589;
+  }
+}
+:root, [data-wb-theme="light"] { --tc-edge-label-bg: #ffffff; --tc-edge-label-text: #333333; }
+[data-wb-theme="dark"] { --tc-edge-label-bg: #38383a; --tc-edge-label-text: #f5f5f7; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-wb-theme="light"]) { --tc-edge-label-bg: #38383a; --tc-edge-label-text: #f5f5f7; }
+}
