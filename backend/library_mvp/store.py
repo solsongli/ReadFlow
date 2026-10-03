@@ -378,7 +378,7 @@ class Store:
             temporary.unlink(missing_ok=True)
 
     def add_pdf(self, data: bytes, *, filename: str = "paper.pdf", item_id: str | None = None,
-                on_saved: Callable[[dict], None] | None = None) -> dict:
+                on_saved: Callable[[dict], None] | None = None, deduplicate: bool = False) -> dict:
         """Save a PDF and optional related metadata in the same database transaction.
 
         on_saved receives the normal result before commit, including duplicate uploads.
@@ -406,7 +406,23 @@ class Store:
         with self.transaction():
             if item_id is not None:
                 self._row("items", item_id)
-            else:
+            if deduplicate:
+                has_state = self.db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='item_state'").fetchone()
+                join = "LEFT JOIN item_state s ON s.item_id=a.item_id" if has_state else ""
+                priority = "(s.deleted_at IS NOT NULL)," if has_state else ""
+                prior = self.db.execute(f"SELECT a.* FROM attachments a {join} WHERE a.sha256=? ORDER BY {priority} a.created_at,a.id LIMIT 1", (digest,)).fetchone()
+                if prior is not None:
+                    # Only /files opts in. Connector/import-plan attachment semantics stay unchanged.
+                    item_id = prior["item_id"]
+                    self._store_blob(digest, data)
+                    if has_state:
+                        self.db.execute("UPDATE item_state SET deleted_at=NULL,updated_at=? WHERE item_id=? AND deleted_at IS NOT NULL", (now(), item_id))
+                    result = {"item": self.get_item(item_id), "attachment": self._attachment_dict(prior), "duplicate": True}
+                    if on_saved is not None:
+                        on_saved(result)
+                        result["item"] = self.get_item(item_id)
+                    return result
+            if item_id is None:
                 item_id = new_id()
                 self._write_item(item_id, self._metadata({"title": suggested_title or filename.rsplit(".", 1)[0]}),
                                  created_at=now())

@@ -1,3 +1,4 @@
+import type { TranslationResult } from "@/platform/contracts/workbench.js";
 // ReadFlow 工作台 HTTP 客户端。分组即后端 collections（多对多），因此新建/改名沿用 /collections，
 // 成员增减与删除走 /workbench/groups/*。条目元数据、上传、导入、原阅读器沿用 researchLibraryApi。
 import { buildApiHeaders, buildApiUrl } from "@/platform/config/runtime.js";
@@ -60,6 +61,9 @@ export function notesQueryParams(query: WorkbenchNotesQuery): URLSearchParams {
 }
 
 export const workbenchApi = {
+  translate: (itemId: string, payload: unknown) => request<TranslationResult>("/workbench/items/" + id(itemId) + "/translate", send(payload)),
+  translationStatus: (itemId: string) => request<TranslationResult>("/workbench/items/" + id(itemId) + "/translate"),
+  cancelTranslation: (itemId: string) => request<TranslationResult>("/workbench/items/" + id(itemId) + "/translate/cancel", send({})),
   notes: (query: WorkbenchNotesQuery, signal?: AbortSignal) =>
     request<WorkbenchNotesResult>("/workbench/notes?" + notesQueryParams(query), { signal }),
   createNote: (itemId: string, value: { body: string }) => request<Note>("/items/" + id(itemId) + "/notes", send(value)),

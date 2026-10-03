@@ -48,18 +48,18 @@ try {
     assert.equal(await page.getByRole("menuitem", { name: "Zotero / CSL JSON…", exact: true }).count(), 1);
     await page.keyboard.press("Escape");
   });
-  await check("translation picker truthfully explains workflow and opens uncached PDF", async () => {
+  await check("translation picker checks configuration and offers settings before submitting", async () => {
     await button("翻译 PDF").click();
     const popup = page.getByRole("dialog", { name: "选择文献翻译", exact: true });
-    await popup.getByText("全文翻译目前在阅读器中进行；一键批量翻译将在翻译模块接入后提供").waitFor();
+    await popup.getByText("选择文献后提交全文翻译；优先读取文字层，缺字页面使用本地 OCR。").waitFor();
     await popup.getByRole("textbox", { name: "查找文献" }).fill("OpenVLA");
     const result = popup.getByRole("button", { name: /OpenVLA/ });
     await result.waitFor();
     await page.evaluate(() => window.fixture.wb.store.actions.patch({ list: { status: "ready", result: { ...window.fixture.wb.store.getSnapshot().list.result, items: [] }, error: null } }));
     await result.click();
-    await page.locator('iframe[title*="OpenVLA"]').waitFor();
-    assert.match(await page.locator('iframe').getAttribute("src"), /pdf1/);
-    await closeReader();
+    await page.getByText("还没有配置翻译服务", { exact: true }).waitFor();
+    assert.equal(await page.locator("iframe").count(), 0);
+    await button("收起").click();
   });
   await check("translation widget picker, recent completion, and AI entry use reader tabs", async () => {
     await button("翻译一篇文献…").click();

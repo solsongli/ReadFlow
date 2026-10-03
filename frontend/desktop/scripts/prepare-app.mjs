@@ -576,15 +576,10 @@ if (frontendOnly) {
 }
 
 const desktopFrontendRuntimeEntries = new Set([
-  "index.html",
-  "detail.html",
   "reader.html",
   "workbench.html",
-  "research-library.html",
-  "styles.css",
   "dist",
   "src",
-  "decor",
   "vendor",
 ]);
 
@@ -688,10 +683,6 @@ fs.writeFileSync(
   "utf8",
 );
 
-const desktopIndexPath = path.join(outputFrontendRoot, "index.html");
-let desktopIndexHtml = fs.readFileSync(desktopIndexPath, "utf8");
-desktopIndexHtml = desktopIndexHtml.replace('\n    <script src="./runtime-config.local.js"></script>', "");
-fs.writeFileSync(desktopIndexPath, desktopIndexHtml, "utf8");
 
 if (!frontendOnly) {
   // Word 导出（保留排版）由 retainpdf2doc 这个 Node 包生成，Python 流水线会起它。

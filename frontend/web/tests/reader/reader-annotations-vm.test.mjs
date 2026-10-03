@@ -1,12 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
-  ANNOTATION_KIND_META,
-  annotationAnchor,
-  buildAnnotationsMarkdown,
-  groupAnnotationsByPage,
-  sortAnnotations,
-} from "../../src/features/reader/domain.js";
+import { ANNOTATION_KIND_META, annotationAnchor, buildAnnotationsMarkdown, groupAnnotationsByPage, sortAnnotations } from "../../src/features/reader/domain/host/content.js";
 
 // 造一条最小批注:测试里只覆写关心的字段
 function makeAnnotation(overrides = {}) {

@@ -5,16 +5,15 @@ import { build } from "esbuild";
 import { chromium } from "playwright";
 import { PDFDocument, StandardFonts } from "pdf-lib";
 
-export async function readerBrowser() {
+export async function readerBrowser({ fixture = "tests/workbench/reader-browser-fixture.tsx", output = "/tmp/readflow-t3/screenshots", translated = false } = {}) {
   const root = process.cwd();
-  const output = "/tmp/readflow-t3/screenshots";
   await mkdir(output, { recursive: true });
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   for (let n = 1; n <= 8; n++) { const page = pdf.addPage([420, 540]); page.drawText(`ReadFlow synthetic page ${n}`, { x: 40, y: 480, size: 18, font }); }
   const bytes = Buffer.from(await pdf.save());
   const hash = createHash("sha256").update(bytes).digest("hex");
-  const built = await build({ entryPoints: ["tests/workbench/reader-browser-fixture.tsx"], bundle: true, write: false, format: "esm", jsx: "automatic", alias: { "@": resolve(root, "src") }, logLevel: "silent" });
+  const built = await build({ entryPoints: [fixture], bundle: true, write: false, format: "esm", jsx: "automatic", alias: { "@": resolve(root, "src") }, logLevel: "silent" });
   const browser = await chromium.launch({ executablePath: process.env.READFLOW_CHROME_PATH || "/usr/bin/google-chrome", headless: true, args: ["--no-sandbox", "--disable-background-networking", "--disable-component-update", "--disable-sync", "--no-first-run"] });
   const context = await browser.newContext({ viewport: { width: 1440, height: 960 }, colorScheme: "light" });
   await context.addInitScript(() => {
@@ -42,6 +41,18 @@ export async function readerBrowser() {
     if (/^\/dist\/(?:css\/(?:workbench|reader)\.css|reader\.bundle\.js|chunks\/reader\/[\w.-]+\.js)$/.test(path)) return serve(route, path.endsWith(".css") ? "text/css" : "text/javascript", await readFile(resolve(root, path.slice(1))));
     if (/^\/src\/assets\/fonts\/inter\/InterVariable(?:-Italic)?\.woff2$/.test(path)) return serve(route, "font/woff2", await readFile(resolve(root, path.slice(1))));
     if (/^\/vendor\/pdfjs-dist\/(?:build|cmaps|standard_fonts)\/[\w.-]+$/.test(path)) return serve(route, path.endsWith(".mjs") ? "text/javascript" : "application/octet-stream", await readFile(resolve(root, path.slice(1))));
+    if (translated && path === "/api/v1/fonts") return route.fulfill({ json: { code: 0, data: { fonts: [] } } });
+    if (translated && path.startsWith("/api/v1/jobs/fixture-job")) {
+      const suffix = path.slice("/api/v1/jobs/fixture-job".length);
+      if (suffix === "/pdf" || suffix.endsWith(".pdf") || suffix.startsWith("/artifacts/")) return serve(route, "application/pdf", bytes);
+      if (suffix === "/live-translation/layout") return route.fulfill({ status: 404, json: {} });
+      const values = {
+        "": { job_id: "fixture-job", document_id: hash, workflow: "book", status: "succeeded", output_pdf_ready: true, source_pdf_ready: true, source_pdf_url: `/api/v1/documents/${hash}/source.pdf`, artifacts: { pdf: { ready: true, url: "/api/v1/jobs/fixture-job/output.pdf" } } },
+        "/artifacts-manifest": { items: [{ artifact_key: "source_pdf", ready: true, resource_url: `/api/v1/documents/${hash}/source.pdf` }, { artifact_key: "pdf", ready: true, resource_url: "/api/v1/jobs/fixture-job/output.pdf" }] },
+        "/reader/regions": { pages: [] }, "/reader/metadata": { pages: [] }, "/markdown": { markdown: "" }, "/markdown/document": { markdown: "" },
+      };
+      if (suffix in values) return route.fulfill({ json: { code: 0, data: values[suffix] } });
+    }
     if (path === `/api/v1/documents/${hash}`) return route.fulfill({ json: { document_id: hash, active_job_id: null, active_version_id: null, source_file_name: "Synthetic reader.pdf" } });
     if (path === `/api/v1/documents/${hash}/source.pdf`) return serve(route, "application/pdf", bytes);
     if (path === "/api/v1/ai/conversations" && route.request().method() === "GET") return route.fulfill({ json: { conversations: [] } });

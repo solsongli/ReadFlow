@@ -12,7 +12,7 @@ python3 ops/development/native_retain_preview.py start --connector
 python3 ops/development/native_retain_preview.py status
 ```
 
-会打开原 Electron 窗口。当前同源入口为 http://127.0.0.1:40061/index.html?tab=research ，仅 R9000P 本机可用。以 status 返回的实际 URL 为准；端口冲突会选择或报告可用状态，不强停其他应用。
+会打开原 Electron 窗口。当前同源入口为 http://127.0.0.1:40061/workbench.html ，仅 R9000P 本机可用。以 status 返回的实际 URL 为准；端口冲突会选择或报告可用状态，不强停其他应用。
 
 ```sh
 python3 ops/development/native_retain_preview.py restart --connector

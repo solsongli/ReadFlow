@@ -23,6 +23,7 @@ function commands(wb: Workbench): Array<Omit<Entry, "kind"> & { words: string }>
     { key: "shortcuts", label: "键盘快捷键", hint: shortcutKeys("shortcuts"), words: "shortcuts kuaijiejian 键盘", run: () => wb.setShortcuts(true) },
     { key: "notes-space", label: "打开笔记", words: "notes biji 批注", run: () => void wb.notes.open() },
     { key: "new-note", label: "新建笔记", hint: shortcutKeys("new-note"), words: "new note xinjian biji", run: () => void wb.notes.create() },
+    { key: "translate", label: "翻译所选文献", words: "translate fanyi", run: () => void wb.translations.start(wb.store.getSnapshot().selectedIds) },
     { key: "settings", label: "打开设置…", hint: shortcutKeys("settings"), words: "settings shezhi", run: () => wb.openSettings() },
     { key: "glossaries", label: "管理术语表", words: "glossary shuyubiao", run: () => wb.openSettings("glossaries") },
     { key: "desk", label: "打开书桌", hint: shortcutKeys("desk"), words: "desk shuzhuo 书桌 首页", run: () => wb.setMain("desk") },
@@ -41,7 +42,6 @@ function commands(wb: Workbench): Array<Omit<Entry, "kind"> & { words: string }>
     ...([['text-larger', 1], ['text-smaller', -1], ['text-reset', 0]] as const).map(([key, direction]) => ({ key,
       label: SHORTCUTS.find((entry) => entry.id === key)!.label, hint: shortcutKeys(key), words: "字体 文字 大小 字号 font size",
       run: () => wb.setPrefs({ textScale: stepTextScale(wb.store.getSnapshot().textScale, direction) }) })),
-    { key: "legacy", label: "打开旧版界面", words: "legacy old jiuban", run: () => void wb.leave(() => window.location.assign("./index.html")) },
   ];
 }
 
@@ -150,9 +150,9 @@ export function CommandPalette() {
     }
   }
 
-  const COMMAND_ICON = { shortcuts: PanelTop, settings: Settings, glossaries: BookOpen, desk: Armchair, library: Library, unread: Bookmark, starred: Star, unfiled: FileQuestion,
+  const COMMAND_ICON = { translate: Languages, shortcuts: PanelTop, settings: Settings, glossaries: BookOpen, desk: Armchair, library: Library, unread: Bookmark, starred: Star, unfiled: FileQuestion,
     "text-larger": Type, "text-smaller": Type, "text-reset": Type,
-    trash: Trash2, import: FileUp, group: FolderPlus, theme: Monitor, legacy: PanelTop,
+    trash: Trash2, import: FileUp, group: FolderPlus, theme: Monitor,
     notes: NotebookPen, "notes-space": NotebookPen, "new-note": NotebookPen, needs_ocr: ScanText, missing_doi: Link2, no_zh_title: Languages };
 
 

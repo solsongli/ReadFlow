@@ -2,17 +2,13 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 test('all public bare-package entry points load their JavaScript artifacts', async () => {
-  const [domain, job, jobStatus, ai, session] = await Promise.all([
-    import('@retainpdf/domain'),
+  const [job, ai, session] = await Promise.all([
     import('@retainpdf/domain/job'),
-    import('@retainpdf/domain/job-status'),
     import('@retainpdf/domain/ai'),
     import('@retainpdf/domain/session'),
   ])
 
-  assert.equal(typeof domain.buildElapsedViewModel, 'function')
   assert.equal(typeof job.normalizeJobPayload, 'function')
-  assert.equal(typeof jobStatus.buildJobStatusViewModel, 'function')
   assert.equal(typeof ai.describeToolEvent, 'function')
   assert.equal(typeof session.toSessionSummary, 'function')
   assert.equal(typeof session.makeId, 'function')
@@ -36,17 +32,4 @@ test('the stale library entry stays deleted', async () => {
     import('@retainpdf/domain/library'),
     ({ code }) => code === 'ERR_PACKAGE_PATH_NOT_EXPORTED',
   )
-  const domain = await import('@retainpdf/domain')
-  for (const name of [
-    'assembleTranslatePayload',
-    'friendlyTranslateError',
-    'friendlyDocumentDeleteError',
-    'shouldPreferTranslateTab',
-  ]) {
-    assert.equal(
-      name in domain,
-      false,
-      `${name} 属于 frontend/web/src/features/library/domain/documents/，不要在本包再放一份`,
-    )
-  }
 })

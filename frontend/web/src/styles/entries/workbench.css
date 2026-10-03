@@ -1,6 +1,6 @@
 /* ReadFlow 工作台 CSS 入口 → dist/css/workbench.css，仅 workbench.html 加载。
  *
- * 与旧三页完全隔离：source(none) 关掉自动探测，只扫描工作台自己的源码；
+ * 与阅读器样式隔离：source(none) 关掉自动探测，只扫描工作台自己的源码；
  * 不引入旧 tokens / 装饰皮肤。颜色真值在 themes/workbench.css。 */
 @import "tailwindcss" source(none);
 @import "../themes/workbench.css";

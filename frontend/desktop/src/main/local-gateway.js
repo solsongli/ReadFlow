@@ -78,7 +78,7 @@ function createLocalGateway(options = {}) {
     if (pathname.includes("\0")) {
       return null;
     }
-    const joined = path.normalize(path.join(frontendRoot, pathname === "/" ? "/index.html" : pathname));
+    const joined = path.normalize(path.join(frontendRoot, pathname === "/" ? "/workbench.html" : pathname));
     const root = path.normalize(frontendRoot);
     if (joined !== root && !joined.startsWith(root + path.sep)) {
       return null;
@@ -91,6 +91,12 @@ function createLocalGateway(options = {}) {
     if (!filePath) {
       res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
       res.end("bad request");
+      return;
+    }
+    if (path.extname(filePath).toLowerCase() === ".html"
+      && !["workbench.html", "reader.html"].includes(path.relative(frontendRoot, filePath))) {
+      res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+      res.end("not found");
       return;
     }
     fs.readFile(filePath, (error, data) => {
@@ -191,7 +197,7 @@ function createLocalGateway(options = {}) {
     }
     const urlPath = rawPath.split("?")[0];
     const entryNavigation = req.method === "GET"
-      && ["/", "/index.html", "/reader.html", "/detail.html", "/workbench.html"].includes(urlPath)
+      && ["/", "/workbench.html", "/reader.html"].includes(urlPath)
       && req.headers["sec-fetch-mode"] === "navigate" && req.headers["sec-fetch-dest"] === "document";
     const origin = req.headers.origin;
     if (origin) {

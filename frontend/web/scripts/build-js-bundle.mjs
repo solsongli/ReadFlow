@@ -60,34 +60,13 @@ function jsToTsResolvePlugin() {
   };
 }
 
-// 三页 MPA 各自打包的入口表——home/detail/reader 均已切换到 React 新世界。
-// 挂载对照（HTML → entry → 产物，?v= 由 stamp-cache-version.mjs 按内容哈希重写）：
-//   index.html  → src/app/home/entry.tsx   → dist/app.bundle.js
-//   detail.html → src/app/detail/entry.tsx → dist/detail.bundle.js
-//   reader.html → src/app/reader/entry.tsx → dist/reader.bundle.js
-// 运行时顺序：各 HTML 内 runtime-config.js → runtime-config.local.js（同步脚本，
-// 先写 window.__FRONT_RUNTIME_CONFIG__）→ 对应 bundle（type=module 延迟执行）。
-// 三 entry 共享启动样板见 src/app/shell-boot.ts（adapters → bootTheme →
-// 找根 → createRoot，不开 StrictMode）。
-// 每页独立构建(见下方 splitting 说明),入口产物名保持 `<out>.js`,
-// 故 HTML 引用与 stamp-cache-version 的资源表都不用改。
+// 工作台与阅读器各自打包，避免跨页共享 chunk 引入无关代码。
 const PAGE_BUNDLES = [
-  {
-    name: "home",
-    entry: path.join(frontendRoot, "src/app/home/entry.tsx"),
-    out: "app.bundle",
-  },
-  {
-    name: "detail",
-    entry: path.join(frontendRoot, "src/app/detail/entry.tsx"),
-    out: "detail.bundle",
-  },
   {
     name: "reader",
     entry: path.join(frontendRoot, "src/app/reader/entry.tsx"),
     out: "reader.bundle",
   },
-  // ReadFlow 工作台（新外壳 + 文献库 + 书桌），与旧三页并行，切换前不影响它们。
   //   workbench.html → src/app/workbench/entry.tsx → dist/workbench.bundle.js
   {
     name: "workbench",

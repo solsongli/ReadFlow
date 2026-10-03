@@ -30,7 +30,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = false;
 const React = await import("react");
 const { createRoot } = await import("react-dom/client");
 const { setReaderAdapters } = await import("../../../../frontend/packages/reader/src/adapters.ts");
-const { AiMarkdownAnswer } = await import("../../../../frontend/packages/reader/src/ai.ts");
+const { AiMarkdownAnswer } = await import("../../../../frontend/packages/reader/src/components/ai/AiMarkdownAnswer.tsx");
 const { syncAnswerImageDisplaySize } = await import(
   "../../../../frontend/packages/reader/src/components/ai/RetainMarkstream.tsx"
 );

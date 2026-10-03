@@ -10,14 +10,12 @@
 | --- | --- |
 | `architecture/` | 源码分层、依赖方向、CSS/DOM 约束和测试布局门禁 |
 | `contracts/` | JSON Schema、API DTO、事件名及跨包数据契约 |
-| `home/` | 首页、上传、凭据、工作流和应用外壳 |
+| `home/` | 沿用历史目录名的共享凭据、术语表、工作流测试；不再包含首页 UI |
+| `workbench/` | 工作台、设置、笔记、字体和嵌入阅读器 |
 | `jobs/` | 任务标准化、运行时、下载、错误和产物处理 |
-| `library/` | 书库、搜索、最近任务和详情 |
 | `reader/` | 阅读器、Markdown、批注、问答、会话和 Reader 包边界 |
 | `shared/` | 被多个页面共同使用的客户端、hook、组件和装饰能力 |
-| `status/` | 状态卡、阶段进度和状态详情 |
 | `helpers/` | 测试加载器和共享基线，不放测试用例 |
-| `visual/baseline/` | 视觉回归基线图片，由视觉测试命令维护 |
 
 测试文件必须放在上述职责最接近的领域目录中；`tests/` 根目录不允许出现
 `*.test.mjs`。`architecture/test-layout.test.mjs` 会持续检查这条规则。
@@ -44,11 +42,11 @@ npm --prefix frontend/web run typecheck
 npm --prefix frontend/web test -- 'tests/architecture/*.test.mjs'
 ```
 
-视觉回归检查与基线更新是独立流程：
+离线界面回归（需已安装 Chromium）直接运行工作台场景脚本，例如：
 
 ```sh
-npm --prefix frontend/web run visual:check
-npm --prefix frontend/web run visual:update   # 仅在确认视觉变化符合预期后执行
+cd frontend/web
+node --import ./tests/helpers/register-jsx.mjs tests/workbench/apple-smoke.mjs
 ```
 
 不要绕过 package script 直接运行普通 `node --test`，否则 TS/TSX、`@/` 和
@@ -89,4 +87,3 @@ npm --prefix frontend/web run visual:update   # 仅在确认视觉变化符合�
 - [ ] 单个测试文件通过。
 - [ ] `tests/architecture` 通过；涉及类型时 `typecheck` 通过。
 - [ ] 提交前全量 `npm --prefix frontend/web test` 通过。
-- [ ] 涉及可见 UI 变化时运行 `visual:check`，只有确认变化后才更新基线。

@@ -18,10 +18,7 @@ import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 import { describe, it } from "node:test";
 
-import {
-  materializeMarkdownMathHtml,
-  resetMarkdownMathEngineLoader,
-} from "../../src/features/reader/domain.js";
+import { materializeMarkdownMathHtml, resetMarkdownMathEngineLoader } from "../../src/features/reader/domain/host/content.js";
 
 const TOKEN = "\uE000RP_MATH_0\uE001";
 

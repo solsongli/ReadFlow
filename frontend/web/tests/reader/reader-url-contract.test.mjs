@@ -7,7 +7,7 @@ import {
   canonicalizeReaderSearch,
   parseReaderParams,
 } from "../../src/platform/navigation/pages.ts";
-import { createReaderDialogConfigPort } from "../../src/features/reader/domain.js";
+
 
 // 单一 URL 契约真源：page_idx/block_id 为规范名，page/blockId 为只读别名；
 // 构造只写规范名，mock 在同处集中注入。
@@ -64,27 +64,4 @@ test("canonicalizeReaderSearch：别名补成规范名，无变化返回 null", 
   assert.equal(canonicalizeReaderSearch("?page_idx=2&block_id=b-1"), null);
   assert.equal(canonicalizeReaderSearch("?job_id=j1"), null);
   assert.equal(canonicalizeReaderSearch("?page=4"), "page_idx=4");
-});
-
-test("config-port：job/document URL 只含规范参数并透传 mock", () => {
-  const seen = [];
-  const port = createReaderDialogConfigPort({
-    buildPageUrl(path, params) {
-      seen.push(params);
-      return `${path}?${new URLSearchParams(params).toString()}`;
-    },
-    mockScenarioProvider: () => "parallel",
-  });
-
-  const jobUrl = port.buildReaderPageUrl("job-1", { pageIdx: 3, blockId: "b-1" });
-  assert.equal(jobUrl, "./reader.html?job_id=job-1&page_idx=3&block_id=b-1&mock=parallel");
-  assert.equal(new URLSearchParams(jobUrl.split("?")[1]).get("page"), null);
-  assert.equal(new URLSearchParams(jobUrl.split("?")[1]).get("blockId"), null);
-
-  const docUrl = port.buildReaderDocumentPageUrl("doc-1", { pageIdx: 0 });
-  assert.equal(docUrl, "./reader.html?document_id=doc-1&page_idx=0&mock=parallel");
-
-  assert.equal(port.buildReaderPageUrl(""), "");
-  assert.equal(port.buildReaderDocumentPageUrl(""), "");
-  assert.equal(seen.length, 2, "空 id 不构造 URL");
 });

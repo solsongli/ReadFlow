@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const desktopRoot = path.resolve(__dirname, "..");
-const repoRoot = path.resolve(desktopRoot, "..");
+const repoRoot = path.resolve(desktopRoot, "../..");
 
 function runStep(command, args, extraEnv = {}) {
   const result = spawnSync(command, args, {
@@ -21,8 +21,8 @@ function runStep(command, args, extraEnv = {}) {
   }
 }
 
-runStep("npm", ["--prefix", "frontend", "run", "build:css"]);
-runStep("npm", ["--prefix", "frontend", "run", "smoke:desktop-first-run"]);
+runStep("npm", ["--prefix", "frontend/web", "run", "build"]);
+runStep("npm", ["--prefix", "frontend/web", "run", "smoke:workbench-settings"]);
 runStep("node", ["frontend/desktop/scripts/prepare-app.mjs"], {
   RETAIN_PDF_DESKTOP_PLATFORM: "win32",
   RETAIN_PDF_SKIP_BUNDLED_RUNTIME_VERIFICATION: "1",

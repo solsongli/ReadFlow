@@ -21,6 +21,5 @@ export function AboutSettings() {
     </SettingsCard>
     {license != null ? <SettingsCard title="Inter 字体许可"><div className="p-3.5"><pre className="wb-scroll m-0 max-h-60 whitespace-pre-wrap break-words font-wb-sans text-[0.75rem] text-wb-text-2">{license}</pre><Button size="sm" className="mt-3" onClick={() => setLicense(null)}>收起许可</Button></div></SettingsCard> : null}
     <SettingsStatus message={error} tone="error" />
-    <div><Button onClick={() => window.location.assign("./index.html")}>打开旧版界面</Button></div>
   </>;
 }

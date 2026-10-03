@@ -17,11 +17,7 @@
 import assert from "node:assert/strict";
 import { describe, it, beforeEach } from "node:test";
 
-import {
-  materializeMarkdownMathHtml,
-  mathFailureStats,
-  resetMarkdownMathEngineLoader,
-} from "../../src/features/reader/domain.js";
+import { materializeMarkdownMathHtml, mathFailureStats, resetMarkdownMathEngineLoader } from "../../src/features/reader/domain/host/content.js";
 
 const TOKEN = "RP_MATH_0";
 

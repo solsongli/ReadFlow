@@ -20,7 +20,6 @@ test("facade composes typed hooks instead of owning sessions or streams", async 
   // replaceVisible command; no raw setter is passed into either hook.
   assert.match(source, /replaceVisible: \(messages\) => chatOwner\.setMessages\(\[...messages\]\)/);
   assert.doesNotMatch(source, /REQUEST_SNAPSHOT_PREFIX/);
-  assert.match(source, /from "\.\/reader-request-snapshots\.js"/);
 });
 
 test("conversation shell owns no streaming and no operations", async () => {

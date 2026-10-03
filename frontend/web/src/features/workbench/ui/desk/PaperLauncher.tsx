@@ -35,6 +35,7 @@ export function PaperLauncher({ kind, children, open: controlledOpen, onOpenChan
     setOpening(true);
     try {
       if (kind === "note") { await wb.notes.createFor(row); setOpen(false); }
+      else if (kind === "translate") { setOpen(false); await wb.translations.start([row.id]); }
       else if (await wb.openReader(row.id)) {
         setOpen(false);
         if (kind === "ai") wb.notify(AI_HINT);

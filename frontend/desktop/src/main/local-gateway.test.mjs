@@ -54,8 +54,9 @@ function getText(url) {
 
 test("serves static files and inlines apiBase into html", async (t) => {
   const root = makeFrontendDir({
-    "index.html": "<html><head></head><body>hi</body></html>",
+    "workbench.html": "<html><head></head><body>hi</body></html>",
     "app.js": "console.log(1)",
+    "stale.html": "obsolete generated shell",
   });
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const gateway = createLocalGateway(gatewayOptions({
@@ -65,8 +66,10 @@ test("serves static files and inlines apiBase into html", async (t) => {
   }));
   const base = await gateway.start("127.0.0.1", 40001);
   t.after(() => gateway.stop());
-  const page = await getText(`${base}/index.html`);
+  const page = await getText(`${base}/workbench.html`);
   assert.equal(page.status, 200);
+  assert.equal((await getText(`${base}/`)).status, 200);
+  assert.equal((await getText(`${base}/stale.html`)).status, 404);
   assert.match(page.body, /Object\.assign\(\{\},window\.__FRONT_RUNTIME_CONFIG__\|\|\{\},\{"apiBase":"http:\/\/127\.0\.0\.1:41001"\}\)/);
   const script = await getText(`${base}/app.js`);
   assert.equal(script.status, 200);
@@ -75,7 +78,7 @@ test("serves static files and inlines apiBase into html", async (t) => {
 });
 
 test("rejects path traversal", async (t) => {
-  const root = makeFrontendDir({ "index.html": "x" });
+  const root = makeFrontendDir({ "workbench.html": "x" });
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const gateway = createLocalGateway(gatewayOptions({
     frontendRoot: root,
@@ -100,7 +103,7 @@ test("proxies /api with headers and streams SSE without buffering", async (t) =>
   await new Promise((resolve) => backend.listen(0, "127.0.0.1", resolve));
   t.after(() => backend.close());
   const backendPort = backend.address().port;
-  const root = makeFrontendDir({ "index.html": "x" });
+  const root = makeFrontendDir({ "workbench.html": "x" });
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const gateway = createLocalGateway(gatewayOptions({
     frontendRoot: root,
@@ -125,7 +128,7 @@ test("proxies /api with headers and streams SSE without buffering", async (t) =>
 });
 
 test("returns 502 JSON when backend is down", async (t) => {
-  const root = makeFrontendDir({ "index.html": "x" });
+  const root = makeFrontendDir({ "workbench.html": "x" });
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const gateway = createLocalGateway(gatewayOptions({
     frontendRoot: root,
@@ -144,7 +147,7 @@ test("finds next free gateway port", async (t) => {
   await new Promise((resolve) => blocker.listen(0, "127.0.0.1", resolve));
   t.after(() => blocker.close());
   const busyPort = blocker.address().port;
-  const root = makeFrontendDir({ "index.html": "x" });
+  const root = makeFrontendDir({ "workbench.html": "x" });
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const gateway = createLocalGateway(gatewayOptions({
     frontendRoot: root,
@@ -159,7 +162,7 @@ test("finds next free gateway port", async (t) => {
 
 test("inlines full runtime config including xApiKey", async (t) => {
   const root = makeFrontendDir({
-    "index.html": "<html><head><script>window.__FRONT_RUNTIME_CONFIG__={xApiKey:\"\",ocrProvider:\"mineru\"};</script></head><body>x</body></html>",
+    "workbench.html": "<html><head><script>window.__FRONT_RUNTIME_CONFIG__={xApiKey:\"\",ocrProvider:\"mineru\"};</script></head><body>x</body></html>",
   });
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const gateway = createLocalGateway(gatewayOptions({
@@ -173,7 +176,7 @@ test("inlines full runtime config including xApiKey", async (t) => {
   }));
   const base = await gateway.start("127.0.0.1", 40001);
   t.after(() => gateway.stop());
-  const page = await getText(`${base}/index.html`);
+  const page = await getText(`${base}/workbench.html`);
   assert.equal(page.status, 200);
   assert.match(page.body, /"xApiKey":"retain-pdf-desktop"/);
   assert.match(page.body, /"ocrProvider":"paddle"/);
@@ -193,7 +196,7 @@ function requestGateway(url, { method = "GET", headers = {}, body } = {}) {
 }
 
 async function startSecuredGateway(t, extra = {}) {
-  const root = makeFrontendDir({ "index.html": "<body>original shell</body>", "reader.html": "<body>reader</body>" });
+  const root = makeFrontendDir({ "workbench.html": "<body>original shell</body>", "reader.html": "<body>reader</body>" });
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const gateway = createLocalGateway(gatewayOptions({ frontendRoot: root, ...extra }));
   const base = await gateway.start("127.0.0.1", 0);

@@ -163,7 +163,7 @@ test("已知已修复的循环不得回归", () => {
 
 test("扫描根有效且能覆盖全量源码", () => {
   const { files, byFile } = buildGraph();
-  assert.ok(files.length > 400, `只扫到 ${files.length} 个源文件，扫描根疑似失效`);
+  assert.ok(files.length > 190, `只扫到 ${files.length} 个源文件，扫描根疑似失效`);
   assert.equal(byFile.size, files.length, "依赖图节点数与源文件数不一致");
 });
 

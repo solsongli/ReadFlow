@@ -3,21 +3,7 @@ import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
-// detail.html / reader.html 现由 esbuild 打包的 dist/{detail,reader}.bundle.js 挂载 React
-// 树(Phase 1 / 2b cutover),但 job-detail 页面逻辑与 reader 下保留的纯逻辑仍以
-// 字符串字面量引用 DOM id/class,esbuild 不做这类校验:id 改名、typo、删掉 CSS 类都只会
-// 在运行时静默失效(dom/query.js 的守卫会吞掉 null)。本测试交叉校验:job-detail / reader
-// 目录下 .ts/.tsx/.js 出现的每个 "detail-*" / "reader-*" / "data-reader-*" 字符串字面量,
-// 必须能在对应页面 HTML 的 id/class、src/styles 的类定义、src/app/{detail,reader} 的 JSX
-// (id=.../className=...)、同名契约常量声明,或 JS/JSX 的 data-* 属性引用中找到归属。
-//
-// home 页(index.html / src/app/home)未纳入本文件:home 没有单一 id 前缀约定(各 feature
-// 域各自命名),用 tests/home-app-component.test.mjs(渲染 HomeApp 断言契约 id)+ 各域
-// *-component.test.mjs(如 recent-jobs-library-component / status-card-component 等,
-// 渲染实际 React 树断言 DOM 契约)覆盖,是比这里的字符串字面量扫描更强的检查——直接渲染
-// 组件断言真实 DOM,而不是扫描源码里的字符串猜测归属。Phase 4 复核确认此判断仍然成立,
-// 不需要把 home 补进本文件。
-
+// 校验阅读器 DOM 字面量的归属。
 const PROJECT_ROOT = process.cwd();
 const STYLES_ROOT = join(PROJECT_ROOT, "src/styles");
 // Reader 的样式真值在 @retainpdf/reader 包内(web 侧只做代理入口),
@@ -26,67 +12,10 @@ const PACKAGE_STYLE_ROOTS = [join(PROJECT_ROOT, "../packages/reader/styles")];
 
 // 已确认的历史遗留引用(运行时元素/类确实不存在)。新增条目前必须先人工确认,
 // 并注明原因;一旦引用恢复归属,下方的 hygiene 用例会强制从这里移除。
-const KNOWN_ORPHANS = {
-  "src/features/job-detail/domain/page": Object.freeze([
-    // 模板生成的类,src/styles 中没有对应规则(无样式 div)
-    "detail-artifact-meta",
-  ]),
-  // 旧 reader-dialog DOM 契约文件已随 cutover 删除(reader-* 字面量真值现在
-  // 全部来自 @retainpdf/reader 包)，原先为它挂的孤儿豁免全部失效，清空。
-  // 键跟随 PAGES[].jsDir，src/js/reader 已不存在。
-  // 扩面到 .tsx 后暴露的非 DOM 字符串，均非样式类或 id，无法补归属，登记为
-  // 已知孤儿：
-  //   reader-ai-pending   ReaderAppReactPdf 的 React key 兜底值
-  //   reader-embedded     boot.tsx 运行时加到 body 的标记类(无对应 CSS)
-  // react-resizable-panels 的 reader-document / reader-assistant 是 const 声明，
-  // 由 declarations 归属覆盖，不需豁免。
-  "../packages/reader/src": Object.freeze([
-    "reader-ai-pending",
-    "reader-embedded",
-  ]),
-  // home 页的 JS 真值随 B6/B7 全部落到 src/app/home（src/js/features 已删除）。
-  "src/app/home": Object.freeze([]),
-};
-
-const PAGES = [
-  {
-    jsDir: "src/features/job-detail/domain/page",
-    prefix: "detail",
-    htmlFile: "detail.html",
-    // Phase 1 cutover 后 detail.html 只剩 #detail-root 挂载点,页面骨架
-    // (id/class)改由 React 树渲染:归属校验需要扫描新世界 JSX 的
-    // id="..." 与 className="..."(保留的旧纯逻辑仍按 id 写这些节点)。
-    jsxDir: "src/app/detail",
-    // C1 把 detail.html 的五个展示组件从 app/detail/components 迁进了
-    // job-detail 功能。它们仍按 id 渲染页面骨架，必须一并纳入归属校验，
-    // 否则这些 id 会被判成孤儿。
-    extraJsxDirs: ["src/features/job-detail/ui/page"],
-  },
-  {
-    // src/js/reader 与 src/js/features/reader-dialog 都已被删除（reader 逻辑迁至
-    // frontend/packages/reader，对话框契约迁至 features/reader/domain/dialog）。
-    // 原配置留着两个不存在的目录，collectJsFiles 的 try/catch 把它们吞掉，
-    // 实际只有 ../packages/reader/src 在起作用——扫描面比配置看起来窄。
-    jsDir: "../packages/reader/src",
-    prefix: "reader",
-    htmlFile: "reader.html",
-    jsxDir: "src/app/reader",
-    extraJsDirs: ["src/features/reader/domain/dialog"],
-    extraJsxDirs: ["../packages/reader/src"],
-  },
-  {
-    // 原 jsDir 是 src/js/features/home，B6/B7 把它拆空删除（型别归
-    // platform/contracts、store 归 app/home/state、idle 视图归
-    // app/home/composition）；扫描面本来就靠 extraJsDirs 的 src/app/home 撑着
-    // （state.ts / idle-reset.ts 里没有一个 home-* 字面量），现在直接以它为 jsDir。
-    // requireScanDir 对不存在的根会失败，所以这里必须跟着改，不能放着不管。
-    jsDir: "src/app/home",
-    prefix: "home",
-    htmlFile: "index.html",
-    jsxDir: "src/app/home",
-    optional: true,
-  },
-];
+const KNOWN_ORPHANS = { "../packages/reader/src": ["reader-ai-pending", "reader-embedded"] };
+const PAGES = [{ jsDir: "../packages/reader/src", prefix: "reader", htmlFile: "reader.html",
+  jsxDir: "src/app/reader", extraJsDirs: ["src/features/reader/domain/dialog"],
+  extraJsxDirs: ["../packages/reader/src"] }];
 
 function walkFiles(dir, extension) {
   const results = [];

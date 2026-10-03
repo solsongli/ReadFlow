@@ -73,17 +73,11 @@ def prepare_data_root(root: Path) -> Path:
 
 def build_frontend(force: bool = False, skip: bool = False) -> None:
     web = REPO / "frontend/web"
-    entry = web / "dist/research-library/app.js"
-    source = web / "src/app/research-library"
-    builder = web / "scripts/build-research-library.mjs"
-    files = [builder, web / "research-library.html", *source.rglob("*")]
-    stale = not entry.is_file() or any(p.is_file() and p.stat().st_mtime > entry.stat().st_mtime for p in files)
-    if (force or stale) and not skip:
-        if not builder.is_file():
-            raise ValueError("前端构建脚本尚未生成。")
-        subprocess.run(["node", str(builder)], cwd=REPO, check=True)
+    entry = web / "dist/workbench.bundle.js"
+    if not skip and (force or not entry.is_file()):
+        subprocess.run(["npm", "run", "build"], cwd=web, check=True)
     if not entry.is_file():
-        raise ValueError("缺少前端构建产物；请运行 --build，不会安装依赖。")
+        raise ValueError("缺少工作台构建产物；请运行 --build，不会安装依赖。")
 
 
 def add_local_browser_guard(app, port: int) -> None:
@@ -99,7 +93,7 @@ def add_local_browser_guard(app, port: int) -> None:
         # A user following a link to the entry HTML must be able to open it.
         # Keep cross-origin API, resource, iframe and write requests blocked.
         entry_navigation = (request.method == "GET"
-                            and request.url.path in {"/", "/research-library.html"}
+                            and request.url.path in {"/", "/workbench.html"}
                             and request.headers.get("sec-fetch-mode") == "navigate"
                             and request.headers.get("sec-fetch-dest") == "document")
         try:
@@ -121,10 +115,11 @@ def add_local_browser_guard(app, port: int) -> None:
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "no-referrer"
+        frame_ancestors = "'self'" if request.url.path == "/reader.html" else "'none'"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
             "img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; "
-            "connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'"
+            f"connect-src 'self'; frame-src 'self'; frame-ancestors {frame_ancestors}; base-uri 'none'; object-src 'none'"
         )
         response.headers["Cache-Control"] = "no-store"
         return response
@@ -138,13 +133,23 @@ def create_preview_app(data_root: Path, *, port: int = 41030):
 
     app = create_app(data_root)
     web = REPO / "frontend/web"
-    app.mount("/dist/research-library", StaticFiles(directory=web / "dist/research-library"),
-              name="research-library-assets")
+    app.mount("/dist", StaticFiles(directory=web / "dist"), name="workbench-assets")
+    app.mount("/src/assets", StaticFiles(directory=web / "src/assets"), name="shared-assets")
 
     @app.get("/", include_in_schema=False)
-    @app.get("/research-library.html", include_in_schema=False)
+    @app.get("/workbench.html", include_in_schema=False)
     def home():
-        return FileResponse(web / "research-library.html")
+        return FileResponse(web / "workbench.html")
+
+    app.mount("/vendor", StaticFiles(directory=web / "vendor"), name="reader-vendor")
+
+    @app.get("/reader.html", include_in_schema=False)
+    def reader():
+        return FileResponse(web / "reader.html")
+
+    @app.get("/runtime-config.js", include_in_schema=False)
+    def runtime_config():
+        return FileResponse(web / "runtime-config.js", media_type="text/javascript")
 
     add_local_browser_guard(app, port)
     return app

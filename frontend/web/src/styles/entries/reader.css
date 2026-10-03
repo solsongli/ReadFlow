@@ -6,7 +6,7 @@
  */
 @import "tailwindcss";
 @import "../../../../../frontend/packages/reader/styles/entry.css";
-/* ReadFlow 工作台的源码与产物只进 workbench.css，不进旧三页，保证旧页面产物不变。 */
+/* ReadFlow 工作台的源码与产物只进 workbench.css，不进入阅读器样式。 */
 @source not "../../app/workbench";
 @source not "../../features/workbench";
 @source not "../../ui/wb";

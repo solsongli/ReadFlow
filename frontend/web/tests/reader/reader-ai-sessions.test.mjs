@@ -1,11 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createReaderAiHistoryStore } from "../../src/features/reader/domain.js";
-import {
-  deriveSessionTitle,
-  summarizeSessions,
-  trimSessions,
-} from "../../src/features/reader/domain.js";
+import { createReaderAiHistoryStore } from "../../src/features/reader/domain/host/ai.js";
+import { deriveSessionTitle, summarizeSessions, trimSessions } from "../../src/features/reader/domain/host/ai.js";
 
 function memoryStorage(seed) {
   const map = new Map(seed ? Object.entries(seed) : []);

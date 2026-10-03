@@ -1,10 +1,5 @@
-const fs = require("fs");
-const path = require("path");
-
-function resolveStartPage({ frontendRoot, isPackaged = false, startPage } = {}) {
-  const fallback = isPackaged ? "workbench.html" : "index.html";
-  const requested = ["index.html", "workbench.html"].includes(startPage) ? startPage : fallback;
-  return fs.existsSync(path.join(frontendRoot, requested)) ? requested : "index.html";
+function resolveStartPage() {
+  return "workbench.html";
 }
 
 function requiresIsolatedBackend({ isPackaged = false, offlinePreview = false } = {}) {

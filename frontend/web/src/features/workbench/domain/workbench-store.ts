@@ -52,6 +52,8 @@ export interface Prefs extends TypographyPrefs {
 }
 
 export interface WorkbenchState extends Prefs {
+  translationIssue?: { itemId: string; error: import("@/platform/contracts/workbench.js").TranslationError };
+  translatingIds?: string[];
   main: MainView;
   settingsSection: SettingsSection;
   settingsReturn: { main: "desk" | "library" | "notes"; activeTab: string };

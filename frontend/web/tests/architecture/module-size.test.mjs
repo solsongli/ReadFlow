@@ -88,7 +88,7 @@ test("baseline 没有虚高（拆小/收敛后必须拧紧）", () => {
 
 test("扫描根有效且覆盖全量源码", () => {
   const files = walkSourceFiles();
-  assert.ok(files.length > 400, `只扫到 ${files.length} 个源文件，扫描根疑似失效`);
+  assert.ok(files.length > 190, `只扫到 ${files.length} 个源文件，扫描根疑似失效`);
   assert.ok(
     files.every((file) => file.startsWith("src/")),
     "扫描结果应全部位于 src/ 下",

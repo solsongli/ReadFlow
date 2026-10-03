@@ -57,7 +57,7 @@ test("embed URL uses zero-based page_idx and never admits foreign navigation", (
   assert.equal(url.searchParams.get("attachment_id"), "a");
   assert.equal(url.searchParams.get("scheme"), "dark");
   assert.equal(workbenchReaderUrl("https://foreign/reader.html", base, ID, "light"), null);
-  assert.equal(workbenchReaderUrl("./index.html", base, ID, "light"), null);
+  assert.equal(workbenchReaderUrl("./workbench.html", base, ID, "light"), null);
   assert.equal(resolveWorkbenchScheme("system", true), "dark");
   assert.equal(resolveWorkbenchScheme("light", true), "light");
 });

@@ -1,12 +1,3 @@
-// 按页编译 CSS：home / detail / reader 独立产物，切断「一份 styles.css 打天下」。
-// 挂载对照（HTML → 源 → 产物，?v= 由 stamp-cache-version.mjs 按内容哈希重写）：
-//   index.html  → src/styles/entries/home.css   → dist/css/home.css
-//   detail.html → src/styles/entries/detail.css → dist/css/detail.css
-//   reader.html → src/styles/entries/reader.css → dist/css/reader.css (仅 react-pdf，legacy 已删除)
-// 对应 JS bundle 见 build-js-bundle.mjs；三 entry 共享启动壳见 src/app/shell-boot.ts。
-//
-// 兼容：仍写一份 styles.css = home 的副本，避免外部脚本/文档旧路径立刻挂掉。
-
 import { spawnSync } from "node:child_process";
 import { copyFileSync, mkdirSync, existsSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -15,8 +6,6 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const ENTRIES = [
-  { in: "src/styles/entries/home.css", out: "dist/css/home.css" },
-  { in: "src/styles/entries/detail.css", out: "dist/css/detail.css" },
   { in: "src/styles/entries/reader.css", out: "dist/css/reader.css" },
   { in: "src/styles/entries/workbench.css", out: "dist/css/workbench.css" },
 ];
@@ -102,13 +91,6 @@ for (const entry of ENTRIES) {
   runOne(entry);
 }
 
-// 兼容旧路径 styles.css（= 主页包）
-const homeOut = join(ROOT, "dist/css/home.css");
-const legacyOut = join(ROOT, "styles.css");
-if (existsSync(homeOut)) {
-  copyFileSync(homeOut, legacyOut);
-  console.log("[build-css] styles.css ← dist/css/home.css (compat)");
-}
 
 copyKatexFonts();
 

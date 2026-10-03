@@ -126,7 +126,7 @@ def main():
     startup_deadline = time.monotonic() + 90
     while True:
         try:
-            page = session.get(args.gateway + "/index.html", timeout=5)
+            page = session.get(args.gateway + "/workbench.html", timeout=5)
             break
         except requests.ConnectionError:
             if time.monotonic() >= startup_deadline:

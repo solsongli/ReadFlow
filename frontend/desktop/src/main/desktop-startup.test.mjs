@@ -11,16 +11,16 @@ const { resolveStartPage, requiresIsolatedBackend } = require("./desktop-startup
 function frontend(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "readflow-start-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  for (const name of ["index.html", "workbench.html"]) fs.writeFileSync(path.join(root, name), "fixture");
+  for (const name of ["workbench.html"]) fs.writeFileSync(path.join(root, name), "fixture");
   return root;
 }
 
-test("packaged workbench default still accepts explicit old or preview entry points", (t) => {
+test("installed and preview starts always use workbench", (t) => {
   const frontendRoot = frontend(t);
   assert.equal(resolveStartPage({ frontendRoot, isPackaged: true }), "workbench.html");
-  assert.equal(resolveStartPage({ frontendRoot, isPackaged: true, startPage: "index.html" }), "index.html");
+  assert.equal(resolveStartPage({ frontendRoot, isPackaged: true, startPage: "workbench.html" }), "workbench.html");
   assert.equal(resolveStartPage({ frontendRoot, isPackaged: false, startPage: "workbench.html" }), "workbench.html");
-  assert.equal(resolveStartPage({ frontendRoot, isPackaged: false }), "index.html");
+  assert.equal(resolveStartPage({ frontendRoot, isPackaged: false }), "workbench.html");
 });
 
 test("unknown/traversal entry points use the default and missing workbench falls back", (t) => {
@@ -29,8 +29,8 @@ test("unknown/traversal entry points use the default and missing workbench falls
     assert.equal(resolveStartPage({ frontendRoot, isPackaged: true, startPage }), "workbench.html");
   }
   fs.unlinkSync(path.join(frontendRoot, "workbench.html"));
-  assert.equal(resolveStartPage({ frontendRoot, isPackaged: true }), "index.html");
-  assert.equal(resolveStartPage({ frontendRoot, startPage: "workbench.html" }), "index.html");
+  assert.equal(resolveStartPage({ frontendRoot, isPackaged: true }), "workbench.html");
+  assert.equal(resolveStartPage({ frontendRoot, startPage: "workbench.html" }), "workbench.html");
 });
 
 test("installed and preview instances cannot reclaim or reuse another app's backend", () => {

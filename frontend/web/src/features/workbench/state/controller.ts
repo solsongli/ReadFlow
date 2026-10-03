@@ -1,3 +1,4 @@
+import { createTranslations } from "./translations.js";
 // 工作台副作用：所有网络请求、偏好持久化、通知都在这里。UI 只调用这些方法。
 import type { WorkbenchApi } from "@/platform/api/workbench.js";
 import type { ReadStatus, WorkbenchRow, WorkbenchStatePatch } from "@/platform/contracts/workbench.js";
@@ -26,6 +27,7 @@ import {
 
 export interface WorkbenchEnv {
   api: WorkbenchApi;
+  translationConfig?: Parameters<typeof createTranslations>[0]["loadConfig"];
   createSettingsServices?: () => SettingsServices;
   storage?: Pick<Storage, "getItem" | "setItem"> | null;
   preferenceEvents?: EventTarget | null;
@@ -258,10 +260,13 @@ export function createWorkbench(env: WorkbenchEnv) {
     });
   }
 
-  const importPdfs = createPdfImporter({ api, group: () => get().groupId, notify, failure, refresh: refreshAll });
+  const translations = createTranslations({ api, store, notify, openReader, refreshDesk, loadConfig: env.translationConfig });
+
+  const importPdfs = createPdfImporter({ api, group: () => get().groupId, notify, failure, refresh: refreshAll, select: revealNotePaper });
 
   return {
     ...settings,
+    translations,
     openSettings: (...args: Parameters<typeof settings.openSettings>) => notes.beforeLeave(() => settings.openSettings(...args)),
     notes,
     revealNotePaper,

@@ -1,3 +1,4 @@
+import { translationProgress } from "../../domain/translation.js";
 import type { DeskTranslation } from "@/platform/contracts/workbench.js";
 import { Button } from "@/ui/wb/Button.js";
 import { mailDate } from "../../domain/format.js";
@@ -20,7 +21,7 @@ export function TranslationPanel({ translation }: { translation?: DeskTranslatio
         </svg>
         <div className="flex min-w-0 flex-col gap-1">
           <span className="wb-truncate text-[0.84375rem] font-semibold" title={running.title}>{running.title_translated || running.title}</span>
-          <span className="text-[0.75rem] text-wb-text-3">{percent == null ? "翻译中 · 进度待更新" : `翻译中 ${percent}%`}</span>
+          <span className="text-[0.75rem] text-wb-text-3">{translationProgress({ status: "running", percent, stage: running.stage })}</span>
           <span className="text-[0.75rem] text-wb-text-3">排队 {translation?.queued ?? 0} 篇{translation && translation.running.length > 1 ? ` · 共 ${translation.running.length} 篇进行中` : ""}</span>
         </div>
       </div> : <EmptyLine>{translation ? translation.queued ? `${translation.queued} 篇文献正在排队。` : "没有正在进行的翻译任务。" : "翻译状态待更新。"}</EmptyLine>}

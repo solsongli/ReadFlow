@@ -42,6 +42,7 @@ try {
     const secret = page.getByLabel("翻译 API Key", { exact: true });
     await secret.waitFor();
     await page.getByText("已配置", { exact: true }).waitFor();
+    await page.getByText(/^已就绪 · .* · demo-model$/).waitFor();
     assert.equal(await secret.getAttribute("type"), "password");
     await button("显示翻译 API Key").click();
     assert.equal(await secret.getAttribute("type"), "text");

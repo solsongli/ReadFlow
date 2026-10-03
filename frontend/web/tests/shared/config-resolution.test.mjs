@@ -46,16 +46,16 @@ function resetRuntime() {
   stubLocation();
 }
 
-// ===== 文件层：runtime-config.local.js 盖掉 runtime-config.js（index.html 先 base 后 local） =====
+// ===== 文件层：runtime-config.local.js 盖掉 runtime-config.js（reader.html 先 base 后 local） =====
 
 test("local 文件能盖掉默认：合并顺序 base→local，local 值胜出", () => {
   const baseText = fs.readFileSync(path.join(frontendRoot, "runtime-config.js"), "utf8");
-  const html = fs.readFileSync(path.join(frontendRoot, "index.html"), "utf8");
+  const html = fs.readFileSync(path.join(frontendRoot, "reader.html"), "utf8");
 
-  // index.html 必须先载入默认、后载入 local
+  // reader.html 必须先载入默认、后载入 local
   assert.ok(
     html.indexOf("runtime-config.js") < html.indexOf("runtime-config.local.js"),
-    "index.html 应先加载 runtime-config.js 再加载 runtime-config.local.js",
+    "reader.html 应先加载 runtime-config.js 再加载 runtime-config.local.js",
   );
 
   // runtime-config.local.js 是 gitignore 的本地文件，CI 干净检出里没有；

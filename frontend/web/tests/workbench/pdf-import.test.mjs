@@ -16,3 +16,21 @@ test("membership retry resumes an uploaded PDF without creating another item", a
   await importFiles([{ name: "paper.pdf", type: "application/pdf" }]); await retry();
   assert.equal(uploaded, 1); assert.equal(groups, 2);
 });
+
+test("single duplicate announces the stored title and selects it after refreshing", async () => {
+  const calls = [];
+  const importer = createPdfImporter({ api: { upload: async () => ({ duplicate: true, item: { id: "existing", title: "Original title" } }) }, group: () => null,
+    refresh: async () => calls.push("refresh"), select: (id) => calls.push(id), notify: (text) => calls.push(text), failure: () => assert.fail("unexpected failure") });
+  await importer([{ name: "renamed.pdf" }]);
+  assert.deepEqual(calls, ["refresh", "existing", "《Original title》已在文献库中"]);
+});
+test("mixed batch summarizes duplicates and a membership retry counts each file once", async () => {
+  let attempts = 0, uploads = 0, retry;
+  const messages = [], selected = [];
+  const importer = createPdfImporter({ api: { upload: async (file) => { uploads++; return { duplicate: file.name !== "new.pdf", item: { id: file.name, title: "Stored" } }; }, changeGroup: async (_group, ids) => { if (ids[0] === "retry.pdf" && attempts++ === 0) throw new Error("offline"); } },
+    group: () => "group", refresh: async () => {}, select: (id) => selected.push(id), notify: (text) => messages.push(text), failure: (_error, fn) => { retry = fn; } });
+  await importer(["new.pdf", "old.pdf", "retry.pdf"].map((name) => ({ name })));
+  await retry();
+  assert.equal(uploads, 3); assert.equal(messages.at(-1), "已导入 1 个 PDF，2 篇已存在");
+  assert.equal(selected.at(-1), "retry.pdf");
+});

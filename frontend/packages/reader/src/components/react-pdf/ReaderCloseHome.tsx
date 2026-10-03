@@ -2,14 +2,14 @@
 //
 // 1) 软打开（主页 SoftReaderHost iframe）→ postMessage 父页 history.back，主页不刷新
 // 2) 独立 reader.html 且从主页 assign 进来 → history.back
-// 3) 深链直达 → location.assign(index.html)
+// 3) 深链直达 → location.assign(workbench.html)
 
 import { parseWorkbenchEmbed } from "../../domain/workbench-embed.js";
 import { X } from "lucide-react";
 import { SOFT_READER_CLOSE_MESSAGE } from "../../shared/navigation/soft-reader.js";
 
 function homeIndexUrl() {
-  return new URL("./index.html", window.location.href).href;
+  return new URL("./workbench.html", window.location.href).href;
 }
 
 function requestSoftHostClose(): boolean {
@@ -36,8 +36,7 @@ export function canReturnToReaderReferrer(
     const current = new URL(currentHref);
     const previous = new URL(referrer, current);
     return previous.origin === current.origin
-      && !/reader\.html$/i.test(previous.pathname)
-      && !/detail\.html$/i.test(previous.pathname);
+      && /(?:^|\/)workbench\.html$/i.test(previous.pathname);
   } catch {
     return false;
   }

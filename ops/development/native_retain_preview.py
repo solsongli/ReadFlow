@@ -123,11 +123,19 @@ def prepare(root: Path) -> Path:
     web = REPO / "frontend/web"
     target = app / "app/frontend"
     target.mkdir(parents=True, exist_ok=True)
-    for name in ["index.html", "reader.html", "detail.html", "workbench.html", "runtime-config.js"]:
+    # Delete obsolete generated HTML and bundles; never touch the profile/data.
+    for old_page in target.glob("*.html"):
+        if old_page.name not in {"workbench.html", "reader.html"}:
+            old_page.unlink()
+    for name in ["dist", "decor", "src/assets"]:
+        if (target / name).is_dir():
+            shutil.rmtree(target / name)
+    (target / "styles.css").unlink(missing_ok=True)
+    for name in ["reader.html", "workbench.html", "runtime-config.js"]:
         shutil.copy2(web / name, target / name)
     # Never copy an existing local runtime config, user keys or desktop state.
     (target / "runtime-config.local.js").write_text("// Empty isolated preview override.\n")
-    for name in ["dist", "vendor", "decor", "src/assets"]:
+    for name in ["dist", "vendor", "src/assets"]:
         source = web / name
         if source.is_dir():
             shutil.copytree(source, target / name, dirs_exist_ok=True)
@@ -145,7 +153,7 @@ def url(value: dict | None) -> str | None:
         stream.seek(max(0, file.stat().st_size - 65536))
         log = stream.read().decode("utf-8", "replace")
     found = re.findall(r"local gateway listening on (http://127\.0\.0\.1:\d+)", log)
-    return found[-1] + "/index.html?tab=research" if found else None
+    return found[-1] + "/workbench.html" if found else None
 
 
 def ready(value: dict | None) -> bool:
@@ -234,8 +242,7 @@ def main() -> int:
                    "RETAIN_PDF_RESEARCH_LIBRARY": "1", "RETAIN_PDF_OFFLINE_LIBRARY_PREVIEW": "1",
                    "RETAIN_PDF_ALLOW_OCR_DOWNLOAD": "1" if options.allow_ocr_download else "0",
                    "RETAIN_PDF_ALLOW_EXTERNAL_MODELS": "1" if options.allow_external_models else "0",
-                   "RETAIN_PDF_RESEARCH_CODE_ROOT": str(REPO), "RETAIN_PDF_NATIVE_START_TAB": "research",
-                   "RETAIN_PDF_START_PAGE": "workbench.html",
+                   "RETAIN_PDF_RESEARCH_CODE_ROOT": str(REPO), "RETAIN_PDF_START_PAGE": "workbench.html",
                    "RETAIN_PDF_PREVIEW_API_PORT": "41060", "RETAIN_PDF_PREVIEW_GATEWAY_PORT": "40061",
                    "RETAIN_PDF_PREVIEW_JOBS_PORT": "41062", "RETAIN_PDF_PREVIEW_SIMPLE_PORT": "42060",
                    "RETAIN_PDF_PREVIEW_AI_PORT": "41160", "RETAIN_PDF_RESEARCH_CONNECTOR_PORT": "23119" if options.connector else ""}

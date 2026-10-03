@@ -1,3 +1,4 @@
+import { TranslationNotice } from "./TranslationNotice.js";
 import { useEffect } from "react";
 import { cn } from "@/ui/lib/utils.js";
 import { workbenchTitle } from "../../domain/resilience.js";
@@ -83,6 +84,7 @@ function WorkbenchLayout() {
       <Sidebar />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {main !== "settings" ? <TitleBar /> : null}
+        <TranslationNotice />
         {!libraryActive ? <ServiceBanner /> : null}
         <div className="relative flex min-h-0 flex-1">
           <div className={cn("flex min-h-0 min-w-0 flex-1", !libraryActive && "hidden")}>

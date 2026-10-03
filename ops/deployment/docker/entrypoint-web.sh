@@ -13,7 +13,7 @@ set -eu
 : "${FRONT_RUNTIME_CONFIG_ROOT:=/usr/share/nginx/html}"
 
 # The frontend always loads runtime-config.local.js first.
-# If the file is missing, nginx falls back to index.html and the browser
+# If the file is missing, nginx falls back to workbench.html and the browser
 # tries to execute HTML as JavaScript, which whitescreens the page.
 : > "$FRONT_RUNTIME_CONFIG_ROOT/runtime-config.local.js"
 

@@ -1,10 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
-  createReaderServerFavoritesPort,
-  dedupeServerFavorites,
-  normalizeServerFavorite,
-} from "../../src/features/reader/domain.js";
+import { createReaderServerFavoritesPort, dedupeServerFavorites, normalizeServerFavorite } from "../../src/features/reader/domain/host/state.js";
 import { deleteFavorite } from "@retainpdf/api/favorites";
 
 const API_FAVORITE = {

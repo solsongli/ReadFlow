@@ -194,6 +194,7 @@ export async function packageReadFlow(args = process.argv.slice(2)) {
     "backend/retainpdf2doc/dist/cli.mjs",
     "backend/bin/rust_api", "backend/bin/retain-jobsd", "backend/bin/retainpdf-agent",
     "frontend/workbench.html", "frontend/dist/workbench.bundle.js", "frontend/dist/css/workbench.css",
+    "frontend/reader.html", "frontend/dist/reader.bundle.js", "frontend/dist/css/reader.css",
   ]) requiredFile(path.join(desktopRoot, "app", relative));
 
   console.log("[3/6] electron-builder --linux dir (offline cached Electron)");
@@ -205,7 +206,11 @@ export async function packageReadFlow(args = process.argv.slice(2)) {
   const asarFile = path.join(unpacked, "resources/app.asar");
   const packaged = JSON.parse(asar.extractFile(asarFile, "package.json").toString());
   if (packaged.productName !== pkg.productName || packaged.version !== pkg.version) throw new Error("app.asar brand/version mismatch");
-  asar.extractFile(asarFile, "app/frontend/workbench.html");
+  for (const page of ["workbench.html", "reader.html"]) asar.extractFile(asarFile, `app/frontend/${page}`);
+  const htmlEntries = asar.listPackage(asarFile).filter((entry) => /^\/app\/frontend\/[^/]+\.html$/.test(entry));
+  if (htmlEntries.some((entry) => !["workbench.html", "reader.html"].includes(path.basename(entry)))) {
+    throw new Error("Unexpected frontend HTML entry in app.asar");
+  }
   if (asar.listPackage(asarFile).some((entry) => entry.endsWith("/runtime-config.local.js"))) {
     throw new Error("Local frontend overrides must not be packaged");
   }

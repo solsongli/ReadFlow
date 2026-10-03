@@ -15,7 +15,12 @@ export type TextStatus =
   | "ocr_complete";
 
 /** Read-only full-text translation status from the original job service. */
+export interface TranslationError { code: string; message: string; details?: string; settings?: "translation" | "ocr" | null }
+export interface TranslationResult { item_id?: string; translation?: TranslationState; error?: TranslationError; reused?: boolean; needs_ocr?: boolean }
+
 export interface TranslationState {
+  stage?: "ocr" | "translation" | "render";
+  error?: TranslationError;
   status: "none" | "queued" | "running" | "done" | "failed" | "unknown";
   job_id?: string | null;
   percent?: number | null;
@@ -144,7 +149,7 @@ export interface DeskCounts {
 }
 
 export interface DeskTranslation {
-  running: Array<{ item_id: string; title: string; title_translated: string; percent: number | null }>;
+  running: Array<{ item_id: string; title: string; title_translated: string; percent: number | null; stage?: TranslationState["stage"] }>;
   queued: number;
   done: number;
   recent_done: { item_id: string; title: string; finished_at: string } | null;

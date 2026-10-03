@@ -44,7 +44,7 @@ before(async () => {
       protocol: "http:",
       hostname: "localhost",
       origin: "http://localhost",
-      href: "http://localhost/index.html",
+      href: "http://localhost/workbench.html",
     },
   };
   const jobDomain = await import("@retainpdf/domain/job");

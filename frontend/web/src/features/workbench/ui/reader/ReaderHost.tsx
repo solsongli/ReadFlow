@@ -1,3 +1,4 @@
+import { ReaderTranslation } from "./ReaderTranslation.js";
 import { CircleAlert, LoaderCircle } from "lucide-react";
 import { cn } from "@/ui/lib/utils.js";
 import { Button } from "@/ui/wb/Button.js";
@@ -17,6 +18,7 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
 
   return (
     <div data-wb-reader-active={active} className={cn("absolute inset-0 flex flex-col bg-wb-bg", !active && "hidden")}>
+      <ReaderTranslation tab={tab} />
       {tab.status === "loading" ? (
         <WbEmptyState className="flex-1" icon={<LoaderCircle size={22} />} title="正在准备阅读器…" hint={tab.title} />
       ) : null}

@@ -32,7 +32,12 @@ export function createReaderActions({ api, store, rowById, notify, failure, open
         resumePage: page ?? row?.read_page ?? null, navigationKey: (existing?.navigationKey ?? 0) + 1 });
       try {
         const result = await api.nativeReader(attachmentId);
-        const url = result.attachment?.reader_url ?? null;
+        let url = result.attachment?.reader_url ?? null;
+        if (url && row?.translation.status === "done" && row.translation.job_id) {
+          const parsed = new URL(url, "http://reader.invalid");
+          parsed.searchParams.set("job_id", row.translation.job_id);
+          url = parsed.pathname + parsed.search;
+        }
         if (!url) throw new Error(result.native_bridge?.message || "阅读器暂不可用。");
         store.actions.updateTab(tabId, { url, status: "ready" });
         void opened(itemId); return true;

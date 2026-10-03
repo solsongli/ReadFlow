@@ -11,9 +11,7 @@ const dom = new JSDOM("<!doctype html><body></body>", { url: "http://localhost/"
 globalThis.document = dom.window.document;
 globalThis.localStorage = dom.window.localStorage;
 
-const { createReaderAskAnswerer, loadStoredConversationId } = await import(
-  "../../src/features/reader/domain.ts"
-);
+const { createReaderAskAnswerer, loadStoredConversationId } = await import("../../src/features/reader/domain/host/ai.js");
 
 function makeAnswerer(fakeAsk, jobId) {
   return createReaderAskAnswerer({

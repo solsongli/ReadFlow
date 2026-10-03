@@ -10,9 +10,7 @@ import { JSDOM } from "jsdom";
 const dom = new JSDOM("<!doctype html><body></body>");
 globalThis.document = dom.window.document;
 
-const { renderFinalAnswerHtml, renderStreamingPreviewHtml } = await import(
-  "../../src/features/reader/domain.ts"
-);
+const { renderFinalAnswerHtml, renderStreamingPreviewHtml } = await import("../../src/features/reader/domain/host/ai.js");
 
 /** 把输出重新解析,断言不存在任何危险活元素/属性 */
 function assertInert(html, label) {

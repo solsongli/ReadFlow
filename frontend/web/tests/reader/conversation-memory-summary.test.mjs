@@ -15,7 +15,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { messagesToBranchItems } from "@retainpdf/api";
+import { messagesToBranchItems } from "@retainpdf/api/conversations";
 
 const BASE = {
   conversation_id: "c1",

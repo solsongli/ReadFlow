@@ -37,7 +37,7 @@ test("workbench Ctrl zoom keys bypass menu accelerators but still reach the rend
   }
   assert.deepEqual(ignored, [true, false, true, false, true, false, true, false]);
   assert.equal(rendererOwnsZoom({ type: "keyDown", meta: true, key: "=" }), true);
-  for (const name of ["reader.html", "index.html", "detail.html"]) {
+  for (const name of ["reader.html", "unrelated.html"]) {
     url = "http://local/"+name;
     contents.emit("before-input-event", event, { type: "keyDown", control: true, key: "=" });
     assert.equal(ignored.at(-1), false);

@@ -64,9 +64,9 @@ python3 backend/api/scripts/query_acceptance.py web "$ACCEPTANCE_ROOT"
 代理仅打印事件请求模式、状态码、条数，不打印 cursor 或凭据。此构建流程
 仅覆盖主页和详情的 CSS，不作为 Reader 样式验收。
 
-实际验收路径：
+历史 UI 验收路径（相关页面已在 T11 删除，以下仅保留事件验收记录；当前 UI 入口为 workbench.html）：
 
-1. `detail.html?job_id=acceptance-ui`：打开前不加载事件；点击“按需加载”，
+1. 当时的任务详情页（已删除）：打开前不加载事件；点击“按需加载”，
    观察 head 500 → cursor 500 → cursor 200，事件弹窗显示全部 1,200 条。
 2. 主页 → 任务中心 → `acceptance-ui` → 打开详情：运行中先读 tail 500，
    随后空 cursor 轮询。任务中心自身目前仍有 2,000 条前端安全上限。

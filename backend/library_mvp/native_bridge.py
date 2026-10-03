@@ -1,6 +1,6 @@
 """Optional local-only publication bridge to RetainPDF's original Rust library.
 
-This module creates no Rust jobs, writes no legacy SQLite files, and reads no
+This module uses the native HTTP API, writes no legacy SQLite files, and reads no
 credentials. The owning launcher supplies the isolated Rust origin and API key.
 Registration readiness is a process-local verified cache; opening after a
 restart can explicitly revalidate via POST native-reader without reuploading.
@@ -114,6 +114,36 @@ class NativeBridge:
             return []
         items = self._json(response).get("items", [])
         return [item for item in items if isinstance(item, dict)] if isinstance(items, list) else []
+
+    def submit_translation(self, sha256: str, payload: dict) -> dict:
+        # The native document endpoint binds its stored upload_id, then invokes JobsFacade.
+        response = self._client.post(f"{self.base_url}/api/v1/documents/{sha256}/translate",
+                                     json=payload, headers=self._headers, follow_redirects=False)
+        if not 200 <= response.status_code < 300:
+            from .workbench_translation_errors import translation_error
+            error = NativeBridgeError("TRANSLATION_REJECTED", "翻译提交失败")
+            try:
+                detail = str(response.json())
+            except ValueError:
+                detail = response.text
+            error.translation_error = translation_error(detail, response.status_code,
+                                                        [payload.get("translation", {}).get("api_key", "")])
+            raise error
+        return self._json(response)
+
+    def translation_job(self, job_id: str) -> dict:
+        if not re.fullmatch(r"[A-Za-z0-9_-]{1,160}", job_id):
+            raise NativeBridgeError("INVALID_JOB", "任务编号无效")
+        response = self._client.get(f"{self.base_url}/api/v1/jobs/{job_id}", headers=self._headers, follow_redirects=False)
+        self._status(response)
+        return self._json(response)
+
+    def cancel_translation(self, job_id: str) -> dict:
+        if not re.fullmatch(r"[A-Za-z0-9_-]{1,160}", job_id):
+            raise NativeBridgeError("INVALID_JOB", "任务编号无效")
+        response = self._client.post(f"{self.base_url}/api/v1/jobs/{job_id}/cancel", json={}, headers=self._headers, follow_redirects=False)
+        self._status(response)
+        return self._json(response)
 
     def _document(self, sha256: str) -> dict | None:
         response = self._client.get(f"{self.base_url}/api/v1/documents/{sha256}",

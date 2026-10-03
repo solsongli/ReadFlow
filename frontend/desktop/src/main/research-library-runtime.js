@@ -37,7 +37,6 @@ function buildResearchFrontendRuntime(config, options = {}) {
     apiBase: options.gatewayBase || config.apiBase,
     researchLibraryEnabled: true,
     offlineLibraryPreview: options.offlinePreview === true,
-    ...(options.startTab === "research" ? { nativeLibraryStartTab: "research" } : {}),
   };
 }
 

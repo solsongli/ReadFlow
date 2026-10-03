@@ -92,6 +92,9 @@ class FrontendRequestHandler(http.server.SimpleHTTPRequestHandler):
         super().__init__(*args, directory=directory, **kwargs)
 
     def do_GET(self) -> None:
+        if urllib.parse.urlsplit(self.path).path == "/":
+            query = urllib.parse.urlsplit(self.path).query
+            self.path = "/workbench.html" + ("?" + query if query else "")
         if self.path == "/health":
             payload = {
                 "ok": True,
@@ -183,7 +186,7 @@ class FrontendRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_header("Cache-Control", "no-store")
         elif path.startswith(("/vendor/", "/src/assets/", "/dist/")):
             self.send_header("Cache-Control", "public, max-age=0, must-revalidate")
-        elif path.endswith((".js", ".css", ".html")) or path in ("/", "/index.html"):
+        elif path.endswith((".js", ".css", ".html")) or path in ("/", "/workbench.html"):
             self.send_header("Cache-Control", "public, max-age=0, must-revalidate")
         else:
             self.send_header("Cache-Control", "public, max-age=3600")

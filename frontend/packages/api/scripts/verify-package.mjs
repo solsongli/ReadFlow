@@ -23,7 +23,7 @@ for (const [subpath, conditions] of Object.entries(manifest.exports)) {
   await import(specifier);
 }
 
-const runtime = await import(`${manifest.name}/runtime`);
+const runtime = await import(`${manifest.name}/internal/runtime`);
 for (const exportName of ["API_PREFIX", "buildApiHeaders", "buildApiUrl", "getRuntimeConfig"]) {
   assert.ok(exportName in runtime, `runtime entrypoint must export ${exportName}`);
 }

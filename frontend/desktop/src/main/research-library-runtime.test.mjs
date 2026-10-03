@@ -39,9 +39,9 @@ test("defaults remain unchanged until research is enabled and preview uses dedic
   const original = { apiBase: "http://127.0.0.1:41000", xApiKey: "synthetic" };
   assert.equal(buildResearchFrontendRuntime(original), original);
   assert.deepEqual(buildResearchFrontendRuntime(original, {
-    enabled: true, gatewayBase: "http://127.0.0.1:47500", offlinePreview: true, startTab: "research",
+    enabled: true, gatewayBase: "http://127.0.0.1:47500", offlinePreview: true,
   }), { ...original, apiBase: "http://127.0.0.1:47500", researchLibraryEnabled: true,
-    offlineLibraryPreview: true, nativeLibraryStartTab: "research" });
+    offlineLibraryPreview: true });
   assert.deepEqual(readResearchPreviewPorts({}), { apiPort: 47100, simplePort: 47200, jobsPort: 47300,
     aiServicePort: 47400, gatewayPort: 47500 });
   assert.throws(() => readResearchPreviewPorts({ RETAIN_PDF_PREVIEW_API_PORT: "65535" }), /1024 and 65485/);

@@ -137,16 +137,6 @@ try {
     assert.match(safe, /错误名：TypeError/); assert.match(safe, /组件栈/); assert.doesNotMatch(safe, /from-reader|one\.pdf|file:\/\/|http:|\/home\//);
     await screenshot("error-boundary"); await button("重新载入").click(); await page.getByRole("region", { name: "欢迎使用 ReadFlow" }).waitFor();
   });
-  await check("legacy note deletion uses its existing nonblocking dialog and preserves cancel/confirm semantics", async () => {
-    await page.goto("http://hardening.test/legacy.html"); await button("删除").click();
-    const dialog = page.getByRole("dialog", { name: "删除这条笔记？", exact: true }); await dialog.waitFor();
-    assert.equal(await page.evaluate(() => window.legacyFixture.deletes), 0);
-    await dialog.getByRole("button", { name: "取消", exact: true }).click();
-    assert.equal(await page.evaluate(() => window.legacyFixture.deletes), 0);
-    await button("删除").click(); await dialog.getByRole("button", { name: "删除", exact: true }).click();
-    await page.waitForFunction(() => window.legacyFixture.deletes === 1 && window.legacyFixture.saved === 1);
-    await dialog.waitFor({ state: "hidden" });
-  });
   assert.deepEqual(errors, []); assert.deepEqual(unexpected, []);
   console.log(`PASS ${checks.length} scenarios; page errors: ${errors.length}; unexpected requests: ${unexpected.length}`);
 } catch (error) { console.log(`Completed ${checks.length} scenarios; page errors: ${errors.length}; unexpected: ${JSON.stringify(unexpected)}`); throw error; }

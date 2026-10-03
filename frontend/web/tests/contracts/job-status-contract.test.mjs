@@ -121,14 +121,6 @@ test("JobProgressView: TS JobProgress ⊆ 契约，且 percent 语义正确", ()
 test("JobStagesView: ocr/translation/render 三阶段齐全且前端可见", () => {
   const stagesProps = schemaProps("JobStagesView");
   assert.deepEqual([...stagesProps].sort(), ["ocr", "render", "translation"]);
-  // 前端 stage 引擎映射依赖
-  const engineSrc = readFileSync(join(
-    process.cwd(),
-    "../../frontend/packages/domain/src/job-status/public-stage-engine.ts",
-  ), "utf8");
-  for (const stage of ["ocr", "translation", "render"]) {
-    assert.ok(engineSrc.includes(stage), `public-stage-engine 未处理 ${stage}`);
-  }
   assert.ok(jobStatusTypesSrc.includes("StageKey") || jobTypesSrc.includes("StageKey"), "TS 缺少 StageKey");
 });
 

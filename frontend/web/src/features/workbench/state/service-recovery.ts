@@ -2,7 +2,7 @@ import type { WorkbenchApi } from "@/platform/api/workbench.js";
 import type { WorkbenchStore } from "../domain/workbench-store.js";
 import { isLibraryUnavailable, retryDelay } from "../domain/resilience.js";
 
-const READS = ["list", "row", "item", "desk", "notes", "ocrJobs", "ocrModules"];
+const READS = ["list", "row", "item", "desk", "notes", "ocrJobs", "ocrModules", "translationStatus"];
 export function createServiceRecovery(raw: WorkbenchApi, store: WorkbenchStore, recovered: () => Promise<unknown>, timers = {
   set: (work: () => void, ms: number): unknown => setTimeout(work, ms),
   clear: (id: unknown) => clearTimeout(id as ReturnType<typeof setTimeout>),

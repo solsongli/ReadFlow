@@ -31,15 +31,10 @@ const { setReaderAdapters } = await import("../../../../frontend/packages/reader
 const { createReaderDataPort } = await import(
   "../../../../frontend/packages/reader/src/shared/data/data-port.ts"
 );
-const {
-  ReaderMarkdownPanel,
-  buildMarkdownOutline,
-  findMarkdownSearchTargets,
-  isProtectedMarkdownAssetUrl,
-  startMarkdownImageLoading,
-} = await import(
-  "../../../../frontend/packages/reader/src/components/react-pdf/ReaderMarkdownPanel.tsx"
-);
+const { ReaderMarkdownPanel } = await import("../../../packages/reader/src/components/react-pdf/ReaderMarkdownPanel.js");
+const { buildMarkdownOutline } = await import("../../../packages/reader/src/shared/content/markdown-outline.js");
+const { findMarkdownSearchTargets } = await import("../../../packages/reader/src/shared/content/markdown-search.js");
+const { isProtectedMarkdownAssetUrl, startMarkdownImageLoading } = await import("../../../packages/reader/src/shared/content/markdown-images.js");
 const {
   resetMarkdownMathEngineLoader,
   setMarkdownMathEngineLoader,
@@ -52,9 +47,7 @@ const { retainPdfReaderAdapters } = await import(
 );
 // parseMarkdownWithMath 由 reader 包直接导出，不属于 ReaderAdapters 注入面；
 // 注册对象只应包含声明字段（避免 `...ext` 静默带入）。
-const { parseMarkdownWithMath } = await import(
-  "../../../../frontend/packages/reader/src/external.ts"
-);
+const { parseMarkdownWithMath } = await import("../../../packages/reader/src/shared/content/markdown-math.js");
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));

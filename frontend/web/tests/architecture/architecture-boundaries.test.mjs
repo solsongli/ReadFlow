@@ -23,7 +23,7 @@ const SOURCE_ROOTS = {
   desktop: join(PLATFORM_ROOT, "desktop"),
   job: DOMAIN_JOB_SOURCE_ROOT,
   jobMirror: join(JS_ROOT, "job"),
-  jobDetail: join(PROJECT_ROOT, "src/features/job-detail/domain/page"),
+  jobDetail: join(PROJECT_ROOT, "src/features/workbench/domain"),
   jobStatus: join(JS_ROOT, "job-status"),
   state: join(JS_ROOT, "state"),
   statusDetail: join(PROJECT_ROOT, "src/features/job-detail/domain/snapshot"),
@@ -236,46 +236,11 @@ test("runtime frontend does not depend on WebAwesome", () => {
   assert.deepEqual(offenders, []);
 });
 
-test("upload workflow presentation components stay independent from home services", () => {
-  // 原路径 src/app/home/features/workflow/components/upload 已在批次 4 的 ingest
-  // 迁移中删除，本门禁自那天起对空数组做 deepEqual，一直是永久绿灯。upload 展示层
-  // 现在在 features/ingest/ui/components/upload。
-  const presentationRoot = join(PROJECT_ROOT, "src/features/ingest/ui/components/upload");
-  const offenders = scanRoot(presentationRoot, IS_TS_OR_TSX)
-    .filter((file) => /useHomeServices|home-services-context|composition\//.test(readFileSync(file, "utf8")))
-    .map((file) => relativeToProject(file));
 
-  assert.deepEqual(offenders, []);
-});
 
-test("book detail tab and artifact components stay independent from APIs and home services", () => {
-  // book-detail 已随按功能重组迁至 src/features/book-detail；死文件
-  // ui/artifacts/* 删除后产物组件真值在 tabs/artifact-center。
-  const detailRoot = join(PROJECT_ROOT, "src/features/book-detail/ui");
-  // 逐个根校验存在性与非空，避免其中一个根被搬走后另一个把总数撑起来、本门禁半哑。
-  const presentationFiles = scanRoots([
-    join(detailRoot, "tabs"),
-    join(detailRoot, "tabs/artifact-center"),
-  ]);
-  const offenders = presentationFiles
-    .filter((file) => /useHomeServices|home-services-context|composition\/|@retainpdf\/api|domain\/controller/.test(readFileSync(file, "utf8")))
-    .map((file) => relativeToProject(file));
 
-  assert.deepEqual(offenders, []);
-  assert.equal(existsSync(join(detailRoot, "tabs/BookDetailTranslateTab.tsx")), false);
-  assert.equal(existsSync(join(detailRoot, "tabs/BookDetailMoreTab.tsx")), false);
-});
 
-test("agent operation presentation components stay independent from APIs and home services", () => {
-  // ask 已随按功能重组迁至 src/features/ask，展示组件在 ui/operations。
-  const presentationRoot = join(PROJECT_ROOT, "src/features/ask/ui/operations");
-  const presentationFiles = scanRoot(presentationRoot, (file) => /Agent[^/]*\.tsx$/.test(file));
-  const offenders = presentationFiles
-    .filter((file) => /useHomeServices|home-services-context|composition\/|@retainpdf\/api/.test(readFileSync(file, "utf8")))
-    .map((file) => relativeToProject(file));
 
-  assert.deepEqual(offenders, []);
-});
 
 test("shared dialog shell styles stay in dialog-shell css", () => {
   const styleSources = allPathsUnder(join(PROJECT_ROOT, "src/styles"))
@@ -287,12 +252,8 @@ test("shared dialog shell styles stay in dialog-shell css", () => {
 });
 
 test("application dialogs use the shared dialog component boundary", () => {
-  const sharedDialog = join(PROJECT_ROOT, "src/ui/components/dialog.tsx");
-  // 唯一允许直连 Radix Dialog 的文件。路径写错就等于把豁免发给了一个不存在的文件，
-  // 门禁会反过来把真正的共享组件判成违规——先断言它在，失败信息才指得准。
-  assert.ok(existsSync(sharedDialog), `共享 dialog 组件不存在，门禁已失效: ${relativeToProject(sharedDialog)}`);
   const offenders = findMatchingSources(
-    walkFiles(join(PROJECT_ROOT, "src")).filter((filePath) => filePath !== sharedDialog),
+    walkFiles(join(PROJECT_ROOT, "src")),
     RAW_RADIX_DIALOG_IMPORT_PATTERN,
   );
 
@@ -312,23 +273,9 @@ test("production React UI does not use browser blocking dialogs", () => {
   assert.deepEqual(offenders, []);
 });
 
-test("app update styles stay in app-update css", () => {
-  const styleSources = allPathsUnder(join(PROJECT_ROOT, "src/styles"))
-    .filter((filePath) => filePath.endsWith(".css"))
-    .filter((filePath) => filePath !== join(PROJECT_ROOT, "src/styles/pages/home/app-update.css"));
-  const offenders = findMatchingSources(styleSources, APP_UPDATE_SELECTOR_PATTERN);
 
-  assert.deepEqual(offenders, []);
-});
 
-test("library shell styles stay in library-shell css", () => {
-  const styleSources = allPathsUnder(join(PROJECT_ROOT, "src/styles"))
-    .filter((filePath) => filePath.endsWith(".css"))
-    .filter((filePath) => filePath !== join(PROJECT_ROOT, "src/styles/pages/home/library-shell.css"));
-  const offenders = findMatchingSources(styleSources, LIBRARY_SHELL_SELECTOR_PATTERN);
 
-  assert.deepEqual(offenders, []);
-});
 
 // 删：「feature modules import local view.js only through explicit view boundary ports」。
 // 旧世界的 features/*/view.js 视图层已随各功能迁移全部删除（src 下已无 view.ts/js），
@@ -406,24 +353,7 @@ test("job helpers keep job-runtime feature access behind explicit runtime ports"
   assert.deepEqual(offenders, []);
 });
 
-test("job stage history presentation helpers are owned by the job layer", () => {
-  const stageHistorySource = readSource(join(SOURCE_ROOTS.job, "stage-history.js"));
-  const statusDetailUtilsSource = readSource(join(SOURCE_ROOTS.statusDetail, "utils.js"));
-  // 迁移后跨目录 import 统一写 @/ 或功能内相对路径，断言用路径无关的正则，
-  // 否则只匹配旧的 ../status-detail/utils.js 会让本门禁退化成永远通过。
-  const jobDetailOffenders = walkFiles(SOURCE_ROOTS.jobDetail)
-    .filter((file) => {
-      const source = readSource(file);
-      return source.includes("stageHistoryDisplay")
-        && /["'][^"']*(?:status-detail|snapshot)\/utils\.js["']/.test(source);
-    })
-    .map((file) => relativeToProject(file));
 
-  assert.match(stageHistorySource, /stageHistoryDisplay/);
-  assert.match(stageHistorySource, /resolveStageHistoryDuration/);
-  assert.match(statusDetailUtilsSource, /@retainpdf\/domain\/job/);
-  assert.deepEqual(jobDetailOffenders, []);
-});
 
 test("source modules read API prefix from config api constants", () => {
   // SOURCE_ROOTS.reader (src/js/reader) 已在更早的迁移中删除，留在这里只贡献 0 个
@@ -525,77 +455,13 @@ function readRecentJobsSource(fileName) {
   return readSource(join(RECENT_JOBS_DOMAIN, fileName.replace(/\.js$/, ".ts")));
 }
 
-test("recent jobs feature does not import home state directly", () => {
-  for (const fileName of ["controller.js", "loader.js", "commit.js", "runtime-item.js"]) {
-    // 允许 `import type { HomeStatePort }`（编译期擦除，无运行时依赖）
-    const source = sourceWithoutTypeImports(readRecentJobsSource(fileName));
 
-    assert.equal(source.includes("../home/state.js"), false);
-  }
-  assert.equal(readRecentJobsSource("runtime-item.js").includes("../../job/core.js"), false);
-  assert.equal(readRecentJobsSource("runtime-item.js").includes("../../job-status/"), false);
-  assert.match(readRecentJobsSource("runtime-item.js"), /runtime-value-helpers\.js/);
-  assert.equal(
-    readRecentJobsSource("library-refresh-port.js").includes("../library/library-event-port.js"),
-    false,
-  );
-  assert.equal(
-    readRecentJobsSource("active-job-recovery.js").includes("../job-runtime/active-job-storage.js"),
-    false,
-  );
-  assert.equal(readRecentJobsSource("state.js").includes("../../state/store.js"), false);
-  assert.match(readRecentJobsSource("loading-state-contract.js"), /RECENT_JOBS_LOADING_STATES/);
-});
 
-test("current job state is store-only with no legacy mirror", () => {
-  const currentJobStateSource = readJobRuntimeSource("current-job-state.js");
-  const secondarySelectorSource = readJobRuntimeSource("current-job-secondary-selectors.js");
 
-  // 迁移完成:镜像 port 文件不得存在,选择器读 store 快照
-  // 同上：扫描点从已删除的 src/js/features/job-runtime 改指 features/jobs/domain/runtime。
-  assert.equal(existsSync(resolveSourcePath(join(JOB_RUNTIME_DOMAIN, "legacy-current-job-state-port.js"))), false);
-  assert.equal(/state\.currentJob[A-Za-z]*\s*=(?!=)/.test(currentJobStateSource), false);
-  // 允许 TS 收窄：currentJobStoreFor(state as object | null | undefined).getSnapshot()
-  assert.match(
-    currentJobStateSource,
-    /currentJobStoreFor\(\s*state(?:\s+as\s+[^)]+)?\s*\)\.getSnapshot\(\)/,
-  );
-  assert.equal(currentJobStateSource.includes("secondary-resource-cache.js"), false);
-  assert.match(currentJobStateSource, /current-job-secondary-selectors\.js/);
-  assert.match(secondarySelectorSource, /secondary-resource-cache\.js/);
-});
 
-test("job runtime library events use injected library ports", () => {
-  const controllerSource = readJobRuntimeSource("controller.js");
-  const libraryEventsSource = readJobRuntimeSource("library-events.js");
 
-  assert.equal(controllerSource.includes("../library/library-event-port.js"), false);
-  assert.equal(libraryEventsSource.includes("../library/library-event-port.js"), false);
-  assert.equal(libraryEventsSource.includes("createLibraryEventPort"), false);
-  assert.match(controllerSource, /libraryEventPort/);
-  assert.match(libraryEventsSource, /contracts\/library-event-contract\.js/);
-});
 
-test("job domains are consumed from packages instead of web mirrors", () => {
-  assert.deepEqual(
-    walkFiles(SOURCE_ROOTS.jobMirror),
-    [],
-    "frontend/web/src/js/job must not return; use @retainpdf/domain/job",
-  );
-  assert.deepEqual(
-    walkFiles(SOURCE_ROOTS.jobStatus),
-    [],
-    "frontend/web/src/js/job-status must not return; use @retainpdf/domain/job-status",
-  );
 
-  // 原先断言主页网关的 external/job.ts 转出 job-status；B8 解散网关后，
-  // 真正的消费点是装配工厂本身。
-  const runtimeFeaturesSource = readSource(join(
-    PROJECT_ROOT,
-    "src/app/home/composition/create-runtime-features.ts",
-  ));
-  assert.match(runtimeFeaturesSource, /@retainpdf\/domain\/job-status/);
-});
 
 test("ui layer does not keep stage action compatibility helper", () => {
   assert.equal(existsSync(join(SOURCE_ROOTS.ui, "stage-actions.js")), false);
@@ -607,36 +473,9 @@ test("status detail layer does not keep legacy render compatibility facades", ()
   }
 });
 
-test("credentials runtime state is store-only with no legacy mirror ports", () => {
-  // credentials 已迁至 src/features/credentials（按功能重组），其非 React 实现在 domain/。
-  const CREDENTIALS_DOMAIN = join(PROJECT_ROOT, "src/features/credentials/domain");
-  // credential slice 已统一到 app-framework store,镜像 port 文件不应再出现
-  for (const fileName of ["runtime-state-port.ts", "balance-state-port.ts", "legacy-runtime-port.ts"]) {
-    assert.equal(existsSync(join(CREDENTIALS_DOMAIN, fileName)), false);
-  }
-  for (const fileName of ["validation.ts", "deepseek-flow.ts", "browser.ts", "ocr-readiness-flow.ts"]) {
-    const source = readSource(join(CREDENTIALS_DOMAIN, fileName));
-    // 迁移后跨目录 import 统一写 @/ 别名，断言必须同时覆盖新旧两种写法，
-    // 否则只匹配旧的相对路径会让本门禁退化成永远通过。
-    assert.equal(/["'][^"']*state\/actions\.js["']/.test(source), false);
-    assert.equal(source.includes("legacy-runtime-port"), false);
-    assert.equal(source.includes("balance-state-port"), false);
-  }
-});
 
-test("upload controller reads upload state only through upload state port", () => {
-  // upload 已随按功能重组迁至 src/features/ingest/domain/upload。
-  const UPLOAD_DOMAIN = join(PROJECT_ROOT, "src/features/ingest/domain/upload");
-  const source = readSource(join(UPLOAD_DOMAIN, "controller.ts"));
-  const stateSource = readSource(join(UPLOAD_DOMAIN, "state.ts"));
 
-  // 迁移后跨目录 import 统一写 @/ 别名，断言用路径无关的正则，
-  // 否则只匹配旧相对路径会让本门禁退化成永远通过。
-  const legacyStateImport = /["'][^"']*state\/(?:actions|upload-state|store)\.js["']/;
-  assert.doesNotMatch(source, legacyStateImport);
-  assert.match(source, /getUploadStatePort/);
-  assert.doesNotMatch(stateSource, legacyStateImport);
-});
+
 
 // ===== React 迁移防回弹门禁(Phase 0 起生效) =====
 // 新世界(src/app/**、src/ui/**、src/features/**)只能消费旧世界的纯逻辑层
@@ -891,78 +730,18 @@ test("@retainpdf/ui and @retainpdf/api packages expose expected entries", () => 
   for (const pkg of ["ui", "api"]) {
     const pkgJson = JSON.parse(readFileSync(join(PROJECT_ROOT, `../packages/${pkg}/package.json`), "utf8"));
     assert.equal(pkgJson.name, `@retainpdf/${pkg}`, `packages/${pkg}/package.json name must be @retainpdf/${pkg}`);
-    assert.ok(pkgJson.exports?.["."], `packages/${pkg} must export "."`);
+    assert.ok(Object.keys(pkgJson.exports).length > 0, `packages/${pkg} must expose retained subpaths`);
     assert.ok(pkgJson.scripts?.build, `packages/${pkg} must have build script`);
     assert.ok(pkgJson.scripts?.typecheck, `packages/${pkg} must have typecheck script`);
   }
-  // ui exports styles.css must resolve to existing built artifact after build
-  const uiPkg = JSON.parse(readFileSync(join(PROJECT_ROOT, "../../frontend/packages/ui/package.json"), "utf8"));
-  assert.ok(uiPkg.exports?.["./styles.css"], "@retainpdf/ui must export ./styles.css");
-  // api exports library-books / jobs subpaths
-  const apiPkg = JSON.parse(readFileSync(join(PROJECT_ROOT, "../../frontend/packages/api/package.json"), "utf8"));
-  assert.ok(apiPkg.exports?.["./library-books"], "@retainpdf/api must export ./library-books");
-  assert.ok(apiPkg.exports?.["./jobs"], "@retainpdf/api must export ./jobs");
-  assert.ok(apiPkg.exports?.["./job-images"], "@retainpdf/api must export ./job-images");
-  assert.ok(apiPkg.exports?.["./reader"], "@retainpdf/api must export ./reader");
-  assert.ok(apiPkg.exports?.["./search"], "@retainpdf/api must export ./search");
-});
-
-test("reader, search, and recent-job images use the canonical API package", () => {
-  // reader 宿主已随按功能重组迁至 src/features/reader/domain/host。
-  const readerData = readFileSync(
-    join(PROJECT_ROOT, "src/features/reader/domain/host/data.ts"),
-    "utf8",
-  );
-  // translation-debug 的 canonical 消费方是 web 平台 barrel；reader 宿主不再
-  // 取翻译条目（该能力已作为死代码移除），故不再要求它出现在这里的清单。
-  for (const entry of ["http", "jobs-artifacts", "jobs", "reader"]) {
-    assert.match(
-      readerData,
-      new RegExp(`from ["']@retainpdf/api/${entry}["']`),
-      `Reader data port must consume @retainpdf/api/${entry}`,
-    );
+  const uiPkg = JSON.parse(readFileSync(join(PROJECT_ROOT, "../packages/ui/package.json"), "utf8"));
+  assert.ok(uiPkg.exports["./lib/utils"]);
+  for (const pkg of ["ui", "api"]) {
+    const base = join(PROJECT_ROOT, `../packages/${pkg}`);
+    const manifest = JSON.parse(readFileSync(join(base, "package.json"), "utf8"));
+    for (const entry of Object.values(manifest.exports)) {
+      assert.ok(existsSync(join(base, entry.import)));
+      assert.ok(existsSync(join(base, entry.types)));
+    }
   }
-  assert.doesNotMatch(
-    readerData,
-    /from\s+["'][^"']*js\/api\/(?:http|jobs-artifacts|reader|translation-debug)\.js["']/,
-  );
-  assert.doesNotMatch(readerData, /loadAiChat\s*:/, "deprecated Reader AI chat must not be wired");
-
-  // 搜索的 mock 适配器不得自带 HTTP；canonical 客户端由平台 barrel 接线。
-  const searchMockAdapter = readFileSync(join(PROJECT_ROOT, "src/platform/api/mocks/search.ts"), "utf8");
-  assert.doesNotMatch(searchMockAdapter, /\bfetch\s*\(/, "search mock adapter must not duplicate HTTP logic");
-  const apiBarrel = readFileSync(join(PROJECT_ROOT, "src/platform/api/index.ts"), "utf8");
-  assert.match(apiBarrel, /from\s+["']@retainpdf\/api\/search["']/);
-
-  // 卡片 presenter 与图片加载器已随 library 功能迁至 features/library/domain/card。
-  for (const file of [
-    "src/features/library/domain/card/recent-job-card-presenter.ts",
-    "src/features/library/domain/card/recent-job-card-image-loader.ts",
-  ]) {
-    const source = readFileSync(join(PROJECT_ROOT, file), "utf8");
-    assert.match(source, /from\s+["']@retainpdf\/api\/job-images["']/);
-    assert.doesNotMatch(source, /api\/job-images\.js/);
-  }
-  assert.equal(existsSync(join(PROJECT_ROOT, "src/platform/api/legacy")), false);
-  assert.equal(existsSync(join(PROJECT_ROOT, "src/platform/api/mocks/search.ts")), true);
-});
-
-test("job cancellation and OCR ambiguity recovery use canonical endpoint clients", () => {
-  const runtimeController = readFileSync(
-    join(PROJECT_ROOT, "src/features/jobs/domain/runtime/controller.ts"),
-    "utf8",
-  );
-  assert.match(runtimeController, /cancelOcrJob/);
-  assert.match(runtimeController, /cancelJob/);
-  assert.doesNotMatch(runtimeController, /submitJson/);
-  assert.doesNotMatch(runtimeController, /buildJobDetailEndpoint/);
-
-  const apiActions = readFileSync(
-    join(PROJECT_ROOT, "../../frontend/packages/api/src/jobs-actions.ts"),
-    "utf8",
-  );
-  assert.match(apiActions, /export async function cancelJob/);
-  assert.match(apiActions, /export async function cancelOcrJob/);
-  assert.match(apiActions, /export async function resolveOcrAmbiguity/);
-  assert.match(apiActions, /\/ocr\/resolve-ambiguity/);
 });

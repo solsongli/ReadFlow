@@ -1,7 +1,7 @@
 import type { ResearchOcrJob, ResearchOcrModule } from "@/platform/contracts/research-library.js";
 import type { WorkbenchDesk, WorkbenchRow } from "@/platform/contracts/workbench.js";
 
-export const TRANSLATE_HINT = "全文翻译目前在阅读器中进行；一键批量翻译将在翻译模块接入后提供";
+export const TRANSLATE_HINT = "选择文献后提交全文翻译；优先读取文字层，缺字页面使用本地 OCR。";
 export const AI_HINT = "选择文献后，在阅读器右侧使用 AI 问答。";
 
 export function deskSubtitle(today: WorkbenchDesk["today"] | undefined, now: Date = new Date()): string {

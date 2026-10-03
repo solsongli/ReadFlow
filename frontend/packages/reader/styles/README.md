@@ -57,7 +57,7 @@ npm --prefix frontend/packages/reader run build
 npm --prefix frontend/web run build:css
 npm --prefix frontend/web test -- 'tests/reader/*.test.mjs'
 npm --prefix frontend/web test -- 'tests/architecture/*.test.mjs'
-npm --prefix frontend/web run visual:check
+cd frontend/web && node --import ./tests/helpers/register-jsx.mjs tests/workbench/reader-smoke.mjs
 ```
 
 只有确认实际渲染变化符合预期后才更新视觉基线。

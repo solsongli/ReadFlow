@@ -1,12 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
-  clearThreadBranchSnapshot,
-  loadThreadBranchSnapshot,
-  saveThreadBranchSnapshot,
-  threadBranchStorageKey,
-  visiblePathFromSnapshot,
-} from "../../src/features/reader/domain.ts";
+import { clearThreadBranchSnapshot, loadThreadBranchSnapshot, saveThreadBranchSnapshot, threadBranchStorageKey, visiblePathFromSnapshot } from "../../src/features/reader/domain/host/ai.js";
 
 class MemoryStorage {
   constructor() {

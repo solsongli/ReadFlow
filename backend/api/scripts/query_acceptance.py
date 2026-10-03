@@ -162,7 +162,7 @@ def serve(root, port):
                 body = ("window.__FRONT_RUNTIME_CONFIG__=" + json.dumps({"apiBase": f"http://127.0.0.1:{port}", "xApiKey": KEY}) + ";").encode()
                 content_type = "text/javascript"
             else:
-                relative = parsed.path.lstrip("/") or "index.html"
+                relative = parsed.path.lstrip("/") or "workbench.html"
                 if ".." in pathlib.PurePosixPath(relative).parts or relative.startswith("."):
                     self.send_error(404)
                     return

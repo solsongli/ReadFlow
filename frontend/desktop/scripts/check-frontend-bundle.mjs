@@ -47,20 +47,16 @@ function collectFiles(root, extensions) {
 }
 
 // HTML shells + production bundles (React cutover: entry is dist/*.bundle.js)
-assertExists("index.html");
-assertExists("detail.html");
+assertExists("workbench.html");
 assertExists("reader.html");
 assertExists("runtime-config.js");
-assertExists("dist/app.bundle.js");
+assertExists("dist/workbench.bundle.js");
 assertExists("dist/reader.bundle.js");
-assertExists("dist/detail.bundle.js");
-assertExists("styles.css");
-assertExists("dist/css/home.css");
+assertExists("dist/css/workbench.css");
 assertExists("dist/css/reader.css");
 
 // Runtime assets referenced by the production HTML and bundled animation URLs.
 assertExists("src/assets/RetainPDF-logo.svg");
-assertExists("src/assets/animations/pdf_upload_Lottie.json");
 if (fs.existsSync(path.join(frontendRoot, "src", "js"))) {
   fail("Desktop frontend must not include source modules after bundling");
 }
@@ -94,12 +90,12 @@ if (!readerHtml.includes("./dist/reader.bundle.js")) {
   fail("Desktop reader.html is not using the production reader bundle");
 }
 
-const indexHtml = readFile("index.html");
-if (!indexHtml.includes("./dist/app.bundle.js")) {
-  fail("Desktop index.html is not using the production app bundle");
+const indexHtml = readFile("workbench.html");
+if (!indexHtml.includes("./dist/workbench.bundle.js")) {
+  fail("Desktop workbench.html is not using the production app bundle");
 }
 if (indexHtml.includes("runtime-config.local.js")) {
-  fail("Desktop index.html still references runtime-config.local.js");
+  fail("Desktop workbench.html still references runtime-config.local.js");
 }
 
 // 阅读器的 AI 面板自 f53fb04e（启用 esbuild 代码分割）起被拆进
@@ -118,15 +114,12 @@ const readerArtifacts = [
 if (!readerArtifacts.some((source) => source.includes("credentials-changed"))) {
   fail("Desktop reader bundle (含 chunks) missing credentials-changed gate refresh");
 }
-const appBundleJs = readFile("dist/app.bundle.js");
+const appBundleJs = readFile("dist/workbench.bundle.js");
 if (!appBundleJs.includes("./vendor/") && !appBundleJs.includes("vendor/pdfjs")) {
   // bundle may inline resolver strings differently; require credentials gate markers
 }
 if (!appBundleJs.includes("credentials-changed") && !appBundleJs.includes("retainpdf:credentials-changed")) {
   fail("Desktop app bundle missing credentials-changed gate refresh");
-}
-if (!appBundleJs.includes("home-ask")) {
-  fail("Desktop app bundle missing home AI ask feature");
 }
 if (appBundleJs.includes("../../../vendor/pdfjs-dist/build/pdf.mjs")) {
   fail("Desktop app bundle still contains module-depth pdfjs vendor path");

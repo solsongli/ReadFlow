@@ -36,11 +36,10 @@ const READER_BOOT_IMPORT = readerExportImport(readerPackage.exports, "./boot");
 const READER_BOOT_ARTIFACT = join(READER_PKG_ROOT, READER_BOOT_IMPORT);
 const READER_BOOT_SOURCE = readerSourceForImport(READER_BOOT_IMPORT);
 
-// 三页壳:HTML 文件 ↔ bundle 产物 ↔ React 挂载入口。
+// 两个页面:HTML 文件 ↔ bundle 产物 ↔ React 挂载入口。
 // home/detail 经共享壳 src/app/shell-boot.ts 建根挂载；reader 经包内 boot 链。
 const PAGES = [
-  { html: "index.html", bundle: "dist/app.bundle.js", entry: "src/app/home/entry.tsx" },
-  { html: "detail.html", bundle: "dist/detail.bundle.js", entry: "src/app/detail/entry.tsx" },
+  { html: "workbench.html", bundle: "dist/workbench.bundle.js", entry: "src/app/workbench/entry.tsx" },
   {
     html: "reader.html",
     bundle: "dist/reader.bundle.js",
@@ -48,7 +47,6 @@ const PAGES = [
     bootChain: [READER_BOOT_SOURCE],
   },
 ];
-const SHARED_SHELL_BOOT = "src/app/shell-boot.ts";
 
 function stripComments(source) {
   return source
@@ -68,7 +66,7 @@ async function probe(url, timeoutMs = 2000) {
   }
 }
 
-test("三HTML都挂对bundle且runtime-config在前", () => {
+test("两个 HTML都挂对bundle且runtime-config在前", () => {
   for (const page of PAGES) {
     const html = readFileSync(join(PROJECT_ROOT, page.html), "utf8");
     // 只认 <script> 标签(注释里的 bundle 名不算),按文档顺序取 src。
@@ -81,9 +79,9 @@ test("三HTML都挂对bundle且runtime-config在前", () => {
     const iLocal = at("runtime-config.local.js");
     const iBundle = at(page.bundle);
     assert.ok(iBase !== -1, `${page.html} 缺 runtime-config.js`);
-    assert.ok(iLocal !== -1, `${page.html} 缺 runtime-config.local.js`);
+
     assert.ok(iBundle !== -1, `${page.html} 缺 ${page.bundle}`);
-    assert.ok(iBase < iLocal && iLocal < iBundle, `${page.html} 顺序错:runtime-config应在bundle前`);
+    assert.ok(iBase < iBundle && (iLocal === -1 || (iBase < iLocal && iLocal < iBundle)), `${page.html} 顺序错:runtime-config应在bundle前`);
     assert.ok(tags[iBundle].tag.includes('type="module"'), `${page.html} bundle应为type=module`);
     assert.ok(existsSync(join(PROJECT_ROOT, page.bundle)), `${page.html} bundle构建产物缺失:${page.bundle}`);
   }
@@ -98,11 +96,10 @@ test("reader boot由exports派生:构建产物与源码入口都存在", () => {
   assert.ok(existsSync(READER_BOOT_SOURCE), `reader boot 源码入口缺失:${READER_BOOT_SOURCE}`);
 });
 
-test("三entry都有createRoot且不开StrictMode", () => {
-  const shellBoot = readFileSync(join(PROJECT_ROOT, SHARED_SHELL_BOOT), "utf8");
+test("两个入口都有createRoot且不开StrictMode", () => {
   for (const page of PAGES) {
     const entry = readFileSync(join(PROJECT_ROOT, page.entry), "utf8");
-    const chain = [entry, shellBoot];
+    const chain = [entry];
     for (const extra of page.bootChain ?? []) {
       chain.push(readFileSync(isAbsolute(extra) ? extra : join(PROJECT_ROOT, "..", "..", extra), "utf8"));
     }
@@ -112,7 +109,7 @@ test("三entry都有createRoot且不开StrictMode", () => {
   }
 });
 
-test("三页壳在隔离临时端口返回200，不探测已运行的应用", { timeout: 15000 }, async (t) => {
+test("两个页面在隔离临时端口返回200，不探测已运行的应用", { timeout: 15000 }, async (t) => {
   const root = mkdtempSync(join(tmpdir(), "readflow-static-shell-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   for (const page of PAGES) copyFileSync(join(PROJECT_ROOT, page.html), join(root, page.html));
@@ -146,5 +143,6 @@ test("三页壳在隔离临时端口返回200，不探测已运行的应用", { 
       if (match) { clearTimeout(timer); resolve(Number(match[1])); }
     });
   });
+  assert.equal((await probe(`http://127.0.0.1:${port}/`)).status, 200);
   for (const page of PAGES) assert.equal((await probe(`http://127.0.0.1:${port}/${page.html}`)).status, 200);
 });

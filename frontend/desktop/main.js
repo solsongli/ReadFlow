@@ -115,7 +115,6 @@ function desktopRuntimeConfig(config) {
     enabled: researchLibraryEnabled,
     gatewayBase: frontendGatewayBaseUrl,
     offlinePreview: offlineLibraryPreview,
-    startTab: process.env.RETAIN_PDF_NATIVE_START_TAB,
   });
 }
 

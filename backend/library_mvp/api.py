@@ -114,7 +114,7 @@ def create_app(data_root: Path, *, bridge: NativeBridge | None = None,
     @app.post("/api/research/files", status_code=201)
     async def upload_pdf(request: Request, filename: str = "paper.pdf", item_id: str | None = None):
         raw = await body_bytes(request, MAX_PDF_BYTES, "application/pdf")
-        result = store.add_pdf(raw, filename=filename, item_id=item_id)
+        result = store.add_pdf(raw, filename=filename, item_id=item_id, deduplicate=True)
         attachment_id = result["attachment"]["id"]
         state = (await asyncio.to_thread(bridge.register, store, attachment_id)
                  if bridge is not None else native_unavailable(attachment_id))
@@ -221,5 +221,8 @@ def create_app(data_root: Path, *, bridge: NativeBridge | None = None,
     from .ocr_jobs import register_ocr_routes
     register_agent_routes(app, store, allow_external_models=allow_external_models)
     register_ocr_routes(app, store, allow_download=allow_ocr_download, manifest_path=ocr_manifest_path)
+
+    from .workbench_translate import register_translation_routes
+    register_translation_routes(app, store, json_body)
 
     return app

@@ -120,16 +120,7 @@ export type { ServerFavorite } from "./domain/host/state.js";
 export { resolveReaderJobId } from "./domain/host/config.js";
 export { resolveReaderJobId as resolveReaderResourceJobId } from "./domain/host/data.js";
 export { READER_DIALOG_MESSAGES } from "./domain/dialog/contract.js";
-export {
-  buildReaderDocumentPageUrl,
-  buildReaderPageUrl,
-  buildReaderRouteUrl,
-  requestedReaderJobIdFromLocation,
-} from "./domain/dialog/routing.js";
-export {
-  createReaderDialogConfigPort,
-  defaultReaderDialogConfigPort,
-} from "./domain/dialog/config-port.js";
+
+
 export { createReaderDialogRuntimePort } from "./domain/dialog/runtime-port.js";
 export { downloadProtectedResource } from "./domain/dialog/downloads.js";
-export { navigateToReader, setReaderNavigateForTests } from "./domain/navigate-to-reader.js";

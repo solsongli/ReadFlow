@@ -17,13 +17,7 @@ import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 import { describe, it, beforeEach } from "node:test";
 
-import {
-  extractMarkdownMath,
-  materializeMarkdownMathHtml,
-  mathFailureStats,
-  resetMarkdownMathEngineLoader,
-  revealProtectedTokens,
-} from "../../src/features/reader/domain.js";
+import { extractMarkdownMath, materializeMarkdownMathHtml, mathFailureStats, resetMarkdownMathEngineLoader, revealProtectedTokens } from "../../src/features/reader/domain/host/content.js";
 
 async function renderText(source) {
   resetMarkdownMathEngineLoader();

@@ -13,6 +13,7 @@ import threading
 import time
 from typing import Any, Callable, Iterable
 
+ACTIVE_STATES = frozenset({"running", "queued", "pending", "paused"})
 QUEUED = frozenset({"queued", "pending", "paused"})
 FAILED = frozenset({"failed", "cancelled", "canceled"})
 NONE = {"status": "none", "job_id": None, "percent": None, "updated_at": None}
@@ -34,13 +35,19 @@ def summarize_jobs(jobs: Iterable[Any]) -> dict:
         updated_at = job.get("updated_at") if isinstance(job.get("updated_at"), str) else None
         if job.get("workflow") == "ocr" and state in (None, "skipped"):
             continue  # OCR-only runs never produce a translation.
-        if job.get("output_pdf_ready") is True or state == "completed" or (status == "succeeded" and state not in ("skipped", "pending")):
+        if (job.get("output_pdf_ready") is True and status not in ACTIVE_STATES and status not in FAILED) or (status not in ACTIVE_STATES and status not in FAILED and state == "completed") or (status == "succeeded" and state not in ("skipped", "pending")):
             return {"status": "done", "job_id": job_id, "percent": 100, "updated_at": updated_at}
         if status == "running":
-            percent = _mapping(translation.get("progress")).get("percent")
+            stages = _mapping(job.get("stages"))
+            phase = next((key for key in ("ocr", "translation", "render") if _mapping(stages.get(key)).get("state") == "running"), None)
+            phase = phase or _mapping(job.get("stage_snapshot")).get("display_stage") or job.get("display_stage") or job.get("stage")
+            phase = phase if phase in ("ocr", "translation", "render") else None
+            percent = _mapping(_mapping(stages.get(phase)).get("progress")).get("percent") if phase else _mapping(translation.get("progress")).get("percent")
+            if percent is None:
+                percent = _mapping(job.get("progress")).get("percent")
             return {"status": "running", "job_id": job_id,
                     "percent": max(0, min(100, round(percent))) if isinstance(percent, (int, float)) and not isinstance(percent, bool) and math.isfinite(percent) else None,
-                    "updated_at": updated_at}
+                    "updated_at": updated_at, **({"stage": phase} if phase else {})}
         if status in QUEUED:
             return {"status": "queued", "job_id": job_id, "percent": None, "updated_at": updated_at}
         if status in FAILED:
@@ -57,6 +64,10 @@ class TranslationStatus:
         self._cache: dict[str, tuple[float, dict]] = {}
         self._lock = threading.Lock()
         self._pool = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="workbench-translation")
+
+    def invalidate(self, digest: str) -> None:
+        with self._lock:
+            self._cache.pop(digest, None)
 
     def close(self) -> None:
         self._pool.shutdown(wait=False, cancel_futures=True)
@@ -75,7 +86,7 @@ class TranslationStatus:
         with self._lock:
             for digest in dict.fromkeys(digests):
                 cached = self._cache.get(digest)
-                if cached and now - cached[0] < self._ttl:
+                if cached and now - cached[0] < (2.0 if cached[1]["status"] in {"queued", "running"} else self._ttl):
                     result[digest] = cached[1]
                 else:
                     missing.append(digest)
@@ -106,7 +117,7 @@ def desk_summary(rows: list[dict], group_count: int) -> dict:
                    "annotations": sum(row["annotations_count"] for row in rows), "groups": group_count},
         "translation": {
             "running": [{"item_id": row["id"], "title": row["title"], "title_translated": row["title_translated"],
-                         "percent": row["translation"].get("percent")} for row in attached if row["translation"].get("status") == "running"],
+                         "percent": row["translation"].get("percent"), **({"stage": row["translation"]["stage"]} if row["translation"].get("stage") else {})} for row in attached if row["translation"].get("status") == "running"],
             "queued": sum(row["translation"].get("status") == "queued" for row in attached),
             "done": len(done),
             "recent_done": {"item_id": recent["id"], "title": recent["title"], "finished_at": recent["translation"]["updated_at"]} if recent else None,

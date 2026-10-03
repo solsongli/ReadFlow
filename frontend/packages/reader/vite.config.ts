@@ -7,10 +7,8 @@ export default defineConfig({
   build: {
     lib: {
       entry: {
-        index: path.resolve(__dirname, "src/index.ts"),
         adapters: path.resolve(__dirname, "src/adapters.ts"),
         boot: path.resolve(__dirname, "src/boot.tsx"),
-        ai: path.resolve(__dirname, "src/ai.ts"),
         contracts: path.resolve(__dirname, "src/contracts/index.ts"),
         "runtime/ai": path.resolve(__dirname, "src/runtime/ai.ts"),
         "runtime/config": path.resolve(__dirname, "src/runtime/config.ts"),

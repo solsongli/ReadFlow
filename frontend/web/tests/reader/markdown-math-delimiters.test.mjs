@@ -16,7 +16,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { extractMarkdownMath } from "../../src/features/reader/domain.js";
+import { extractMarkdownMath } from "../../src/features/reader/domain/host/content.js";
 
 describe("Markdown 数学定界符", () => {
   it("转义方括号是正文，不是块级公式", () => {

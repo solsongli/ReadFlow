@@ -78,7 +78,7 @@ test("allowlist 没有陈旧条目（去重/迁移后必须删除）", () => {
 
 test("扫描根有效且覆盖全量源码", () => {
   const files = walkSourceFiles();
-  assert.ok(files.length > 400, `只扫到 ${files.length} 个源文件，扫描根疑似失效`);
+  assert.ok(files.length > 190, `只扫到 ${files.length} 个源文件，扫描根疑似失效`);
   assert.ok(
     !files.some((file) => file.includes("/mock") || file.includes("generated")),
     "mock/generated 文件必须被排除",

@@ -1,3 +1,4 @@
+import { translationProgress } from "./translation.js";
 // Workbench presentation rules, shared by the toolbar, rows and inspector.
 import type { ResearchOcrJob } from "@/platform/contracts/research-library.js";
 import type { DeskTranslation, TranslationState, WorkbenchGroup, WorkbenchRow, WorkbenchSort } from "@/platform/contracts/workbench.js";
@@ -31,6 +32,8 @@ export function progressPercent(percent: number | null | undefined): number | nu
 }
 
 export function translationLabel(translation: TranslationState, detail = false): string {
+  if (translation.error?.code === "cancelled") return "翻译已取消";
+  if (translation.stage && translation.status === "running") return translationProgress(translation);
   const percent = progressPercent(translation.percent);
   switch (translation.status) {
     case "done": return detail ? "已有中文译文" : "已译";

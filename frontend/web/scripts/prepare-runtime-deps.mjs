@@ -47,9 +47,6 @@ copyPackageAssets("pdf-lib", [
   "dist/pdf-lib.esm.js",
 ]);
 
-copyPackageAssets("lottie-web", [
-  "build/player/lottie.min.js",
-]);
 
 copyPackageAssets("marked", [
   "lib/marked.esm.js",

@@ -22,7 +22,6 @@ export function SettingsMenu() {
           <MenuRadioItem value="dark">深色</MenuRadioItem>
         </MenuRadioGroup>
         <MenuSeparator />
-        <MenuItem onSelect={() => void wb.leave(() => window.location.assign("./index.html"))}>打开旧版界面</MenuItem>
       </MenuContent>
     </MenuRoot>
   );

@@ -1,13 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  extractMarkdownMath,
-  materializeMarkdownMathFallbackHtml,
-  materializeMarkdownMathHtml,
-  parseMarkdownWithMath,
-  wrapMathSvgHtml,
-} from "../../src/features/reader/domain.js";
+import { extractMarkdownMath, materializeMarkdownMathFallbackHtml, materializeMarkdownMathHtml, parseMarkdownWithMath, wrapMathSvgHtml } from "../../src/features/reader/domain/host/content.js";
 
 test("extractMarkdownMath protects display and inline delimiters", () => {
   // `\\(...\\)` 和 `\\[...\\]` 曾经也算公式。按 CommonMark 它们是转义括号，

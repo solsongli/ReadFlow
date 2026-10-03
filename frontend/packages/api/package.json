@@ -4,12 +4,7 @@
   "private": false,
   "description": "RetainPDF typed API clients backed by @retainpdf/contracts wire DTOs.",
   "type": "module",
-  "types": "./dist/index.d.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    },
     "./library-books": {
       "types": "./dist/library-books.d.ts",
       "import": "./dist/library-books.js"
@@ -21,14 +16,6 @@
     "./http": {
       "types": "./dist/http.d.ts",
       "import": "./dist/http.js"
-    },
-    "./runtime": {
-      "types": "./dist/runtime.d.ts",
-      "import": "./dist/runtime.js"
-    },
-    "./jobs-query": {
-      "types": "./dist/jobs-query.d.ts",
-      "import": "./dist/jobs-query.js"
     },
     "./jobs-artifacts": {
       "types": "./dist/jobs-artifacts.d.ts",
@@ -102,10 +89,6 @@
       "types": "./dist/search.d.ts",
       "import": "./dist/search.js"
     },
-    "./job-images": {
-      "types": "./dist/job-images.d.ts",
-      "import": "./dist/job-images.js"
-    },
     "./fonts": {
       "types": "./dist/fonts.d.ts",
       "import": "./dist/fonts.js"
@@ -123,7 +106,9 @@
       "import": "./dist/internal/runtime.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -139,7 +124,9 @@
     "zod": "^3.22.0"
   },
   "peerDependenciesMeta": {
-    "zod": { "optional": true }
+    "zod": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "typescript": "^7.0.2"

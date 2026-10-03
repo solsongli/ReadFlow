@@ -304,3 +304,64 @@ SHA256：`e41466438d6e1e6944e3c5a56eb73983d7746cd592f214b75b068261ac973fb4`。
 - 离线浏览器：上线打磨 **13/13**、文献库 **17/17**、书桌 **14/14**、设置 **17/17**、笔记 **15/15**、真实阅读器 **9/9**；页面错误均为 0。覆盖大库、欢迎页、拖放到 iframe、断线恢复、显式写重试、诊断脱敏、旧页确认取消/删除、快捷键、深色对比度和焦点。
 
 日志与主要截图在 `/tmp/readflow-t6/`；设置各类别深色截图在 `/tmp/readflow-t4/screenshots/t6-dark-*.png`。所有数据为合成/临时数据；未读取真实凭据、调用模型、安装依赖、提交或启停预览。保留本轮工作台、旧主页样式/出口及独立旧文献库对应构建产物。真实验收重点为首次导入、系统文件拖放、服务中断后恢复、大库分组多选/拖拽，以及键盘全流程。
+
+
+## 移除旧版界面（T11）
+
+只保留 `workbench.html` 与 `reader.html`。实际删除四个旧 HTML（index/detail/research-library/studio）、旧 app/home/detail/research-library、studio 原型、旧 CSS 入口、对应 dist 产物及 UI 入口；不以重定向或隐藏保留旧页面。
+
+- 删除旧专属 features：library、book-detail、job-detail、ask、collections、favorites、app-update、task-center、research-library、artifacts；精简 credentials、ingest、jobs、reader、settings、glossaries 的旧 UI/转发出口。
+- 删除 web 旧 ui/theme、装饰与动画、未引用的 platform 模块及 web 旧皮肤；删除 packages 中不可达的 UI 原语、API、domain、reader 转发出口和样式。
+- 保留凭据保存/默认值链、术语表 CRUD、译文字体存储、导入状态和任务下载模型；阅读器宿主直接注册共享 job 适配器，不再加载旧 shell。
+- Reader 独立返回目标为工作台；iframe 关闭消息保持原协议。包内皮肤仍由 Reader 样式与主题注册器使用，不能按“旧页面皮肤”误删。
+- 桌面启动/回退只有工作台；网关拒绝其他 HTML，即使磁盘有陈旧文件。prepare、打包检查和预览复制清单一致；预览 prepare 清理旧 HTML 和旧 dist，不涉及 profile/data。
+- 开发静态预览与 Docker 默认文档也改为工作台。未修改后端服务、翻译/OCR/Rust、许可证、MIT 版权、桌面 copyright 生成规则和“关于”的上游说明。
+
+可复现审计：在 frontend/web 运行 `node scripts/audit-entry-reachability.mjs /tmp/readflow-audit`。以两个入口生成 esbuild metafile，补齐 TS 类型引用与递归 CSS import；447 个运行时项目输入、509 个源码/样式节点，不可达源码为 0。新增架构门禁锁住两入口和可达性。
+
+规模（同一统计口径，排除 node_modules/dist；行数只统计 TS/TSX/JS/JSX/MJS/CSS/HTML）：
+
+| 范围 | 文件总数（前→后） | 代码文件（前→后） | 代码行（前→后） |
+|---|---:|---:|---:|
+| frontend/web/src | 852 → 255 | 820 → 240 | 83,137 → 18,304 |
+| frontend/packages（含构建脚本/测试） | 352 → 292 | 336 → 277 | 42,164 → 36,642 |
+
+删除的旧页面测试随实现移除；共享功能测试继续保留，失效的旧页架构规则删除或改为新入口规则。代码来源的逐文件基线比对见 `docs/readflow/代码来源清单.md`，不能把整个阅读器或凭据模块称为新增原创。
+
+本轮不打包、不安装、不运行成品；未启停预览；交付时只读检查 /proc/exe 未发现预览可执行文件进程。历史规划/验收记录仍可能提到已删页面，那是历史记录，不是可用入口；后端目录仅有前端验收静态页默认值和 launcher 测试夹具两处 URL 同步；未删除任何后端文件。
+
+最终验证：Web tsc/build 通过；不使用 force-exit 的完整 Node 测试 **900/900**，0 跳过；桌面 lint 与 **98/98**；Reader typecheck/build 通过；后端核心 12 模块加 notes **208/208**；独立启动器、隔离预览复制与 native library service **19/19**。额外 domain 公共入口测试 **3/3**、类型检查及 API 25 个公开出口校验通过。
+
+离线界面回归：工作台 17、Reader 9、设置 17、笔记 15，共 **58/58**；没有页面错误及未处理请求。截图分别在 `/tmp/readflow-t1/screenshots`、`/tmp/readflow-t3/screenshots`、`/tmp/readflow-t4/screenshots`、`/tmp/readflow-t5/screenshots`。构建/测试/可达性证据在 `/tmp/readflow-t11/`。
+
+
+## 翻译模块（T12）
+
+根因是文献导入只登记源 PDF，没有创建全文翻译任务；新 ReadFlow profile 也不会继承 RetainPDF 的模型凭据。本轮增加详情、书桌选择器、多选、命令面板和阅读器标签工具栏的真实提交入口，缺配置时就地引导。
+
+- 新接口：`POST /api/research/workbench/items/{id}/translate`，`GET` 同路径查询状态，`POST .../translate/cancel` 取消。
+- 后端 `workbench_translate.py` 负责附件归属、原生任务去重、文字层预检、OCR 模块预检和命令；`workbench_translation_errors.py` 归类并脱敏错误。NativeBridge 仅调用原生 HTTP，不改 Rust/翻译/OCR 流水线。
+- 提交复用旧 `buildOcrPayload`、`buildTranslationPayload`、`buildRenderPayload`、默认配置 resolver 和现有 headless 凭据读取。配置由前端从同一存储读取后发送，文献库不另存 Key。
+- `register()` 后调用原生文献 translate 接口；Rust 为 source 绑定实际 upload_id，进入原 JobsFacade。黄金样本调用真实旧 `submitJobRequest()`，模拟该 source 绑定后逐字段比对；不以手写期望 JSON 替代旧函数。
+- 同一附件的排队/进行中翻译任务复用；请求锁和短暂提交回执覆盖并发及查询可见性窗口。缺 Key/URL/模型不提交；扫描前先看原始文字层，模块缺失引导设置，不触发下载。
+- 进行中 2 秒轮询，空闲回到 20 秒调度；列表、详情、书桌及阅读器共用阶段/百分比。渲染中或失败时，即使已有部分产物，也不提前报告完成。
+- 完成提示含对照阅读操作；已打开标签自动刷新任务 URL，并保留阅读页码。利用已有 Reader 三模式，不重写阅读器。系统通知是可选项，本轮只使用工作台提示条。
+- 支持原生 `/api/v1/jobs/{id}/cancel`；未提供“删除译文”，因为现有文献/书籍删除接口会连带删除源数据或任务，不能代替只删译文。
+- 启动器测试直接捕获假的 Popen 环境，锁住 `RETAIN_PDF_RESEARCH_CODE_ROOT`，不依赖继承环境变量，不启动实际预览。
+
+错误映射：401/403 → Key/权限；429/quota → 额度或频率限制；网络/超时 → 服务连接；model not found → 模型；OCR → 本地识别；其余 → 通用失败。详情剔除已知凭据、敏感字段与长令牌；失败可重试并按类别进入设置。取消失败的“重试”仍执行取消，不会误提交新翻译。
+
+验证：Web tsc/build 通过，全量 **908/908**；桌面 lint 与 **98/98**；Reader typecheck/build 通过。后端核心、工作台、笔记、Connector、新翻译及启动器/假服务测试共 **237/237**。离线界面共 **77/77**：新翻译 5、书桌 14、设置 17、文献库 17、Reader 9、笔记 15。日志在 `/tmp/readflow-t12/`，新翻译截图在其 `screenshots/` 子目录。
+
+真实 Rust→假服务→译文 PDF 链路由验收方执行，配置、接口格式与步骤见 [翻译链路验收](translation-acceptance.md)。提供标准库脚本 `ops/development/readflow_fake_openai.py`，只监听回环地址，不记录请求内容或凭据；本轮仅测纯函数，未启动假模型服务，也未调用真实模型。
+
+本轮未改 Rust API 或翻译/OCR 流水线行为，未打包、安装或运行成品，未启停现有预览；验收时需由启动器同步当前构建并重启 sidecar 以加载新路由。
+
+
+## 重复导入与发布（T12.1 / 0.9.3）
+
+`/api/research/files` 显式启用 Store 的事务内 SHA-256 复用：优先未删除条目，否则恢复回收站匹配条目。保留原标题、笔记、分组、阅读状态；已有重复记录不合并。Connector 与 CSL 不启用这个新选项，原去重语义不变。菜单、拖放与批量共用导入器，重复时提示并回到全部文献选中已有项；分组写入失败重试不重复上传或累计计数。
+
+新增后端 5 项和前端 2 项测试。Web tsc、完整构建及全量 **910/910**；桌面 **98/98**；后端核心及工作台、笔记、Connector、翻译、重复导入和相关启动器/假服务 **242/242**，全部通过。
+
+按完整打包命令（无 skip-web-build）生成 `readflow_0.9.3_amd64.deb`，226111840 字节，SHA-256 `043d22af6c179f09c7c751c88a4e07b5b2754ab3f8aa441e69235f0212ea774a`。从 deb 检查 control、全部 7407 个文件系统成员权限/root 所有权、MIT copyright；ASAR 98 个工作台/dist 文件逐字节一致，reader HTML 仅有预期 vendor/配置脚本改写。deb 中 63 个 ELF 均与通过 linux-runtime --check 的运行时一致。证据在 `/tmp/readflow-t121/`。未安装或运行成品，未操作现有预览、/opt/ReadFlow 或 23119 监听。

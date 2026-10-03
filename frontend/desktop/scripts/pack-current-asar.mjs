@@ -20,7 +20,7 @@ function copyRequiredFile(stagingRoot, relativePath) {
 }
 
 export async function packCurrentDesktopAsar(outputPath) {
-  const frontendIndex = path.join(desktopRoot, "app", "frontend", "index.html");
+  const frontendIndex = path.join(desktopRoot, "app", "frontend", "workbench.html");
   if (!fs.existsSync(frontendIndex)) {
     throw new Error(
       `prepared desktop frontend is missing at ${frontendIndex}; run npm --prefix frontend/desktop run sync-frontend`,

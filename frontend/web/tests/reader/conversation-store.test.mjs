@@ -1,11 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
-  clearStoredConversationId,
-  conversationStorageKey,
-  loadStoredConversationId,
-  saveStoredConversationId,
-} from "../../src/features/reader/domain.ts";
+import { clearStoredConversationId, conversationStorageKey, loadStoredConversationId, saveStoredConversationId } from "../../src/features/reader/domain/host/ai.js";
 
 class MemoryStorage {
   constructor() {

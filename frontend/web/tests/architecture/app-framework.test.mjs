@@ -2,12 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  createCommandBus,
-} from "../../src/platform/store/commands.js";
-import {
-  createResource,
-} from "../../src/platform/store/resource.js";
-import {
   createStore,
 } from "../../src/platform/store/store.js";
 
@@ -98,74 +92,4 @@ test("createStore batches multiple updates into one subscriber notification", ()
     stage: "ocr",
     percent: 0,
   });
-});
-
-test("createCommandBus dispatches commands and can isolate handler errors", async () => {
-  const errors = [];
-  const commands = createCommandBus({
-    onError: (error, meta) => errors.push({ error, meta }),
-  });
-  const calls = [];
-  commands.on("reader:open", async (payload, meta) => {
-    calls.push({ payload, meta });
-    return payload.jobId;
-  });
-  commands.on("reader:open", () => {
-    throw new Error("boom");
-  });
-
-  const results = await commands.dispatch("reader:open", { jobId: "job-1" });
-
-  assert.deepEqual(results, ["job-1"]);
-  assert.equal(calls[0].meta.command, "reader:open");
-  assert.equal(errors.length, 1);
-  assert.equal(errors[0].meta.command, "reader:open");
-});
-
-test("createResource owns loading success error and stale request guards", async () => {
-  let releaseFirst;
-  const firstLoad = new Promise((resolve) => {
-    releaseFirst = () => resolve({ value: "first" });
-  });
-  const loads = [];
-  const resource = createResource({
-    name: "jobDetail",
-    loader: async ({ jobId }) => {
-      loads.push(jobId);
-      if (jobId === "slow") {
-        return firstLoad;
-      }
-      return { value: jobId };
-    },
-    cacheKey: ({ jobId }) => jobId,
-  });
-
-  const slowPromise = resource.load({ jobId: "slow" });
-  const fastSnapshot = await resource.load({ jobId: "fast" });
-  releaseFirst();
-  await slowPromise;
-
-  assert.equal(fastSnapshot.status, "success");
-  assert.deepEqual(resource.getSnapshot().data, { value: "fast" });
-
-  await resource.load({ jobId: "fast" });
-  assert.deepEqual(loads, ["slow", "fast"]);
-
-  resource.invalidate({ jobId: "fast" });
-  await resource.load({ jobId: "fast" });
-  assert.deepEqual(loads, ["slow", "fast", "fast"]);
-});
-
-test("createResource records loader errors without throwing by default", async () => {
-  const resource = createResource({
-    name: "failing",
-    loader: async () => {
-      throw new Error("network failed");
-    },
-  });
-
-  const snapshot = await resource.load();
-
-  assert.equal(snapshot.status, "error");
-  assert.equal(snapshot.error.message, "network failed");
 });

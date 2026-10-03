@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { normalizeBlockKey } from "../../src/features/reader/domain.js";
+import { normalizeBlockKey } from "../../src/features/reader/domain/host/content.js";
 
 test("normalizeBlockKey 对两套补零格式归一到同一键", () => {
   // regions itemId(3 位) 与服务端 block_id(4 位) 必须相等

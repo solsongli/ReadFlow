@@ -31,7 +31,6 @@ const PACKAGE_BOUNDARIES = [
         "",
         "types.ts",
         "job-stage-contract-adapter.ts",
-        "public-stage-engine.ts",
         "summary/job-status-summary-progress.ts",
       ])],
     ]),

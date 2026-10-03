@@ -7,7 +7,6 @@ export async function hardeningBrowser() {
   const root = process.cwd(), output = "/tmp/readflow-t6/screenshots";
   await mkdir(output, { recursive: true });
   const bundle = await build({ entryPoints: ["tests/workbench/apple-fixture.tsx"], bundle: true, write: false, format: "esm", jsx: "automatic", alias: { "@": resolve(root, "src") }, logLevel: "silent" });
-  const legacy = await build({ entryPoints: ["tests/workbench/legacy-confirm-fixture.tsx"], outfile: "/tmp/readflow-t6/legacy-fixture.js", bundle: true, write: false, format: "esm", jsx: "automatic", alias: { "@": resolve(root, "src") }, logLevel: "silent" });
   const html = await readFile("workbench.html", "utf8");
   const favicon = html.match(/<link rel="icon"[^>]+>/)?.[0] ?? "";
   const browser = await chromium.launch({ executablePath: process.env.READFLOW_CHROME_PATH || "/usr/bin/google-chrome", headless: true, args: ["--no-sandbox", "--disable-background-networking", "--disable-component-update", "--disable-sync", "--no-first-run"] });
@@ -22,9 +21,6 @@ export async function hardeningBrowser() {
     if (path === "/workbench.html") return route.fulfill({ contentType: "text/html; charset=utf-8", body: `<!doctype html><html lang="zh-CN"><head><title>ReadFlow</title>${favicon}<link rel="stylesheet" href="/dist/css/workbench.css"></head><body><div id="workbench-root"></div><script type="module" src="/fixture.js"></script></body></html>` });
     if (path === "/fixture.js") return route.fulfill({ contentType: "text/javascript", body: bundle.outputFiles[0].text });
     if (path === "/api/v1/fonts") return route.fulfill({ json: { code: 0, data: { fonts: [{ family: "Source Han Serif SC", files: [], available: true }] } } });
-    if (path === "/legacy.html") return route.fulfill({ contentType: "text/html; charset=utf-8", body: '<!doctype html><link rel="stylesheet" href="/legacy.css"><div id="root"></div><script type="module" src="/legacy-fixture.js"></script>' });
-    if (path === "/legacy-fixture.js") return route.fulfill({ contentType: "text/javascript", body: legacy.outputFiles.find((file) => file.path.endsWith(".js")).text });
-    if (path === "/legacy.css") return route.fulfill({ contentType: "text/css", body: await readFile(resolve(root, "src/app/research-library/styles.css")) });
     if (path === "/dist/css/workbench.css") return route.fulfill({ contentType: "text/css", body: await readFile(resolve(root, path.slice(1))) });
     if (/^\/src\/assets\/fonts\/inter\/InterVariable(?:-Italic)?\.woff2$/.test(path)) return route.fulfill({ contentType: "font/woff2", body: await readFile(resolve(root, path.slice(1))) });
     if (path === "/src/assets/readflow-logo.svg") return route.fulfill({ contentType: "image/svg+xml", body: await readFile(resolve(root, path.slice(1))) });

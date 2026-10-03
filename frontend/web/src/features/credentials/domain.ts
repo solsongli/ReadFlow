@@ -12,21 +12,18 @@ import { defaultCredentialsStatePort } from "./domain/default-state-port.js";
 // 避免 features/reader/domain 反向 import 本功能。
 setDefaultCredentialsStatePort(defaultCredentialsStatePort);
 
-export { mountBrowserCredentialsFeature } from "./domain/browser.js";
-export { createCredentialsViewFeature } from "./domain/credentials-view-store.js";
-export type {
-  CredentialsElementsRef,
-  HandlersBag,
-} from "./domain/credentials-view-store.js";
+
+
+
 export {
   applyDefaultCredentialInputs,
   defaultCredentialsStatePort,
 } from "./domain/default-state-port.js";
 export type { CredentialsStatePort } from "./domain/state.js";
-export { hasDesktopCredentials } from "./domain/desktop-readiness.js";
-export type { DesktopCredentialSnapshot } from "./domain/desktop-readiness.js";
+
+
 export { readHiddenCredentialDomInputs } from "./domain/hidden-input-dom-port.js";
-export { createCredentialRuntimeEnvPort } from "./domain/runtime-env-port.js";
+
 export type {
   BindCredentialViewEventsOptions,
   CredentialUploadTilePort,

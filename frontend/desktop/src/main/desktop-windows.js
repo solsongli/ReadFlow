@@ -280,11 +280,11 @@ function createDesktopWindows(app, options = {}) {
     if (app.isPackaged) {
       return generatedFrontendRoot;
     }
-    if (fs.existsSync(path.join(generatedFrontendRoot, "index.html"))) {
+    if (fs.existsSync(path.join(generatedFrontendRoot, "workbench.html"))) {
       return generatedFrontendRoot;
     }
     const sourceFrontendRoot = path.resolve(appRoot, "..", "frontend");
-    if (fs.existsSync(path.join(sourceFrontendRoot, "index.html"))) {
+    if (fs.existsSync(path.join(sourceFrontendRoot, "workbench.html"))) {
       return sourceFrontendRoot;
     }
     return generatedFrontendRoot;
