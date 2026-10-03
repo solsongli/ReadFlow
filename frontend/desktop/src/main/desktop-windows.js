@@ -4,6 +4,7 @@ const { BrowserWindow, Menu, Tray, dialog, nativeImage, shell } = require("elect
 const { PRODUCT_NAME, resolveBrandIcon } = require("./brand");
 const { resolveStartPage } = require("./desktop-startup");
 const { appVersionArguments } = require("./app-version");
+const { installRendererZoomShortcuts } = require("./renderer-shortcuts");
 
 function createDesktopWindows(app, options = {}) {
   const appRoot = options.appRoot || process.cwd();
@@ -158,6 +159,7 @@ function createDesktopWindows(app, options = {}) {
     });
 
     // Keep legacy page titles from overriding the desktop product identity.
+    installRendererZoomShortcuts(mainWindow.webContents);
     mainWindow.on("page-title-updated", (event) => event.preventDefault());
     const startPage = resolveStartPage({ frontendRoot, isPackaged: app.isPackaged, startPage: options.startPage });
     const indexPath = path.join(frontendRoot, startPage);

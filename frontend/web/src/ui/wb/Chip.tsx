@@ -17,7 +17,7 @@ export function Chip({ children, onRemove, removeLabel = "移除", title, classN
       title={title}
       className={cn(
         "inline-flex max-w-full shrink-0 items-center gap-1 rounded-full bg-wb-chip text-wb-chip-text",
-        size === "sm" ? "h-5 px-1.5 text-[11.5px]" : "h-[26px] px-2.5 text-[12.5px]",
+        size === "sm" ? "h-5 px-1.5 text-[0.71875rem]" : "h-[1.625rem] px-2.5 text-[0.78125rem]",
         onRemove && "pr-0.5",
         className,
       )}

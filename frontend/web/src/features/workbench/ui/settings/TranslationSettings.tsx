@@ -4,8 +4,11 @@ import { Button } from "@/ui/wb/Button.js";
 import { SecretField } from "@/ui/wb/SecretField.js";
 import { useWorkbench } from "../context.js";
 import { SETTINGS_INPUT, SettingsCard, SettingsRow, SettingsStatus } from "./SettingsParts.js";
+import { RenderFontSettings } from "./RenderFontSettings.js";
 
-export function TranslationSettings() {
+export function TranslationSettings() { return <><TranslationServiceSettings /><RenderFontSettings /></>; }
+
+function TranslationServiceSettings() {
   const wb = useWorkbench();
   const service = wb.settingsServices().translation;
   const [draft, setDraft] = useState<TranslationDraft | null>(null);
@@ -34,10 +37,10 @@ export function TranslationSettings() {
       <SettingsRow label="服务"><select aria-label="翻译服务" className={SETTINGS_INPUT} disabled={busy} value={draft.provider} onChange={(event) => { setDraft(service.switchProvider(event.target.value, draft)); setStatus({ message: "有未保存的更改。", tone: "" }); }}>{service.providers.map((provider) => <option key={provider.id} value={provider.id}>{provider.label}</option>)}</select></SettingsRow>
       <SettingsRow label="API URL"><input aria-label="翻译 API URL" type="url" className={SETTINGS_INPUT} value={draft.baseUrl} disabled={busy} onChange={(event) => change({ baseUrl: event.target.value })} /></SettingsRow>
       <SettingsRow label="模型"><input aria-label="翻译模型" className={SETTINGS_INPUT} value={draft.model} disabled={busy} onChange={(event) => change({ model: event.target.value })} /></SettingsRow>
-      <SettingsRow label="API Key"><div className="flex min-w-0 items-center gap-2">{draft.apiKey.trim() ? <span className="shrink-0 text-[11.5px] text-wb-text-3">已配置</span> : null}<SecretField key={draft.provider} className="flex-1" label="翻译 API Key" value={draft.apiKey} placeholder="尚未填写" disabled={busy} onChange={(event) => change({ apiKey: event.target.value })} /></div></SettingsRow>
+      <SettingsRow label="API Key"><div className="flex min-w-0 items-center gap-2">{draft.apiKey.trim() ? <span className="shrink-0 text-[0.71875rem] text-wb-text-3">已配置</span> : null}<SecretField key={draft.provider} className="flex-1" label="翻译 API Key" value={draft.apiKey} placeholder="尚未填写" disabled={busy} onChange={(event) => change({ apiKey: event.target.value })} /></div></SettingsRow>
       <SettingsRow label="并发数"><input aria-label="翻译并发数" type="number" min={1} max={service.providers.find((p) => p.id === draft.provider)?.maxWorkers ?? 100} className={SETTINGS_INPUT} value={draft.workers} disabled={busy} onChange={(event) => change({ workers: event.target.value })} /></SettingsRow>
     </SettingsCard>
-    <div className="flex flex-wrap items-center gap-3"><Button disabled={busy} onClick={() => void run("detect")}>检测接口</Button><span className="text-[12px] text-wb-text-3">会向所选服务发送一次很小的请求</span><span className="flex-1" /><Button variant="primary" disabled={busy} onClick={() => void run("save")}>保存</Button></div>
+    <div className="flex flex-wrap items-center gap-3"><Button disabled={busy} onClick={() => void run("detect")}>检测接口</Button><span className="text-[0.75rem] text-wb-text-3">会向所选服务发送一次很小的请求</span><span className="flex-1" /><Button variant="primary" disabled={busy} onClick={() => void run("save")}>保存</Button></div>
     <SettingsStatus {...status} />
   </>;
 }

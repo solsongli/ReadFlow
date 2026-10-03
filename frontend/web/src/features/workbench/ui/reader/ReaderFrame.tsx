@@ -1,24 +1,32 @@
 import { CREDENTIALS_CHANGED_EVENT } from "@/platform/contracts/credentials-contract.js";
 import { useEffect, useRef } from "react";
 import type { ReaderTab } from "../../domain/workbench-store.js";
-import { parseWorkbenchReaderMessage, trustedWorkbenchMessage, workbenchReaderUrl, SOFT_READER_CLOSE_MESSAGE } from "../../domain/reader-messages.js";
+import { parseWorkbenchReaderMessage, trustedWorkbenchMessage, workbenchReaderUrl, readerSchemeMessages, SOFT_READER_CLOSE_MESSAGE } from "../../domain/reader-messages.js";
 import { WbEmptyState } from "@/ui/wb/EmptyState.js";
-import { useWorkbench } from "../context.js";
+import { useWb, useWorkbench } from "../context.js";
+import { readerAppearance } from "../../domain/typography.js";
 import { useWorkbenchScheme } from "./useWorkbenchScheme.js";
 
 export function ReaderFrame({ tab }: { tab: ReaderTab }) {
   const wb = useWorkbench();
   const scheme = useWorkbenchScheme();
+  const uiFont = useWb((state) => state.uiFont);
+  const customFont = useWb((state) => state.customFont);
+  const textScale = useWb((state) => state.textScale);
+  const appearance = readerAppearance({ uiFont, customFont, textScale, noteFont: "interface" });
+  const appearanceKey = JSON.stringify(appearance);
   const frame = useRef<HTMLIFrameElement>(null);
   // Theme and progress updates must never change the iframe's src and reload the document.
   const source = useRef(workbenchReaderUrl(tab.url!, window.location.href, tab.itemId, scheme, tab.resumePage));
   const detachKeys = useRef<() => void>(() => {});
   const latestScheme = useRef(scheme);
   latestScheme.current = scheme;
+  const latestAppearance = useRef(appearance);
+  latestAppearance.current = appearance;
   function syncScheme() {
-    frame.current?.contentWindow?.postMessage({ type: "readflow:scheme", scheme: latestScheme.current }, window.location.origin);
+    for (const message of readerSchemeMessages(latestScheme.current, latestAppearance.current)) frame.current?.contentWindow?.postMessage(message, window.location.origin);
   }
-  useEffect(syncScheme, [scheme]);
+  useEffect(syncScheme, [scheme, appearanceKey]);
   useEffect(() => {
     const receive = (event: MessageEvent) => {
       if (!trustedWorkbenchMessage(event, window.location.origin, frame.current?.contentWindow)) return;

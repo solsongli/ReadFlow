@@ -1,4 +1,5 @@
 import { SOFT_READER_CLOSE_MESSAGE } from "../shared/navigation/soft-reader.js";
+import { type WorkbenchAppearance } from "./workbench-typography.js";
 export { SOFT_READER_CLOSE_MESSAGE };
 export type WorkbenchScheme = "light" | "dark";
 export type ReaderProgressMessage = {
@@ -23,6 +24,7 @@ export declare function validReaderProgress(page: unknown, pages: unknown): page
 export declare function parseWorkbenchSchemeMessage(value: unknown): {
     type: "readflow:scheme";
     scheme: WorkbenchScheme;
+    appearance?: WorkbenchAppearance;
 } | null;
 export declare function trustedWorkbenchMessage(event: {
     origin: string;

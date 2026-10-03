@@ -20,7 +20,7 @@ export function TitleBar() {
             aria-current={activeTab === tab.id ? "page" : undefined}
             title={tab.title}
             onClick={() => tab.id === LIBRARY_TAB ? wb.setMain("library") : wb.activateTab(tab.id)}
-            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-md border-0 bg-transparent px-2 text-[12px]"
+            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-md border-0 bg-transparent px-2 text-[0.75rem]"
           >
             {tab.id === LIBRARY_TAB ? <Library size={13} className="shrink-0" aria-hidden="true" /> : <FileText size={13} className="shrink-0" aria-hidden="true" />}
             <span className="wb-truncate">{tab.title}</span>

@@ -13,7 +13,7 @@ export function NotesView() {
   const status = useWb((state) => state.notes.status);
   useEffect(() => { if (status === "idle") void wb.notes.refresh(); }, [status, wb]);
   return <main aria-label="笔记空间" className="flex min-h-0 min-w-0 flex-1 flex-col bg-wb-panel">
-    <header className="flex h-[52px] shrink-0 items-center gap-3 border-b border-wb-line-soft px-4"><h1 className="m-0 flex-1 text-[15px] font-semibold">笔记</h1><NewNoteButton /><Button size="sm" icon={<Download size={14} aria-hidden="true" />} disabled={exporting} onClick={async () => { setExporting(true); await wb.notes.exportAll(); setExporting(false); }}>导出为 Markdown</Button></header><ServiceBanner />
+    <header className="flex h-[3.25rem] shrink-0 items-center gap-3 border-b border-wb-line-soft px-4"><h1 className="m-0 flex-1 text-[0.9375rem] font-semibold">笔记</h1><NewNoteButton /><Button size="sm" icon={<Download size={14} aria-hidden="true" />} disabled={exporting} onClick={async () => { setExporting(true); await wb.notes.exportAll(); setExporting(false); }}>导出为 Markdown</Button></header><ServiceBanner />
     <div className="flex min-h-0 min-w-0 flex-1"><NotesList /><NoteEditor /></div>
   </main>;
 }

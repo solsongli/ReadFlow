@@ -1,16 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { once } from "node:events";
+import { existsSync, readFileSync, mkdtempSync, copyFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { isAbsolute, join } from "node:path";
 
 // 壳 A10 冒烟:三页 HTML 挂载顺序 + 三 entry createRoot/无 StrictMode + 静态 200。
-// 只读源码文本与 HTTP 状态,不改业务代码、不改构建、不依赖后端(后端可达才加断 API)。
+// 只读源码文本与隔离静态服务的 HTTP 状态，不访问已安装应用、预览或真实凭据。
 
 const PROJECT_ROOT = process.cwd();
 const READER_PKG_ROOT = join(PROJECT_ROOT, "..", "..", "frontend", "packages", "reader");
-const FRONT_URL = "http://127.0.0.1:40001";
-const BACKEND_URLS = ["http://127.0.0.1:41000/health", "http://127.0.0.1:41000/ready"];
 
 // reader 的公开 boot 子路径以 package.json exports 为唯一真源:宿主只经 exports
 // 消费,冒烟也从 exports 取构建产物与源码入口,避免仓库里再抄一份 dist/src 路径。
@@ -112,29 +112,39 @@ test("三entry都有createRoot且不开StrictMode", () => {
   }
 });
 
-test("40001/index.html可200(41000可达才断言API)", async (t) => {
-  let server = null;
-  t.after(() => server?.kill());
-  let res = await probe(`${FRONT_URL}/index.html`);
-  if (!res.reachable || res.status !== 200) {
-    server = spawn("python3", ["scripts/serve_static.py", "--host", "127.0.0.1", "--port", "40001", "--root", "."], {
-      cwd: PROJECT_ROOT,
-      stdio: "ignore",
+test("三页壳在隔离临时端口返回200，不探测已运行的应用", { timeout: 15000 }, async (t) => {
+  const root = mkdtempSync(join(tmpdir(), "readflow-static-shell-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  for (const page of PAGES) copyFileSync(join(PROJECT_ROOT, page.html), join(root, page.html));
+  const script = [
+    "import functools, importlib.util, sys",
+    "spec = importlib.util.spec_from_file_location('fixture_static', sys.argv[1])",
+    "module = importlib.util.module_from_spec(spec)",
+    "spec.loader.exec_module(module)",
+    "handler = functools.partial(module.FrontendRequestHandler, directory=sys.argv[2])",
+    "with module.ThreadingHTTPServer(('127.0.0.1', 0), handler) as server:",
+    "    print('READY_PORT=' + str(server.server_port), flush=True)",
+    "    server.serve_forever()",
+  ].join("\n");
+  const server = spawn("python3", ["-B", "-u", "-c", script, join(PROJECT_ROOT, "scripts/serve_static.py"), root], {
+    cwd: root, stdio: ["ignore", "pipe", "ignore"],
+    // Explicit fake configuration bypasses serve_static's credential discovery.
+    env: { PATH: process.env.PATH, PYTHONDONTWRITEBYTECODE: "1", RETAIN_PDF_FRONTEND_ROOT: root,
+      RETAIN_PDF_FRONTEND_X_API_KEY: "fixture", RETAIN_PDF_FRONTEND_API_BASE: "http://127.0.0.1:9" },
+  });
+  t.after(async () => {
+    if (server.exitCode === null && server.signalCode === null) { const exit = once(server, "exit"); server.kill(); await exit; }
+  });
+  const port = await new Promise((resolve, reject) => {
+    let output = "";
+    const timer = setTimeout(() => reject(new Error("隔离静态服务未就绪")), 10000);
+    server.once("error", (error) => { clearTimeout(timer); reject(error); });
+    server.once("exit", () => { clearTimeout(timer); reject(new Error("隔离静态服务提前退出")); });
+    server.stdout.on("data", (chunk) => {
+      output += String(chunk);
+      const match = output.match(/READY_PORT=(\d+)/);
+      if (match) { clearTimeout(timer); resolve(Number(match[1])); }
     });
-    const deadline = Date.now() + 15_000;
-    do {
-      await new Promise((r) => setTimeout(r, 300));
-      res = await probe(`${FRONT_URL}/index.html`);
-    } while (res.status !== 200 && Date.now() < deadline);
-  }
-  assert.equal(res.status, 200, "40001/index.html非200");
-
-  for (const url of BACKEND_URLS) {
-    const back = await probe(url);
-    if (back.reachable && back.status >= 200 && back.status < 300) {
-      assert.ok(true, `后端可达:${url}`);
-      return;
-    }
-  }
-  t.skip("后端41000不可达,仅断言静态");
+  });
+  for (const page of PAGES) assert.equal((await probe(`http://127.0.0.1:${port}/${page.html}`)).status, 200);
 });

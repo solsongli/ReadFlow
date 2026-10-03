@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { LIBRARY_TAB } from "../../domain/workbench-store.js";
+import { stepTextScale, textScaleShortcut } from "../../domain/typography.js";
 import { useWorkbench } from "../context.js";
 
 const INTERACTIVE = '[role="menu"],[role="dialog"],[role="listbox"]:not([data-wb-list]),[data-radix-popper-content-wrapper]';
@@ -17,6 +18,19 @@ export function useWorkbenchKeys() {
       if (event.defaultPrevented || event.isComposing) return;
       const state = wb.store.getSnapshot();
       const modifier = event.ctrlKey || event.metaKey;
+      const typographyStep = textScaleShortcut(event);
+      if (typographyStep !== null) {
+        event.preventDefault();
+        if (state.activeTab === LIBRARY_TAB || state.paletteOpen || state.shortcutsOpen) wb.setPrefs({ textScale: stepTextScale(state.textScale, typographyStep) });
+        else {
+          const frame = document.querySelector<HTMLIFrameElement>('[data-wb-reader-active="true"] iframe');
+          try {
+            const child = frame?.contentWindow as (Window & typeof globalThis) | null;
+            child?.dispatchEvent(new child.KeyboardEvent("keydown", { key: event.key, ctrlKey: true, cancelable: true }));
+          } catch { /* Only a same-origin ready reader can receive PDF zoom keys. */ }
+        }
+        return;
+      }
       if (modifier && event.key === "/") { event.preventDefault(); wb.setShortcuts(!state.shortcutsOpen); return; }
       if (state.shortcutsOpen) { if (event.key === "Escape") { event.preventDefault(); wb.setShortcuts(false); } return; }
       if (modifier && event.key.toLowerCase() === "n") { event.preventDefault(); void wb.notes.create(); return; }

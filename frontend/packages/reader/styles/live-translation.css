@@ -27,7 +27,7 @@
   box-shadow: 0 10px 28px color-mix(in srgb, var(--shadow-color, #111) 9%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  font-size: 12px;
+  font-size: calc(12px * var(--readflow-ui-scale, 1));
   font-weight: 620;
   pointer-events: none;
 }

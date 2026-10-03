@@ -66,7 +66,7 @@ export function InlineEdit({ value, placeholder, label, onSave, className, input
             inputClassName,
           )}
         />
-        {error ? <span className="text-[11.5px] text-wb-danger">{error}</span> : null}
+        {error ? <span className="text-[0.71875rem] text-wb-danger">{error}</span> : null}
       </span>
     );
   }

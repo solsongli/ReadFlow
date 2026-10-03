@@ -41,3 +41,18 @@ test("collapsed sections leave no phantom rows or keyboard selection targets", (
   assert.equal(buildVirtualList([], [], "list", "bilingual", null, []).height, 0);
   assert.deepEqual(virtualWindow({ entries: [], headers: [], height: 0, order: [] }, 0, 0).indices, []);
 });
+
+test("2000 rows use remeasured geometry at the smallest and largest text size", () => {
+  for (const scale of [0.85, 1.3]) {
+    const metrics = { compact: 36 * scale, bilingual: 81 * scale, normal: 60 * scale, header: 32 * scale };
+    for (const layout of ["list", "grouped"]) {
+      const list = buildVirtualList(rows, groups, layout, "bilingual", null, [], metrics);
+      const top = rowScrollTarget(list, "1999", 0, 700);
+      const window = virtualWindow(list, top, 700);
+      assert.ok(window.indices.length < 32);
+      assert.ok(window.indices.some(index => list.entries[index].kind === "row" && list.entries[index].row.id === "1999"));
+      const header = list.entries[list.headers[1]];
+      if (header) assert.equal(virtualWindow(list, header.top - 1, 700).stickyTop, header.top - metrics.header);
+    }
+  }
+});

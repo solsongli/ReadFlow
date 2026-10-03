@@ -9,3 +9,4 @@ export * from "./ai-chat.js";
 
 export * from "./annotations.js";
 export * from "../domain/workbench-embed.js";
+export * from "../domain/workbench-typography.js";

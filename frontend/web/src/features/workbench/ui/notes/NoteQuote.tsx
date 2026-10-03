@@ -8,8 +8,8 @@ export function NoteDot({ color }: { color: string }) {
 }
 export function NoteQuote({ note, compact = false }: { note: Pick<WorkbenchNote, "color" | "quote" | "translated_quote">; compact?: boolean }) {
   return <blockquote className={cn("m-0 border-l-[3px] border-current pl-4", COLORS[noteColor(note.color)])}>
-    {note.quote ? <p className={cn("m-0 whitespace-pre-wrap break-words font-wb-serif text-[16px] leading-[1.65] text-wb-text-2", compact && "line-clamp-2 text-[13px]")}>{note.quote}</p> : null}
-    {note.translated_quote ? <p className={cn("mb-0 mt-2 whitespace-pre-wrap break-words font-wb-serif text-[14px] leading-relaxed text-wb-text-3", compact && "line-clamp-2")}>{note.translated_quote}</p> : null}
-    {!note.quote && !note.translated_quote ? <p className="m-0 text-[13px] text-wb-text-3">PDF 选区批注</p> : null}
+    {note.quote ? <p className={cn("m-0 whitespace-pre-wrap break-words font-wb-serif text-[1rem] leading-[1.65] text-wb-text-2", compact && "line-clamp-2 text-[0.8125rem]")}>{note.quote}</p> : null}
+    {note.translated_quote ? <p className={cn("mb-0 mt-2 whitespace-pre-wrap break-words font-wb-serif text-[0.875rem] leading-relaxed text-wb-text-3", compact && "line-clamp-2")}>{note.translated_quote}</p> : null}
+    {!note.quote && !note.translated_quote ? <p className="m-0 text-[0.8125rem] text-wb-text-3">PDF 选区批注</p> : null}
   </blockquote>;
 }

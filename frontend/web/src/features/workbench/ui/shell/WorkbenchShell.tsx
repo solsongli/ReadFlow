@@ -23,6 +23,7 @@ import { CommandPalette } from "./CommandPalette.js";
 import { NoticeToast } from "./NoticeToast.js";
 import { TitleBar } from "./TitleBar.js";
 import { useWorkbenchKeys } from "./useWorkbenchKeys.js";
+import { useWorkbenchTypography } from "./useWorkbenchTypography.js";
 
 export function WorkbenchShell() { return <WorkbenchErrorBoundary><WorkbenchLayout /></WorkbenchErrorBoundary>; }
 
@@ -37,6 +38,7 @@ function WorkbenchLayout() {
   const hasRows = useWb((state) => Boolean(state.list.result?.items.length));
   const empty = total === 0 && (main === "desk" || (main === "library" && view !== "trash"));
   useWorkbenchKeys();
+  useWorkbenchTypography();
   useNotesLifecycle();
   useEffect(() => { document.title = workbenchTitle(main, tabs.find((tab) => tab.id === activeTab)?.title); }, [main, tabs, activeTab]);
 

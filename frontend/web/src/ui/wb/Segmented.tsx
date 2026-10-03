@@ -27,7 +27,7 @@ export function Segmented<T extends string>({ value, options, onChange, label, c
             aria-pressed={active}
             onClick={() => onChange(option.value)}
             className={cn(
-              "h-[22px] rounded border-0 px-2 text-[12px] transition-colors duration-150",
+              "h-[1.375rem] rounded border-0 px-2 text-[0.75rem] transition-colors duration-150",
               active
                 ? "bg-wb-panel text-wb-text shadow-[0_0_0_1px_var(--wb-line-strong)]"
                 : "bg-transparent text-wb-text-3 hover:text-wb-text",

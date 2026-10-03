@@ -4,7 +4,7 @@ import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { JSDOM } from "jsdom";
-import { bootTheme, setTheme, getStoredTheme, THEME_CHANGE_EVENT } from "../../../../frontend/packages/reader/src/shared/theme/theme.ts";
+import { bootTheme, setTheme, getStoredTheme, THEME_CHANGE_EVENT, applyWorkbenchAppearance } from "../../../../frontend/packages/reader/src/shared/theme/theme.ts";
 import { ReaderCloseHome } from "../../../../frontend/packages/reader/src/components/react-pdf/ReaderCloseHome.tsx";
 import { useWorkbenchSchemeBridge, useWorkbenchReaderProgress } from "../../../../frontend/packages/reader/src/hooks/use-workbench-bridge.ts";
 import { createNativeReaderAnnotationsPort } from "@/app/reader/adapters/native-library.js";
@@ -141,4 +141,30 @@ test("UI fonts are loaded only for explicit embeds from the host asset path", (t
   h.dom.reconfigure({ url: "http://reader.test/reader.html?scheme=dark" });
   loadWorkbenchReaderFonts();
   assert.equal(faces.length, 2);
+});
+
+test("appearance updates preserve source/origin validation and old scheme-only messages", async (t) => {
+  const h = harness(t); bootTheme();
+  function Probe() { useWorkbenchSchemeBridge(); return null; }
+  await act(async () => h.root.render(React.createElement(Probe)));
+  const appearance = { font: "serif", textScale: 130 };
+  const send = (source, origin, data) => act(async () => window.dispatchEvent(new window.MessageEvent("message", { source, origin, data })));
+  const message = { type: "readflow:scheme", scheme: "light", appearance };
+  await send({}, window.location.origin, message);
+  await send(h.parent, "http://foreign.test", message);
+  assert.equal(document.documentElement.style.getPropertyValue("--readflow-ui-scale"), "");
+  await send(h.parent, window.location.origin, message);
+  assert.equal(document.documentElement.style.getPropertyValue("--readflow-ui-scale"), "1.3");
+  assert.match(document.documentElement.style.getPropertyValue("--readflow-ui-font"), /Noto Serif CJK SC/);
+  await send(h.parent, window.location.origin, { type: "readflow:scheme", scheme: "dark" });
+  assert.equal(document.documentElement.style.getPropertyValue("--readflow-ui-scale"), "1.3");
+  assert.equal(document.documentElement.dataset.theme, "graphite");
+  assert.deepEqual(h.accesses, []);
+});
+
+test("standalone reader ignores workbench typography entirely", (t) => {
+  harness(t, "?document_id=doc", false);
+  applyWorkbenchAppearance({ font: "kai", textScale: 130 });
+  assert.equal(document.documentElement.style.getPropertyValue("--readflow-ui-scale"), "");
+  assert.equal(document.documentElement.style.getPropertyValue("--readflow-ui-font"), "");
 });

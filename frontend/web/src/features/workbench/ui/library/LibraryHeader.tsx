@@ -83,10 +83,10 @@ export function LibraryHeader() {
   const subtitle = librarySubtitle({ view, group: groupId ? groupLabel(list.result?.groups ?? [], groupId) : null, tag, query,
     total: list.result?.total ?? (view === "all" && !filtered ? state.desk.data?.total : undefined), unread: list.result?.counts.unread });
   return (
-    <><header className={cn("flex h-[52px] shrink-0 items-center gap-1.5 px-4 pl-[22px]", desk ? "bg-wb-desk-bg" : "border-b border-wb-line-soft")} aria-label="工作台工具栏">
+    <><header className={cn("flex h-[3.25rem] shrink-0 items-center gap-1.5 px-4 pl-[1.375rem]", desk ? "bg-wb-desk-bg" : "border-b border-wb-line-soft")} aria-label="工作台工具栏">
       <div className="flex min-w-0 flex-1 flex-col">{!desk ? <>
-        <h1 className="m-0 wb-truncate text-[15px] font-semibold">{desk ? "书桌" : groupId || tag ? "文献库" : VIEW_TITLE[view]}</h1>
-        <div className="flex min-w-0 items-center gap-1 text-[11.5px] text-wb-text-3">
+        <h1 className="m-0 wb-truncate text-[0.9375rem] font-semibold">{desk ? "书桌" : groupId || tag ? "文献库" : VIEW_TITLE[view]}</h1>
+        <div className="flex min-w-0 items-center gap-1 text-[0.71875rem] text-wb-text-3">
           <span className="wb-truncate" title={subtitle || undefined}>
             {subtitle}
           </span>
@@ -96,7 +96,7 @@ export function LibraryHeader() {
       <TaskProgress />
       {!desk ? <><SortMenu /><DisplayMenu /></> : null}
       {!desk ? <ImportMenu /> : null}
-      <label className="ml-1 flex h-7 w-[clamp(120px,17vw,220px)] shrink-0 items-center gap-1.5 rounded-lg bg-wb-fill px-2.5 text-wb-text-3" title="搜索当前列表（/）；命令面板（Ctrl K）">
+      <label className="ml-1 flex h-7 w-[clamp(120px,17vw,220px)] min-w-0 shrink items-center gap-1.5 rounded-lg bg-wb-fill px-2.5 text-wb-text-3" title="搜索当前列表（/）；命令面板（Ctrl K）">
         <Search size={14} aria-hidden="true" />
         <input
           data-wb-search
@@ -108,7 +108,7 @@ export function LibraryHeader() {
           onCompositionStart={() => setComposing(true)}
           onCompositionEnd={(event) => { setComposing(false); setSearch(event.currentTarget.value); }}
           onKeyDown={(event) => { if (event.key === "Escape") { setSearch(""); wb.setQuery(""); event.currentTarget.blur(); } }}
-          className="h-full min-w-0 flex-1 border-0 bg-transparent text-[13px] text-wb-text outline-none placeholder:text-wb-text-3"
+          className="h-full min-w-0 flex-1 border-0 bg-transparent text-[0.8125rem] text-wb-text outline-none placeholder:text-wb-text-3"
         />
       </label>
     </header><ServiceBanner /></>

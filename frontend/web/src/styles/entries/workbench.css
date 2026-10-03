@@ -67,8 +67,8 @@
   --color-wb-tag-6: var(--wb-tag-6);
   --color-wb-tag-7: var(--wb-tag-7);
   --shadow-wb-pop: var(--wb-shadow-pop);
-  --font-wb-sans: "Inter", "Noto Sans CJK SC", "Source Han Sans SC", "PingFang SC",
-    "Microsoft YaHei", system-ui, sans-serif;
+  --font-wb-sans: var(--wb-ui-font, "Inter", "Noto Sans CJK SC", system-ui, sans-serif);
+  --font-wb-note: var(--wb-note-font, var(--font-wb-sans));
   --font-wb-mono: "IBM Plex Mono", "JetBrains Mono", "Cascadia Mono", "DejaVu Sans Mono", ui-monospace, monospace;
   --font-wb-serif: "Source Serif 4", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", Georgia, serif;
 }
@@ -91,6 +91,7 @@
 }
 
 @layer base {
+  html { font-size: calc(16px * var(--wb-ui-scale, 1)); }
   html,
   body,
   #workbench-root {
@@ -103,7 +104,7 @@
     background: var(--wb-bg);
     color: var(--wb-text);
     font-family: var(--font-wb-sans);
-    font-size: 13px;
+    font-size: 0.8125rem;
     line-height: 1.45;
     -webkit-font-smoothing: antialiased;
   }
@@ -136,6 +137,11 @@
 }
 
 @layer components {
+  /* Measured by the virtual list whenever root type size or the font changes. */
+  .wb-list-metrics [data-metric="compact"] { height: 2.25rem; }
+  .wb-list-metrics [data-metric="bilingual"] { height: 5.0625rem; }
+  .wb-list-metrics [data-metric="normal"] { height: 3.75rem; }
+  .wb-list-metrics [data-metric="header"] { height: 2rem; }
   /* 中英题名双行：长标题截断，悬停给完整 title 属性。 */
   .wb-truncate {
     overflow: hidden;

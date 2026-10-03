@@ -40,21 +40,21 @@
 }
 
 @utility reader-brand {
-  font-size: 1.05rem;
+  font-size: calc(1.05rem * var(--readflow-ui-scale, 1));
   letter-spacing: -0.02em;
 }
 
 @utility reader-meta {
   & h1 {
     margin: 0;
-    font-size: 1.05rem;
+    font-size: calc(1.05rem * var(--readflow-ui-scale, 1));
     font-weight: 700;
     letter-spacing: -0.02em;
   }
 
   & p {
     margin: 4px 0 0;
-    font-size: 12px;
+    font-size: calc(12px * var(--readflow-ui-scale, 1));
     color: var(--muted);
   }
 }
@@ -69,14 +69,14 @@
     min-height: 34px;
     border-radius: 999px;
     padding-inline: 12px;
-    font-size: 12px;
+    font-size: calc(12px * var(--readflow-ui-scale, 1));
   }
 
   & .button-link {
     min-height: 34px;
     border-radius: 999px;
     padding-inline: 12px;
-    font-size: 12px;
+    font-size: calc(12px * var(--readflow-ui-scale, 1));
   }
 
   & .is-active {
@@ -96,7 +96,7 @@
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--paper);
-  font-size: 12px;
+  font-size: calc(12px * var(--readflow-ui-scale, 1));
   color: var(--muted);
 
   &.is-error {
@@ -148,7 +148,7 @@
 
   & h2 {
     margin: 0;
-    font-size: 15px;
+    font-size: calc(15px * var(--readflow-ui-scale, 1));
     font-weight: 700;
     letter-spacing: -0.02em;
   }
@@ -157,7 +157,7 @@
 @utility reader-panel-kicker {
   display: inline-flex;
   margin-bottom: 4px;
-  font-size: 10px;
+  font-size: calc(10px * var(--readflow-ui-scale, 1));
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -172,14 +172,14 @@
   border-radius: 999px;
   background: var(--bg);
   color: color-mix(in srgb, var(--ink) 35%, var(--muted));
-  font-size: 10px;
+  font-size: calc(10px * var(--readflow-ui-scale, 1));
   font-weight: 700;
 }
 
 @utility reader-empty {
   margin: 14px;
   padding: 16px 18px;
-  font-size: 13px;
+  font-size: calc(13px * var(--readflow-ui-scale, 1));
   color: var(--muted);
   border: 1px dashed var(--line);
   border-radius: 14px;
@@ -224,7 +224,7 @@
   padding: 28px 30px 36px;
   background: var(--reader-page, var(--paper));
   color: var(--ink);
-  font-size: 16px;
+  font-size: calc(16px * var(--readflow-ui-scale, 1));
   line-height: 1.82;
 
   & h1 {
@@ -258,15 +258,15 @@
   }
 
   & h1 {
-    font-size: 1.8rem;
+    font-size: calc(1.8rem * var(--readflow-ui-scale, 1));
   }
 
   & h2 {
-    font-size: 1.35rem;
+    font-size: calc(1.35rem * var(--readflow-ui-scale, 1));
   }
 
   & h3 {
-    font-size: 1.15rem;
+    font-size: calc(1.15rem * var(--readflow-ui-scale, 1));
   }
 
   & p {

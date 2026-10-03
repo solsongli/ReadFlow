@@ -23,6 +23,8 @@ const {
 } = require("./src/main/research-library-runtime");
 const { createBackendRuntime } = require("./src/main/backend-runtime");
 const { createDesktopConfigStore } = require("./src/main/desktop-config");
+const { createConnectorSettings } = require("./src/main/connector-settings");
+const { createInstalledFonts } = require("./src/main/installed-fonts");
 const { createDesktopLogger } = require("./src/main/desktop-logging");
 const { createDesktopWindows } = require("./src/main/desktop-windows");
 
@@ -66,6 +68,9 @@ const {
   saveDesktopConfig,
   setBackendApiPort,
 } = desktopConfigStore;
+const connectorSettings = createConnectorSettings({ app, loadDesktopConfig, saveDesktopConfig,
+  canConnectToPort, getPortOccupant: portOccupant.getPortOccupant });
+const installedFonts = createInstalledFonts();
 // The shared local service now also owns OCR settings for the original shell.
 const researchLibraryEnabled = process.env.RETAIN_PDF_RESEARCH_LIBRARY !== "0";
 const offlineLibraryPreview = researchLibraryEnabled && process.env.RETAIN_PDF_OFFLINE_LIBRARY_PREVIEW === "1";
@@ -133,7 +138,7 @@ async function startDesktopGateway({ apiPort, backendRoot, pythonRuntime, env })
       dataRoot: path.join(app.getPath("userData"), "data", "research-library"),
       backendBase: `http://127.0.0.1:${apiPort}`,
       desktopApiKey: DESKTOP_API_KEY,
-      connectorPort: process.env.RETAIN_PDF_RESEARCH_CONNECTOR_PORT,
+      ...(await connectorSettings.prepare()),
     });
   }
   try {
@@ -695,6 +700,10 @@ app.on("window-all-closed", () => {
 
 ipcMain.handle("desktop:invoke", async (_event, command, args = {}) => {
   switch (command) {
+    case "list_installed_fonts": return installedFonts.list();
+    case "load_connector_settings": return connectorSettings.preferences();
+    case "save_connector_settings": return connectorSettings.save(args.enabled);
+    case "restart_readflow": connectorSettings.restart(); return { ok: true };
     case "load_desktop_config": {
       const config = loadDesktopConfig();
       return desktopConfigResponse(config);

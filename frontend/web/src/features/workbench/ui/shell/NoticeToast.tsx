@@ -20,7 +20,7 @@ export function NoticeToast() {
   return (
     <div
       role={notice.tone === "error" ? "alert" : "status"}
-      className="pointer-events-auto fixed bottom-5 left-1/2 z-50 flex w-max max-w-[min(560px,calc(100vw-32px))] -translate-x-1/2 items-center gap-2.5 rounded-xl border-0 bg-wb-panel py-2 pl-3 pr-1.5 text-[12.5px] shadow-wb-pop"
+      className="pointer-events-auto fixed bottom-5 left-1/2 z-50 flex w-max max-w-[min(560px,calc(100vw-32px))] -translate-x-1/2 items-center gap-2.5 rounded-xl border-0 bg-wb-panel py-2 pl-3 pr-1.5 text-[0.78125rem] shadow-wb-pop"
     >
       <Icon size={15} aria-hidden="true" className={cn(notice.tone === "error" ? "text-wb-danger" : notice.tone === "success" ? "text-wb-link" : "text-wb-text-3")} />
       <span className="min-w-0 flex-1">{notice.text}</span>

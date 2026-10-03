@@ -23,18 +23,18 @@ export function CitationBox({ row }: { row: WorkbenchRow }) {
       <PopoverRoot>
         <PopoverTrigger asChild><IconButton size="xs" label="预览引用"><Eye size={13} aria-hidden="true" /></IconButton></PopoverTrigger>
         <PopoverContent align="end" className="flex w-[360px] max-w-[calc(100vw-24px)] flex-col gap-3 p-4">
-          <p className="m-0 text-[12px] leading-relaxed">{gbt}</p>
-          <pre className="wb-scroll m-0 max-h-52 whitespace-pre-wrap break-words rounded-lg bg-wb-panel-2 p-3 font-wb-mono text-[12px]">{bibtex}</pre>
+          <p className="m-0 text-[0.75rem] leading-relaxed">{gbt}</p>
+          <pre className="wb-scroll m-0 max-h-52 whitespace-pre-wrap break-words rounded-lg bg-wb-panel-2 p-3 font-wb-mono text-[0.75rem]">{bibtex}</pre>
           <Button onClick={() => void copy(`\\cite{${row.citekey}}`, "引用命令")}>复制引用命令</Button>
         </PopoverContent>
       </PopoverRoot>
     }>
       <div className="overflow-hidden rounded-xl bg-wb-panel-2">
         <button type="button" onClick={() => void copy(gbt, "参考文献")} className="wb-info-row wb-transition relative flex w-full items-center justify-between gap-2 border-0 bg-transparent px-3.5 py-2.5 text-left text-wb-link hover:bg-wb-hover">
-          <span>复制参考文献</span><span className="text-[12px] text-wb-text-3">GB/T 7714</span>
+          <span>复制参考文献</span><span className="text-[0.75rem] text-wb-text-3">GB/T 7714</span>
         </button>
         <button type="button" onClick={() => void copy(bibtex, " BibTeX")} className="wb-info-row wb-transition relative flex w-full items-center justify-between gap-2 border-0 bg-transparent px-3.5 py-2.5 text-left text-wb-link hover:bg-wb-hover">
-          <span className="shrink-0">复制 BibTeX</span><span className="wb-truncate text-[12px] text-wb-text-3" title={row.citekey}>{row.citekey}</span>
+          <span className="shrink-0">复制 BibTeX</span><span className="wb-truncate text-[0.75rem] text-wb-text-3" title={row.citekey}>{row.citekey}</span>
         </button>
       </div>
     </Section>

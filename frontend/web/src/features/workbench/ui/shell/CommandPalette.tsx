@@ -1,6 +1,7 @@
-import { shortcutKeys } from "../../domain/shortcuts.js";
+import { SHORTCUTS, shortcutKeys } from "../../domain/shortcuts.js";
+import { stepTextScale } from "../../domain/typography.js";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { Armchair, BookOpen, Bookmark, FileQuestion, FileUp, Folder, FolderPlus, Languages, Library, Link2, Monitor, NotebookPen, PanelTop, ScanText, Search, Settings, Star, Trash2, X } from "lucide-react";
+import { Armchair, BookOpen, Bookmark, FileQuestion, FileUp, Folder, FolderPlus, Languages, Library, Link2, Monitor, NotebookPen, PanelTop, ScanText, Search, Settings, Star, Trash2, Type, X } from "lucide-react";
 import type { WorkbenchRow } from "@/platform/contracts/workbench.js";
 import { cn } from "@/ui/lib/utils.js";
 import { IconButton } from "@/ui/wb/Button.js";
@@ -37,6 +38,9 @@ function commands(wb: Workbench): Array<Omit<Entry, "kind"> & { words: string }>
     { key: "import", label: "导入 PDF…", words: "import pdf daoru", run: () => openPdfPicker() },
     { key: "group", label: "新建分组…", words: "new group xinjian fenzu", run: () => { wb.browse({}); wb.store.actions.patch({ groupDraft: { parentId: null }, sidebarCollapsed: false }); } },
     { key: "theme", label: "切换浅色 / 深色", words: "theme dark light zhuti", run: () => wb.setPrefs({ theme: wb.store.getSnapshot().theme === "dark" ? "light" : "dark" }) },
+    ...([['text-larger', 1], ['text-smaller', -1], ['text-reset', 0]] as const).map(([key, direction]) => ({ key,
+      label: SHORTCUTS.find((entry) => entry.id === key)!.label, hint: shortcutKeys(key), words: "字体 文字 大小 字号 font size",
+      run: () => wb.setPrefs({ textScale: stepTextScale(wb.store.getSnapshot().textScale, direction) }) })),
     { key: "legacy", label: "打开旧版界面", words: "legacy old jiuban", run: () => void wb.leave(() => window.location.assign("./index.html")) },
   ];
 }
@@ -147,6 +151,7 @@ export function CommandPalette() {
   }
 
   const COMMAND_ICON = { shortcuts: PanelTop, settings: Settings, glossaries: BookOpen, desk: Armchair, library: Library, unread: Bookmark, starred: Star, unfiled: FileQuestion,
+    "text-larger": Type, "text-smaller": Type, "text-reset": Type,
     trash: Trash2, import: FileUp, group: FolderPlus, theme: Monitor, legacy: PanelTop,
     notes: NotebookPen, "notes-space": NotebookPen, "new-note": NotebookPen, needs_ocr: ScanText, missing_doi: Link2, no_zh_title: Languages };
 
@@ -177,7 +182,7 @@ export function CommandPalette() {
             aria-activedescendant={entries[index] ? `wb-command-${index}` : undefined}
             aria-autocomplete="list"
             aria-label="搜索或输入命令"
-            className="h-full flex-1 border-0 bg-transparent text-[13.5px] text-wb-text outline-none"
+            className="h-full flex-1 border-0 bg-transparent text-[0.84375rem] text-wb-text outline-none"
           />
           <IconButton label="关闭命令面板" title="关闭（Esc）" onClick={() => wb.setPalette(false)}><X size={15} aria-hidden="true" /></IconButton>
         </label>
@@ -200,9 +205,9 @@ export function CommandPalette() {
                   <Icon size={14} aria-hidden="true" className="shrink-0 text-wb-text-3" />
                   <span className="min-w-0 flex-1">
                     <span className="block wb-truncate text-wb-text">{entry.label}</span>
-                    {entry.hint && entry.kind === "paper" ? <span className="block wb-truncate text-[12px] text-wb-text-3">{entry.hint}</span> : null}
+                    {entry.hint && entry.kind === "paper" ? <span className="block wb-truncate text-[0.75rem] text-wb-text-3">{entry.hint}</span> : null}
                   </span>
-                  {entry.hint && entry.kind !== "paper" ? <span className="shrink-0 text-[11.5px] text-wb-text-3">{entry.hint}</span> : null}
+                  {entry.hint && entry.kind !== "paper" ? <span className="shrink-0 text-[0.71875rem] text-wb-text-3">{entry.hint}</span> : null}
                 </button>
               </li>
             );

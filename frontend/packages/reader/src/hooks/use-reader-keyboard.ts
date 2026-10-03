@@ -9,6 +9,7 @@ import {
 } from "../pdf/reader-zoom.js";
 import { clampPageNumber } from "../pdf/scroll-to-page.js";
 import { matchReaderKeyBinding } from "./reader-keyboard-map.js";
+import { parseWorkbenchEmbed } from "../domain/workbench-embed.js";
 
 export type ReaderKeyboardApi = {
   mode: ReaderMode;
@@ -65,6 +66,12 @@ export function useReaderKeyboard(api: ReaderKeyboardApi) {
     }
 
     const onKeyDown = (event: KeyboardEvent) => {
+      if (!event.defaultPrevented && !event.isComposing && !event.altKey && (event.ctrlKey || event.metaKey)
+          && ["=", "+", "-", "0"].includes(event.key) && parseWorkbenchEmbed(window.location.search)) {
+        event.preventDefault();
+        onZoomChange(event.key === "0" ? defaultZoomForMode(mode) : stepReaderZoom(userZoom, event.key === "-" ? -1 : 1));
+        return;
+      }
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) {
         return;
       }

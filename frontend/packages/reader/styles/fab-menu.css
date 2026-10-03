@@ -47,13 +47,13 @@
   min-width: 0;
 }
 .reader-fab-menu-head-text strong {
-  font-size: 13px;
+  font-size: calc(13px * var(--readflow-ui-scale, 1));
   font-weight: 750;
   letter-spacing: -0.02em;
   color: var(--ink, var(--ink));
 }
 .reader-fab-menu-head-text span {
-  font-size: 10.5px;
+  font-size: calc(10.5px * var(--readflow-ui-scale, 1));
   font-weight: 500;
   color: var(--muted, var(--muted));
 }
@@ -120,12 +120,12 @@
   min-width: 0;
 }
 .reader-fab-row-title {
-  font-size: 13px;
+  font-size: calc(13px * var(--readflow-ui-scale, 1));
   font-weight: 750;
   letter-spacing: -0.015em;
 }
 .reader-fab-row-sub {
-  font-size: 11px;
+  font-size: calc(11px * var(--readflow-ui-scale, 1));
   font-weight: 500;
   color: var(--muted, var(--muted));
   white-space: nowrap;
@@ -145,7 +145,7 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--accent) 14%, transparent);
   color: var(--accent);
-  font-size: 11px;
+  font-size: calc(11px * var(--readflow-ui-scale, 1));
   font-weight: 750;
 }
 .reader-fab-row.is-active .reader-fab-row-badge {

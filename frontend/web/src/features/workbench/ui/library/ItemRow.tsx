@@ -42,15 +42,15 @@ export const ItemRow = memo(function ItemRow({ id, position, total, row, density
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex h-5 min-w-0 items-baseline gap-3 leading-5">
-          <span className="wb-truncate min-w-0 flex-1 text-[13.5px] font-semibold tracking-[-0.01em]" title={row.title}>{row.title}</span>
+          <span className="wb-truncate min-w-0 flex-1 text-[0.84375rem] font-semibold tracking-[-0.01em]" title={row.title}>{row.title}</span>
           {row.starred ? <Star size={12} aria-label="星标" className="shrink-0 self-center fill-current text-wb-warn" /> : null}
-          <span className={cn("text-[12px] text-wb-text-3", compact ? "wb-truncate max-w-[35%]" : "shrink-0")} title={compact ? row.authors.join(", ") : row.created_at}>
+          <span className={cn("text-[0.75rem] text-wb-text-3", compact ? "wb-truncate max-w-[35%]" : "shrink-0")} title={compact ? row.authors.join(", ") : row.created_at}>
             {compact ? metadata : mailDate(row.created_at)}
           </span>
         </div>
-        {!compact && row.title_translated ? <span className="wb-truncate text-[13px] leading-[19px] text-wb-text-2" title={row.title_translated}>{row.title_translated}</span> : null}
+        {!compact && row.title_translated ? <span className="wb-truncate text-[0.8125rem] leading-[1.1875rem] text-wb-text-2" title={row.title_translated}>{row.title_translated}</span> : null}
         {!compact ? (
-          <div className="flex h-[18px] min-w-0 items-center gap-2.5 text-[12px] leading-[18px] text-wb-text-3">
+          <div className="flex h-[1.125rem] min-w-0 items-center gap-2.5 text-[0.75rem] leading-[1.125rem] text-wb-text-3">
             {metadata ? <span className="wb-truncate flex-1" title={metadata}>{metadata}</span> : <span className="flex-1" aria-hidden="true" />}
             {translation ? <span className="inline-flex shrink-0 items-center gap-1" title={translationLabel(row.translation, true)}><Languages size={13} strokeWidth={1.7} aria-hidden="true" />{translation}</span> : null}
             {row.notes_count > 0 ? <span className="inline-flex shrink-0 items-center gap-1" title={`${row.notes_count} 条笔记`}><Pencil size={13} strokeWidth={1.7} aria-hidden="true" />{row.notes_count}</span> : null}

@@ -79,7 +79,7 @@
   background: color-mix(in srgb, var(--paper) 98%, transparent);
   color: var(--ink);
   box-shadow: 0 8px 18px color-mix(in srgb, var(--shadow-color) 20%, transparent);
-  font-size: 14px;
+  font-size: calc(14px * var(--readflow-ui-scale, 1));
   font-weight: 700;
   line-height: 1;
   opacity: 0;
@@ -132,7 +132,7 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--ink) 88%, transparent);
   color: var(--paper);
-  font-size: 12px;
+  font-size: calc(12px * var(--readflow-ui-scale, 1));
   font-weight: 700;
   line-height: 1;
   pointer-events: none;
@@ -172,7 +172,7 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--ink) 88%, transparent);
   color: var(--paper);
-  font-size: 11px;
+  font-size: calc(11px * var(--readflow-ui-scale, 1));
   font-weight: 700;
   line-height: 1;
   white-space: nowrap;

@@ -41,8 +41,8 @@ export interface EvidenceResult {
 export interface AiStatus { status: string; model_verified: boolean; message: string }
 
 export interface ConnectorStatus {
-  status: "experimental" | "disabled" | "coexist" | "unsupported";
-  port?: number; real_connector_verified: boolean; code?: string; message?: string;
+  status: "listening" | "busy" | "disabled" | "error" | "experimental" | "coexist" | "unsupported";
+  port?: number | null; occupant?: string | null; real_connector_verified: boolean; code?: string; message?: string;
   partial_acceptance?: { tested_at: string; connector_version: string; browser: string; fixture: string; passed: string[]; public_samples?: Array<{ site: string; identifier: string; revision: string }> };
 }
 

@@ -27,6 +27,18 @@ contextBridge.exposeInMainWorld("retainPdfDesktop", {
   brand: { productName: PRODUCT_NAME, iconUrl: pathToFileURL(resolveBrandIcon(__dirname, 128)).href },
   platform: process.platform,
   appVersion: readAppVersion(process.argv),
+  listInstalledFonts() {
+    return ipcRenderer.invoke("desktop:invoke", "list_installed_fonts");
+  },
+  loadConnectorSettings() {
+    return ipcRenderer.invoke("desktop:invoke", "load_connector_settings");
+  },
+  saveConnectorSettings(enabled) {
+    return ipcRenderer.invoke("desktop:invoke", "save_connector_settings", { enabled });
+  },
+  restartReadFlow() {
+    return ipcRenderer.invoke("desktop:invoke", "restart_readflow");
+  },
   invoke(command, args = {}) {
     return ipcRenderer.invoke("desktop:invoke", command, args);
   },

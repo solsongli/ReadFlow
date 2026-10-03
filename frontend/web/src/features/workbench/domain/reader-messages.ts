@@ -1,5 +1,12 @@
 import { isWorkbenchScheme, type WorkbenchScheme } from "@retainpdf/reader/contracts";
+import type { WorkbenchAppearance } from "./typography.js";
 export { parseWorkbenchReaderMessage, trustedWorkbenchMessage, SOFT_READER_CLOSE_MESSAGE } from "@retainpdf/reader/contracts";
+
+/** The first message also works with a cached reader that predates typography. */
+export function readerSchemeMessages(scheme: WorkbenchScheme, appearance: WorkbenchAppearance) {
+  const legacy = { type: "readflow:scheme" as const, scheme };
+  return [legacy, { ...legacy, appearance }];
+}
 
 export function resolveWorkbenchScheme(preference: string, systemDark: boolean): WorkbenchScheme {
   return isWorkbenchScheme(preference) ? preference : systemDark ? "dark" : "light";

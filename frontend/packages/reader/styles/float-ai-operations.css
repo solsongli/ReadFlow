@@ -16,7 +16,7 @@
   border-radius: 9px;
   background: color-mix(in srgb, var(--reader-ink, #17191c) 3.5%, transparent);
   color: color-mix(in srgb, var(--reader-ink, #17191c) 68%, transparent);
-  font-size: 11px;
+  font-size: calc(11px * var(--readflow-ui-scale, 1));
   font-weight: 650;
 }
 
@@ -74,7 +74,7 @@
 
 .reader-float-ai .reader-agent-operation-title > span {
   color: color-mix(in srgb, var(--reader-ink, #17191c) 48%, transparent);
-  font-size: 9px;
+  font-size: calc(9px * var(--readflow-ui-scale, 1));
   font-weight: 700;
   letter-spacing: 0.06em;
 }
@@ -82,7 +82,7 @@
 .reader-float-ai .reader-agent-operation-title > strong {
   overflow: hidden;
   color: var(--reader-ink, #17191c);
-  font-size: 12px;
+  font-size: calc(12px * var(--readflow-ui-scale, 1));
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -93,7 +93,7 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--reader-ink, #17191c) 6%, transparent);
   color: color-mix(in srgb, var(--reader-ink, #17191c) 70%, transparent);
-  font-size: 9px;
+  font-size: calc(9px * var(--readflow-ui-scale, 1));
   font-weight: 700;
   white-space: nowrap;
 }
@@ -125,7 +125,7 @@
 .reader-float-ai .reader-agent-operation-scope {
   margin: 8px 0 0 36px;
   color: color-mix(in srgb, var(--reader-ink, #17191c) 57%, transparent);
-  font-size: 10px;
+  font-size: calc(10px * var(--readflow-ui-scale, 1));
 }
 
 .reader-float-ai .reader-agent-operation-details {
@@ -141,7 +141,7 @@
   background: transparent;
   color: color-mix(in srgb, var(--reader-ink, #17191c) 58%, transparent);
   font: inherit;
-  font-size: 10px;
+  font-size: calc(10px * var(--readflow-ui-scale, 1));
   cursor: pointer;
 }
 
@@ -161,7 +161,7 @@
   align-items: center;
   gap: 5px;
   color: color-mix(in srgb, var(--reader-ink, #17191c) 67%, transparent);
-  font-size: 9px;
+  font-size: calc(9px * var(--readflow-ui-scale, 1));
 }
 
 .reader-float-ai .reader-agent-operation-timeline time {
@@ -176,7 +176,7 @@
   padding: 7px 8px;
   border-radius: 8px;
   background: color-mix(in srgb, var(--reader-ink, #17191c) 4%, transparent);
-  font-size: 10px;
+  font-size: calc(10px * var(--readflow-ui-scale, 1));
 }
 
 .reader-float-ai .reader-agent-operation-candidate > div {
@@ -226,7 +226,7 @@
   background: white;
   color: var(--reader-ink, #17191c);
   font: inherit;
-  font-size: 10px;
+  font-size: calc(10px * var(--readflow-ui-scale, 1));
   font-weight: 680;
   cursor: pointer;
 }
@@ -256,7 +256,7 @@
   border-radius: 8px;
   background: color-mix(in srgb, #c3453f 8%, transparent);
   color: #96302b;
-  font-size: 10px;
+  font-size: calc(10px * var(--readflow-ui-scale, 1));
   line-height: 1.45;
 }
 

@@ -37,7 +37,7 @@ function NameInput({ initial, placeholder, onSubmit, onCancel, indent }: {
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={onKeyDown}
         onBlur={() => finish(true)}
-        className="h-8 w-full rounded-lg border-0 bg-wb-fill px-1.5 text-[12.5px] outline-none"
+        className="h-8 w-full rounded-lg border-0 bg-wb-fill px-1.5 text-[0.78125rem] outline-none"
       />
     </div>
   );
@@ -116,7 +116,7 @@ export function GroupTree() {
               onDragLeave={() => setDropTarget((value) => (value === node.id ? null : value))}
               onDrop={(event) => drop(event, node)}
               className={cn(
-                "group wb-transition flex h-[30px] items-center gap-1.5 rounded-lg pr-1",
+                "group wb-transition flex h-[1.875rem] items-center gap-1.5 rounded-lg pr-1",
                 current === node.id ? "bg-wb-selected text-wb-text" : "text-wb-text hover:bg-wb-hover",
                 dropTarget === node.id && "outline outline-2 -outline-offset-2 outline-wb-accent",
               )}
@@ -142,7 +142,7 @@ export function GroupTree() {
                 <Folder size={17} strokeWidth={1.7} aria-hidden="true" className="shrink-0 text-wb-link" />
                 <span className="wb-truncate">{node.name}</span>
               </button>
-              <span className="wb-numeric text-[12px] font-normal text-wb-text-3">{node.count}</span>
+              <span className="wb-numeric text-[0.75rem] font-normal text-wb-text-3">{node.count}</span>
               <MenuRoot open={menuId === node.id} onOpenChange={(value) => setMenuId(value ? node.id : null)}>
                 <MenuTrigger asChild>
                   <IconButton label={`分组「${node.name}」的操作`} size="xs" className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 data-[state=open]:opacity-100">
@@ -158,7 +158,7 @@ export function GroupTree() {
               </MenuRoot>
             </div>
             {confirming === node.id ? (
-              <div className="mx-1 my-1 rounded-xl bg-wb-panel p-3 shadow-wb-pop text-[12px]" role="alertdialog" aria-label="确认删除分组" onKeyDown={(event) => { if (event.key === "Escape") setConfirming(null); }}>
+              <div className="mx-1 my-1 rounded-xl bg-wb-panel p-3 shadow-wb-pop text-[0.75rem]" role="alertdialog" aria-label="确认删除分组" onKeyDown={(event) => { if (event.key === "Escape") setConfirming(null); }}>
                 <p className="m-0 mb-2 leading-relaxed text-wb-text-2">
                   删除「{node.name}」{node.children.length ? "及其子分组" : ""}？文献本身不会被删除，仍在文献库和其他分组中。
                 </p>

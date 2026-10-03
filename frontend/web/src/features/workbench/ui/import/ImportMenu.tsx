@@ -62,7 +62,7 @@ export function ImportMenu({ children, onImported, directJson = false }: { child
           </MenuRoot>}
         </span>
       </PopoverAnchor>
-      <PopoverContent align="end" className="w-[340px] p-3.5 text-[12.5px]">
+      <PopoverContent align="end" className="w-[340px] p-3.5 text-[0.78125rem]">
         <p className="m-0 font-semibold">导入预览 · {pending?.name}</p>
         {counts ? (
           <p className="m-0 mt-1.5 text-wb-text-2">
@@ -70,11 +70,11 @@ export function ImportMenu({ children, onImported, directJson = false }: { child
           </p>
         ) : null}
         {pending?.plan.warnings.length ? (
-          <ul className="m-0 mt-2 max-h-28 list-disc overflow-auto pl-4 text-[12px] text-wb-warn">
+          <ul className="m-0 mt-2 max-h-28 list-disc overflow-auto pl-4 text-[0.75rem] text-wb-warn">
             {pending.plan.warnings.slice(0, 8).map((warning, index) => <li key={index}>{warning.message}</li>)}
           </ul>
         ) : null}
-        <p className="m-0 mt-2 text-[12px] text-wb-text-3">重复导入同一来源不会产生重复条目；导入后可在批次记录里回滚。</p>
+        <p className="m-0 mt-2 text-[0.75rem] text-wb-text-3">重复导入同一来源不会产生重复条目；导入后可在批次记录里回滚。</p>
         <div className="mt-3 flex justify-end gap-1.5">
           <Button size="sm" variant="ghost" onClick={() => setPending(null)}>取消</Button>
           <Button size="sm" variant="primary" disabled={busy} onClick={() => void commit()}>{busy ? "导入中…" : "确认导入"}</Button>

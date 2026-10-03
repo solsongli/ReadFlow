@@ -17,9 +17,9 @@ function BulkPanel({ ids }: { ids: string[] }) {
   const wb = useWorkbench();
   const trashView = useWb((state) => state.view === "trash");
   return (
-    <div className="flex flex-col gap-[18px] p-[22px]">
-      <h2 className="m-0 text-[18px] font-bold">已选 {ids.length} 篇文献</h2>
-      <p className="m-0 text-[13px] leading-relaxed text-wb-text-3">一起整理这些文献，或将它们拖到侧栏分组。</p>
+    <div className="flex flex-col gap-[1.125rem] p-[1.375rem]">
+      <h2 className="m-0 text-[1.125rem] font-bold">已选 {ids.length} 篇文献</h2>
+      <p className="m-0 text-[0.8125rem] leading-relaxed text-wb-text-3">一起整理这些文献，或将它们拖到侧栏分组。</p>
       {trashView ? <Button variant="primary" icon={<Undo2 size={15} aria-hidden="true" />} onClick={() => void wb.restore(ids)}>从回收站恢复</Button> : <>
         <GroupPicker itemIds={ids}><Button variant="primary" icon={<FolderPlus size={15} aria-hidden="true" />} shortcut="G">加入分组…</Button></GroupPicker>
         <div className="flex flex-col overflow-hidden rounded-xl bg-wb-panel-2">
@@ -46,12 +46,12 @@ export function Inspector() {
   const item = detail.item?.id === row.id ? detail.item : null;
   return (
     <aside aria-label="详情" className={PANEL}>
-      <div key={row.id} className="flex flex-col gap-[18px] p-[22px]">
+      <div key={row.id} className="flex flex-col gap-[1.125rem] p-[1.375rem]">
         <div className="flex flex-col gap-2">
-          <h2 className="m-0 break-words text-[18px] font-bold leading-[1.28]">{row.title}</h2>
-          <InlineEdit value={row.title_translated} placeholder="添加中文题名" label="中文题名" className="text-[14px] leading-[1.45] text-wb-text-2" onSave={(title_translated) => void wb.updateState(row.id, { title_translated })} />
-          <p className="m-0 wb-truncate text-[12.5px] text-wb-text-3" title={row.authors.join(", ")}>{inspectorAuthors(row.authors)}</p>
-          <p className="m-0 text-[12px] text-wb-text-3">{inspectorStatus(row)}</p>
+          <h2 className="m-0 break-words text-[1.125rem] font-bold leading-[1.28]">{row.title}</h2>
+          <InlineEdit value={row.title_translated} placeholder="添加中文题名" label="中文题名" className="text-[0.875rem] leading-[1.45] text-wb-text-2" onSave={(title_translated) => void wb.updateState(row.id, { title_translated })} />
+          <p className="m-0 wb-truncate text-[0.78125rem] text-wb-text-3" title={row.authors.join(", ")}>{inspectorAuthors(row.authors)}</p>
+          <p className="m-0 text-[0.75rem] text-wb-text-3">{inspectorStatus(row)}</p>
         </div>
         <div className="flex items-center gap-2">
           {trashView ? <Button variant="primary" icon={<Undo2 size={14} aria-hidden="true" />} onClick={() => void wb.restore([row.id])}>恢复</Button> : <>
@@ -76,7 +76,7 @@ export function Inspector() {
         <MetadataSection row={row} />
         {!trashView ? <InspectorNotes row={row} item={item} /> : null}
         <CitationBox row={row} />
-        {detail.status === "error" ? <p role="status" className="m-0 text-[12px] text-wb-text-3">详情加载失败。<button type="button" className="text-wb-link" onClick={() => wb.select(row.id)}>重试</button></p> : null}
+        {detail.status === "error" ? <p role="status" className="m-0 text-[0.75rem] text-wb-text-3">详情加载失败。<button type="button" className="text-wb-link" onClick={() => wb.select(row.id)}>重试</button></p> : null}
         <AbstractSection item={item} />
       </div>
     </aside>

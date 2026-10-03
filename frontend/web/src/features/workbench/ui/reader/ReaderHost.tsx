@@ -16,7 +16,7 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
   const wb = useWorkbench();
 
   return (
-    <div className={cn("absolute inset-0 flex flex-col bg-wb-bg", !active && "hidden")}>
+    <div data-wb-reader-active={active} className={cn("absolute inset-0 flex flex-col bg-wb-bg", !active && "hidden")}>
       {tab.status === "loading" ? (
         <WbEmptyState className="flex-1" icon={<LoaderCircle size={22} />} title="正在准备阅读器…" hint={tab.title} />
       ) : null}

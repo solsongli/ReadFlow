@@ -44,6 +44,8 @@ export async function readerBrowser() {
     if (/^\/vendor\/pdfjs-dist\/(?:build|cmaps|standard_fonts)\/[\w.-]+$/.test(path)) return serve(route, path.endsWith(".mjs") ? "text/javascript" : "application/octet-stream", await readFile(resolve(root, path.slice(1))));
     if (path === `/api/v1/documents/${hash}`) return route.fulfill({ json: { document_id: hash, active_job_id: null, active_version_id: null, source_file_name: "Synthetic reader.pdf" } });
     if (path === `/api/v1/documents/${hash}/source.pdf`) return serve(route, "application/pdf", bytes);
+    if (path === "/api/v1/ai/conversations" && route.request().method() === "GET") return route.fulfill({ json: { conversations: [] } });
+    if (path === "/api/v1/ai/runtime-config") return route.fulfill({ json: { configured_runtime: "python", active_runtime: "python_markdown", agent_confirmation_mode: "explicit", configured_revision: 1, active_revision: 1, restart_state: "active", restart_required: false, llm_api_key_configured: false } });
     if (/^\/api\/research\/items\/[0-9a-f-]+$/.test(path)) {
       const id = path.split("/").at(-1);
       return route.fulfill({ json: await page.evaluate((id) => window.fixture.item(id), id) });

@@ -9,12 +9,14 @@ import { createNotesController } from "./notes-controller.js";
 import { createReaderActions, type ReaderTarget } from "./reader-actions.js";
 import { createServiceRecovery } from "./service-recovery.js";
 import { createPdfImporter } from "./pdf-import.js";
+import { preferenceEvents, syncWorkbenchPreferences } from "./preferences-sync.js";
+import { parseWorkbenchPrefs, PREFS_KEY } from "../domain/preferences.js";
+import { normalizeTypography } from "../domain/typography.js";
 import { localMidnightIso } from "../domain/format.js";
 import {
   createWorkbenchStore,
   DEFAULT_PREFS,
   LIBRARY_TAB,
-  prefsOf,
   rangeSelection,
   type MainView,
   type Notice,
@@ -26,10 +28,9 @@ export interface WorkbenchEnv {
   api: WorkbenchApi;
   createSettingsServices?: () => SettingsServices;
   storage?: Pick<Storage, "getItem" | "setItem"> | null;
+  preferenceEvents?: EventTarget | null;
   now?: () => Date;
 }
-
-const PREFS_KEY = "readflow.workbench.prefs.v1";
 
 function message(error: unknown): string {
   return error instanceof Error && error.message ? error.message : "操作失败，请重试。";
@@ -37,14 +38,7 @@ function message(error: unknown): string {
 
 function readPrefs(storage: WorkbenchEnv["storage"]): Partial<Prefs> {
   try {
-    const raw = storage?.getItem(PREFS_KEY);
-    const value = raw ? JSON.parse(raw) : null;
-    if (!value || typeof value !== "object") return {};
-    const prefs: Partial<Prefs> = {};
-    for (const key of Object.keys(DEFAULT_PREFS) as Array<keyof Prefs>) {
-      if (key in value && typeof value[key] === typeof DEFAULT_PREFS[key]) (prefs as Record<string, unknown>)[key] = value[key];
-    }
-    return prefs;
+    return parseWorkbenchPrefs(storage?.getItem(PREFS_KEY));
   } catch {
     return {};
   }
@@ -68,18 +62,8 @@ export function createWorkbench(env: WorkbenchEnv) {
   let noticeId = 0;
   // Functions cannot enter the store's structuredClone snapshots.
   let noticeUndo: (() => void) | undefined;
-  let savedPrefs = JSON.stringify(prefsOf(get()));
-
-  store.subscribe((state) => {
-    const next = JSON.stringify(prefsOf(state));
-    if (next === savedPrefs) return;
-    savedPrefs = next;
-    try {
-      env.storage?.setItem(PREFS_KEY, next);
-    } catch {
-      failure(new Error("偏好未能保存到本机，本次设置仍有效。"), async () => { env.storage?.setItem(PREFS_KEY, next); });
-    }
-  });
+  const stopPreferences = syncWorkbenchPreferences(store, env.storage, env.preferenceEvents === undefined ? preferenceEvents(env.storage) : env.preferenceEvents,
+    (retry) => failure(new Error("偏好未能保存到本机，本次设置仍有效。"), retry), setPrefs);
 
   function notify(text: string, tone: Notice["tone"] = "info", undo?: () => void, actionLabel = "撤销") {
     noticeId += 1;
@@ -213,7 +197,7 @@ export function createWorkbench(env: WorkbenchEnv) {
 
   function setPrefs(changes: Partial<Prefs>) {
     const sortChanged = ("sort" in changes && changes.sort !== get().sort) || ("order" in changes && changes.order !== get().order);
-    store.actions.patch(changes);
+    store.actions.patch({ ...changes, ...normalizeTypography({ ...get(), ...changes }) });
     if (sortChanged) void refreshList();
   }
 
@@ -286,7 +270,7 @@ export function createWorkbench(env: WorkbenchEnv) {
     notify,
     failure,
     retryService: recovery.retry,
-    dispose: recovery.dispose,
+    dispose: () => { stopPreferences(); recovery.dispose(); },
     setLibraryOrder: (order: string[] | null) => { libraryOrder = order; },
     setShortcuts: (shortcutsOpen: boolean) => store.actions.patch({ shortcutsOpen }),
     dismissNotice,

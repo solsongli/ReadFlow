@@ -40,5 +40,5 @@ export function WindowDropZone() {
     const observer = new MutationObserver(scan); observer.observe(document.body, { childList: true, subtree: true }); scan();
     return () => { observer.disconnect(); rootCleanup(); frames.forEach((cleanup) => cleanup()); };
   }, [wb]);
-  return description ? <div role="status" aria-label="文件拖放导入" className="pointer-events-none fixed inset-0 z-[100] flex items-center justify-center bg-wb-overlay backdrop-blur-sm"><div className="flex items-center gap-3 rounded-xl bg-wb-panel px-7 py-5 text-[16px] font-medium shadow-wb-pop"><FileUp size={24} aria-hidden="true" />{description}</div></div> : null;
+  return description ? <div role="status" aria-label="文件拖放导入" className="pointer-events-none fixed inset-0 z-[100] flex items-center justify-center bg-wb-overlay backdrop-blur-sm"><div className="flex items-center gap-3 rounded-xl bg-wb-panel px-7 py-5 text-[1rem] font-medium shadow-wb-pop"><FileUp size={24} aria-hidden="true" />{description}</div></div> : null;
 }

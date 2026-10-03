@@ -2,7 +2,7 @@
 
 /* 悬浮窗内 Markdown / AI 内容 */
 .reader-float-markdown-content {
-  font-size: 13px;
+  font-size: calc(13px * var(--readflow-ui-scale, 1));
   line-height: 1.55;
   color: var(--ink);
 }
@@ -18,7 +18,7 @@
   padding: 8px 18px 76px;
 }
 .reader-notes-panel--workspace .reader-markdown-content {
-  font-size: 14px;
+  font-size: calc(14px * var(--readflow-ui-scale, 1));
   line-height: 1.68;
 }
 .reader-notes-panel--workspace .reader-markdown-nav {

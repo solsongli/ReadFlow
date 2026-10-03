@@ -721,7 +721,7 @@ def create_connector_router(service: ConnectorService) -> APIRouter:
             if request.method == "GET":
                 if method != "ping":
                     raise ConnectorError("METHOD_NOT_ALLOWED", "This endpoint requires POST.", 405)
-                return HTMLResponse("<!doctype html><html><body>RetainPDF experimental Connector receiver is running. Official Connector 5.0.216 / Firefox 156.0.1 passed synthetic webpage/PDF and arXiv 2503.03480v4 saving; other sites and features remain unverified.</body></html>", headers=headers)
+                return HTMLResponse('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>ReadFlow · Zotero Connector</title></head><body>ReadFlow 正在接收 Zotero Connector 的保存。</body></html>', headers=headers)
             content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
             if method in {"saveAttachment", "saveStandaloneAttachment"}:
                 if content_type != "application/pdf":

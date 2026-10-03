@@ -1,4 +1,5 @@
 import { isWorkbenchScheme, parseWorkbenchEmbed, type WorkbenchScheme } from "../../domain/workbench-embed.js";
+import { validWorkbenchAppearance, workbenchFontStack, type WorkbenchAppearance } from "../../domain/workbench-typography.js";
 // 主题皮肤运行时 API — 自包含版（从 frontend/web/src/shared/theme/theme.ts 复制）
 // 注册表：./registry.ts
 import {
@@ -59,6 +60,12 @@ export function applyWorkbenchScheme(scheme: WorkbenchScheme) {
   document.documentElement.dataset.readerEmbed = "workbench";
   document.documentElement.dataset.readerScheme = scheme;
   applyTheme(scheme === "dark" ? "graphite" : "classic");
+}
+
+export function applyWorkbenchAppearance(appearance: WorkbenchAppearance) {
+  if (!parseWorkbenchEmbed(globalThis.window?.location?.search || "") || !validWorkbenchAppearance(appearance)) return;
+  document.documentElement.style.setProperty("--readflow-ui-font", workbenchFontStack(appearance));
+  document.documentElement.style.setProperty("--readflow-ui-scale", String(appearance.textScale / 100));
 }
 
 export function getStoredTheme(): ThemeId {

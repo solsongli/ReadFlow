@@ -1,5 +1,6 @@
 // Shared, pure protocol for the Reader package and its workbench host.
 import { SOFT_READER_CLOSE_MESSAGE } from "../shared/navigation/soft-reader.js";
+import { validWorkbenchAppearance, type WorkbenchAppearance } from "./workbench-typography.js";
 export { SOFT_READER_CLOSE_MESSAGE };
 export type WorkbenchScheme = "light" | "dark";
 export type ReaderProgressMessage = { type: "readflow:reader-progress"; itemId: string; page: number; pages: number };
@@ -29,9 +30,10 @@ export function validReaderProgress(page: unknown, pages: unknown): page is numb
   return Number.isInteger(page) && Number.isInteger(pages) && Number(page) >= 1
     && Number(pages) >= Number(page) && Number(pages) <= 100000;
 }
-export function parseWorkbenchSchemeMessage(value: unknown): { type: "readflow:scheme"; scheme: WorkbenchScheme } | null {
-  return record(value) && value.type === "readflow:scheme" && isWorkbenchScheme(value.scheme) && fields(value, ["type", "scheme"])
-    ? { type: "readflow:scheme", scheme: value.scheme } : null;
+export function parseWorkbenchSchemeMessage(value: unknown): { type: "readflow:scheme"; scheme: WorkbenchScheme; appearance?: WorkbenchAppearance } | null {
+  if (!record(value) || value.type !== "readflow:scheme" || !isWorkbenchScheme(value.scheme) || !fields(value, ["type", "scheme", "appearance"])) return null;
+  if ("appearance" in value && !validWorkbenchAppearance(value.appearance)) return null;
+  return { type: "readflow:scheme", scheme: value.scheme, ...("appearance" in value ? { appearance: value.appearance as WorkbenchAppearance } : {}) };
 }
 export function trustedWorkbenchMessage(event: { origin: string; source: unknown }, origin: string, source: unknown): boolean {
   return source != null && event.origin === origin && event.source === source;

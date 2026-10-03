@@ -78,7 +78,7 @@
   border-radius: 999px;
   background: var(--accent);
   color: var(--paper);
-  font-size: 10px;
+  font-size: calc(10px * var(--readflow-ui-scale, 1));
   font-weight: 750;
   line-height: 18px;
   text-align: center;

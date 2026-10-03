@@ -55,7 +55,7 @@ export function GroupPicker({ itemIds, children }: { itemIds: string[]; children
   return (
     <PopoverRoot open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
-      <PopoverContent align="start" className="flex w-[300px] flex-col p-1.5 text-[13px]">
+      <PopoverContent align="start" className="flex w-[300px] flex-col p-1.5 text-[0.8125rem]">
         <label className="flex h-8 items-center gap-2 rounded-lg bg-wb-fill px-2.5 text-wb-text-3">
           <Search size={14} aria-hidden="true" />
           <input
@@ -68,7 +68,7 @@ export function GroupPicker({ itemIds, children }: { itemIds: string[]; children
             className="h-full flex-1 border-0 bg-transparent text-wb-text outline-none"
           />
         </label>
-        <div className="wb-scroll max-h-[300px] p-1">
+        <div className="wb-scroll max-h-[18.75rem] p-1">
           {nodes.length === 0 && !text ? <p className="m-0 px-2 py-3 text-wb-text-3">还没有分组，输入名称新建一个。</p> : null}
           {nodes.map((node) => {
             const count = members.counts.get(node.id) ?? 0;
@@ -85,10 +85,10 @@ export function GroupPicker({ itemIds, children }: { itemIds: string[]; children
                     state ? "border-wb-accent bg-wb-accent text-wb-on-accent" : "border-wb-line-strong bg-wb-panel",
                   )}
                 >
-                  <Checkbox.Indicator className="text-[10px] leading-none">{state === "indeterminate" ? "–" : "✓"}</Checkbox.Indicator>
+                  <Checkbox.Indicator className="text-[0.625rem] leading-none">{state === "indeterminate" ? "–" : "✓"}</Checkbox.Indicator>
                 </Checkbox.Root>
                 <label htmlFor={id} className="min-w-0 flex-1 wb-truncate">{node.name}</label>
-                <span className="wb-numeric text-[11.5px] text-wb-text-3">{node.count}</span>
+                <span className="wb-numeric text-[0.71875rem] text-wb-text-3">{node.count}</span>
               </div>
             );
           })}
@@ -100,9 +100,9 @@ export function GroupPicker({ itemIds, children }: { itemIds: string[]; children
               <span className="wb-truncate">新建分组「{text}」并加入</span>
             </button>
           ) : (
-            <span className="px-1.5 text-[11.5px] text-wb-text-3">可多选 · 勾选即加入，取消即移出</span>
+            <span className="px-1.5 text-[0.71875rem] text-wb-text-3">可多选 · 勾选即加入，取消即移出</span>
           )}
-          {members.total > 1 ? <span className="shrink-0 text-[11.5px] text-wb-text-3">{members.total} 篇</span> : null}
+          {members.total > 1 ? <span className="shrink-0 text-[0.71875rem] text-wb-text-3">{members.total} 篇</span> : null}
         </div>
       </PopoverContent>
     </PopoverRoot>

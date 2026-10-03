@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import errno
 import importlib.util
 import json
 import os
@@ -12,6 +13,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -91,19 +93,16 @@ class InternalGuardTests(unittest.IsolatedAsyncioTestCase):
 
 class ConnectorCoexistTests(unittest.TestCase):
     def test_busy_connector_port_keeps_the_owner_and_does_not_disable_library(self):
-        with socket.socket() as owner:
-            owner.bind(("127.0.0.1", 0))
-            owner.listen()
-            port = owner.getsockname()[1]
+        with patch.object(service, "create_loopback_socket", side_effect=OSError(errno.EADDRINUSE, "fixture occupied")) as bind:
+            port = 23119
             app = FastAPI()
             app.state.connector_status = {"status": "disabled"}
             connector, listener = service.prepare_connector(app, port)
             self.assertIsNone(connector)
             self.assertIsNone(listener)
-            self.assertEqual(app.state.connector_status["status"], "coexist")
+            self.assertEqual(app.state.connector_status["status"], "busy")
             self.assertFalse(app.state.connector_status["real_connector_verified"])
-            with socket.create_connection(("127.0.0.1", port), timeout=1):
-                pass
+            bind.assert_called_once_with(port)
 
 
 class ConnectorBridgeConcurrencyTests(unittest.IsolatedAsyncioTestCase):

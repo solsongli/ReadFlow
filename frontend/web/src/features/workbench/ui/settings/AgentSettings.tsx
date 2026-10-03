@@ -77,15 +77,15 @@ export function AgentSettings() {
   return <>
     <SettingsCard title="运行方式" description="保存后沿用现有运行时配置；切换运行方式可能短暂重启 AI 服务。">
       <SettingsRow label="运行模式"><select aria-label="AI 运行模式" className={SETTINGS_INPUT} value={draft.mode} disabled={busy} onChange={(event) => change({ mode: event.target.value as AgentRuntimeMode })}><option value="python">Markdown 检索问答</option><option value="openai">OpenAI 兼容 Agent</option><option value="fx">FX Gateway Agent</option></select></SettingsRow>
-      <SettingsRow label="当前运行"><span className="text-[12px] text-wb-text-3">{agentRuntimeLabel(config.active_runtime)}{polling ? " · 切换中" : ""}</span></SettingsRow>
+      <SettingsRow label="当前运行"><span className="text-[0.75rem] text-wb-text-3">{agentRuntimeLabel(config.active_runtime)}{polling ? " · 切换中" : ""}</span></SettingsRow>
       <SettingsRow label="操作确认"><select aria-label="操作确认方式" className={SETTINGS_INPUT} value={draft.confirmation} disabled={busy} onChange={(event) => change({ confirmation: event.target.value as AgentSettingsDraft["confirmation"] })}><option value="explicit">需要确认</option><option value="green_light">绿灯模式</option></select></SettingsRow>
     </SettingsCard>
-    {draft.confirmation === "green_light" ? <p className="m-0 text-[12px] leading-relaxed text-wb-text-3">AI 可直接执行并应用受支持的 PDF 操作，无需逐步确认；不允许执行 shell 或任意系统命令。</p> : null}
+    {draft.confirmation === "green_light" ? <p className="m-0 text-[0.75rem] leading-relaxed text-wb-text-3">AI 可直接执行并应用受支持的 PDF 操作，无需逐步确认；不允许执行 shell 或任意系统命令。</p> : null}
     {draft.mode !== "fx" ? <SettingsCard title="问答模型">
       <SettingsRow label="API URL">{field("baseUrl", "AI 模型 API URL", "url")}</SettingsRow>
       <SettingsRow label="模型">{field("model", "AI 模型")}</SettingsRow>
       <SettingsRow label="API Key"><SecretField label="AI 模型 API Key" value={draft.modelKey} disabled={busy} placeholder={config.llm_api_key_configured ? "已保存，留空保持" : "尚未填写"} onChange={(event) => change({ modelKey: event.target.value })} /></SettingsRow>
-      <div className="wb-info-row relative flex flex-wrap items-center gap-2 p-3.5"><Button size="sm" disabled={busy} onClick={() => void copyTranslation()}>使用翻译配置</Button><button type="button" onClick={() => wb.openSettings("translation")} className="text-[12px] text-wb-link">前往翻译设置</button></div>
+      <div className="wb-info-row relative flex flex-wrap items-center gap-2 p-3.5"><Button size="sm" disabled={busy} onClick={() => void copyTranslation()}>使用翻译配置</Button><button type="button" onClick={() => wb.openSettings("translation")} className="text-[0.75rem] text-wb-link">前往翻译设置</button></div>
     </SettingsCard> : <SettingsCard title="FX Gateway" description="URL 留空使用官方 Gateway；自定义地址仅支持本机 HTTP 与端口，远程服务请选择 OpenAI 兼容模式。">
       <SettingsRow label="Gateway URL（可选）">{field("gatewayUrl", "FX Gateway URL", "url")}</SettingsRow>
       <SettingsRow label="模型（可选）">{field("gatewayModel", "FX 模型")}</SettingsRow>

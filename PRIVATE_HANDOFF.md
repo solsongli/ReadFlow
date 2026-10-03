@@ -1,6 +1,21 @@
 # RetainPDF 科研阅读版本（ReadFlow）：私有交接快照
 
-## 最新状态（2026-10-02，ReadFlow 0.9.0 交付）
+## 最新状态（2026-10-03，ReadFlow 0.9.2 已在本机安装）
+
+- **用户操作**：用户要求卸载本机 RetainPDF 4.2.5（旧数据保留在 `~/.config/retain-pdf-desktop`，未迁移），改装 ReadFlow。当前已安装 **0.9.2**（`/opt/ReadFlow`），数据在 `~/.config/ReadFlow`。
+- **0.9.1（T9）**：Zotero Connector 正式化。
+  - 设置 → 文献库新增开关，默认开启。
+  - 23119 被占用（例如 Zotero 桌面版）时不抢占、不崩溃，界面显示状态；`GET /api/research/connector/status`。
+  - 环境变量 `RETAIN_PDF_RESEARCH_CONNECTOR_PORT` 仍优先。
+- **0.9.2（T10）**：
+  - 界面字体（预置 + 本机 `fc-list` 字体）、7 档文字大小（Ctrl = / - / 0）、笔记字体；阅读器界面同步，PDF 不受影响。
+  - 迁移旧版「译文排版字体」（同一存储键）。
+- **安装包**：`readflow_0.9.2_amd64.deb`，SHA256 `e9115609eee296af9ee512867040a6cd4a714614b18339fbdf2866ec6b84dedc`。
+- **测试**：web 1996 项 0 失败；桌面 98；后端 222。
+- **待清理**：Connector 状态接口仍带上游内部字段（`client: RetainPDF`、`product_version 4.2.5`、`partial_acceptance`）。
+- **Astra 的 Fast 模式**：用户允许使用；调用时加 `-c 'service_tier="priority"'`，不改 `~/.codex/config.toml`。
+
+## 此前状态（2026-10-02，ReadFlow 0.9.0 交付）
 
 - **目标**：用户要求「和 Astra 配合，交付一版接近正式软件的版本，UI 按 Apple 风格」。
 - **分工**：Claude 负责规划与验收（任务书、代码审阅、复跑测试、Chrome/打包版实测）。Astra（本地 Codex CLI，gpt-6-astra，max 推理）负责实现。

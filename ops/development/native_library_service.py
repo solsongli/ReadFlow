@@ -124,15 +124,14 @@ def create_native_app(data_root: Path, *, internal_token: str, native_base: str,
     except BaseException:
         bridge.close()
         raise
-    app.state.connector_status = {"status": "disabled", "real_connector_verified": False}
+    app.state.connector_status = {"status": "disabled", "port": None, "occupant": None, "real_connector_verified": False}
 
     @app.get("/api/research/connector/status")
     def connector_status():
         status = dict(app.state.connector_status)
         service = getattr(app.state, "connector_service", None)
         if service is not None:
-            status.update(service.status())
-            status["port"] = app.state.connector_status["port"]
+            status = {**service.status(), **status}
         return status
 
     return app
@@ -158,12 +157,12 @@ def prepare_connector(app, port: int | None):
     try:
         listener = create_loopback_socket(port)
     except OSError as exc:
-        app.state.connector_status = {"status": "coexist", "code": "CONNECTOR_PORT_OCCUPIED", "port": port,
-                                      "real_connector_verified": False,
-                                      "message": "The requested port is occupied. Its existing owner was left running."}
+        app.state.connector_status = {"status": "busy", "code": "CONNECTOR_PORT_OCCUPIED", "port": port,
+                                      "occupant": None, "real_connector_verified": False,
+                                      "message": "端口已被占用，现有接收服务保持运行。"}
         if exc.errno != errno.EADDRINUSE:
-            app.state.connector_status.update(status="unsupported", code="CONNECTOR_BIND_UNAVAILABLE",
-                message="The optional Connector could not bind its loopback listener.")
+            app.state.connector_status.update(status="error", code="CONNECTOR_BIND_UNAVAILABLE",
+                message="无法绑定 Connector 本地接收端口。")
         print(f"Optional Connector port {port} is unavailable; no existing listener was changed.", flush=True)
         return None, None
     try:
@@ -178,16 +177,46 @@ def prepare_connector(app, port: int | None):
         connector_app = create_connector_app(service)
     except Exception:
         listener.close()
-        app.state.connector_status = {"status": "unsupported", "code": "CONNECTOR_UNAVAILABLE", "port": port,
-                                      "real_connector_verified": False}
+        app.state.connector_status = {"status": "error", "code": "CONNECTOR_UNAVAILABLE", "port": port,
+                                      "occupant": None, "real_connector_verified": False,
+                                      "message": "Connector 接收模块暂时不可用。"}
         print("Optional Connector adapter is unavailable; the native library remains usable.", flush=True)
         return None, None
     app.state.connector_service = service
-    app.state.connector_status = {"status": "experimental", "port": port, "real_connector_verified": False}
+    app.state.connector_status = {"status": "listening", "port": port, "occupant": None, "real_connector_verified": False}
     return connector_app, listener
 
 
-async def serve(app, *, port: int, connector_port: int | None = None) -> None:
+def initial_connector_status(value: str) -> dict:
+    """Only public connection metadata is accepted from the desktop's preflight."""
+    raw = json.loads(value)
+    if not isinstance(raw, dict) or raw.get("status") not in {"disabled", "busy", "error"}:
+        raise ValueError("Invalid initial Connector status.")
+    port = raw.get("port")
+    if port is not None and (type(port) is not int or not 1024 <= port <= 65535):
+        raise ValueError("Invalid initial Connector port.")
+    result = {"status": raw["status"], "port": port, "occupant": None, "real_connector_verified": False}
+    for key in ("occupant", "message"):
+        if isinstance(raw.get(key), str):
+            result[key] = "".join(char for char in raw[key][:240] if char.isprintable())
+    return result
+
+
+async def serve_connector(app, server, listener) -> None:
+    try:
+        await server.serve(sockets=[listener])
+        if not server.should_exit:
+            raise RuntimeError("Connector stopped unexpectedly")
+    except (Exception, SystemExit):
+        # Uvicorn may raise SystemExit on startup failure; this optional receiver
+        # must never take down the document service sharing its event loop.
+        app.state.connector_status.update(status="error", code="CONNECTOR_SERVER_STOPPED",
+            message="Connector 接收服务已停止，请重启 ReadFlow 后重试。")
+    finally:
+        listener.close()
+
+
+async def serve(app, *, port: int, connector_port: int | None = None, connector_state: dict | None = None) -> None:
     import uvicorn
 
     class ConnectorServer(uvicorn.Server):
@@ -198,6 +227,8 @@ async def serve(app, *, port: int, connector_port: int | None = None) -> None:
 
     listener = create_loopback_socket(port)
     actual_port = listener.getsockname()[1]
+    if connector_state is not None:
+        app.state.connector_status = connector_state
     connector_app, connector_listener = prepare_connector(app, connector_port)
     server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=actual_port,
                             proxy_headers=False, access_log=False, log_level="warning", workers=1))
@@ -207,7 +238,7 @@ async def serve(app, *, port: int, connector_port: int | None = None) -> None:
         if connector_app is not None:
             connector_server = ConnectorServer(uvicorn.Config(connector_app, host="127.0.0.1", port=connector_port,
                 proxy_headers=False, access_log=False, log_level="warning", lifespan="off", workers=1))
-            connector_task = asyncio.create_task(connector_server.serve(sockets=[connector_listener]))
+            connector_task = asyncio.create_task(serve_connector(app, connector_server, connector_listener))
         while not server.started:
             if task.done():
                 await task
@@ -231,6 +262,7 @@ def main() -> None:
     parser.add_argument("--native-base", required=True)
     parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--connector-port", type=int, default=None)
+    parser.add_argument("--connector-state", type=initial_connector_status, default=None)
     args = parser.parse_args()
     if args.port != 0 and not 1024 <= args.port <= 65535:
         parser.error("The API port must be zero or between 1024 and 65535.")
@@ -242,7 +274,7 @@ def main() -> None:
             native_base=args.native_base, api_key=os.environ.pop("RETAIN_PDF_RESEARCH_NATIVE_API_KEY", ""),
             allow_ocr_download=os.environ.get("RETAIN_PDF_ALLOW_OCR_DOWNLOAD") == "1",
             allow_external_models=os.environ.get("RETAIN_PDF_ALLOW_EXTERNAL_MODELS") == "1")
-        asyncio.run(serve(app, port=args.port, connector_port=args.connector_port))
+        asyncio.run(serve(app, port=args.port, connector_port=args.connector_port, connector_state=args.connector_state))
     except (ValueError, OSError, RuntimeError) as exc:
         raise SystemExit("Native research-library startup failed: " + str(exc)) from None
 

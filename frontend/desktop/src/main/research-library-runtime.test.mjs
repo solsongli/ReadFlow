@@ -59,7 +59,7 @@ test("uses the already selected Python and keeps authentication out of arguments
     healthProbe: async (_base, token) => token === invocation[2].env.RETAIN_PDF_RESEARCH_INTERNAL_TOKEN,
   });
   t.after(() => runtime.stop());
-  const starting = runtime.start({ ...settings(entry, root), connectorPort: 23219 });
+  const starting = runtime.start({ ...settings(entry, root), connectorPort: 23219, connectorState: { status: "disabled", port: 23219 } });
   const token = invocation[2].env.RETAIN_PDF_RESEARCH_INTERNAL_TOKEN;
   assert.match(token, /^[a-f0-9]{64}$/);
   child.stderr.write(`redact ${token} and synthetic-desktop-key\n`);
@@ -71,6 +71,7 @@ test("uses the already selected Python and keeps authentication out of arguments
   assert.equal(invocation[2].env.PYTHONPATH, "selected-packages");
   assert.equal(invocation[2].env.RETAIN_PDF_RESEARCH_NATIVE_API_KEY, "synthetic-desktop-key");
   assert.ok(invocation[1].includes("--connector-port"));
+  assert.deepEqual(JSON.parse(invocation[1][invocation[1].indexOf("--connector-state") + 1]), { status: "disabled", port: 23219 });
   assert.ok(!invocation[1].includes(token));
   assert.ok(!invocation[1].includes("synthetic-desktop-key"));
   assert.ok(!logs.join("\n").includes(token));

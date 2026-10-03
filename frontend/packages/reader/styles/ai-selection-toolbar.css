@@ -20,7 +20,7 @@
   border-radius: 6px;
   background: transparent;
   color: var(--ink);
-  font-size: 12px;
+  font-size: calc(12px * var(--readflow-ui-scale, 1));
   line-height: 1.4;
   cursor: pointer;
   transition: background 120ms ease;

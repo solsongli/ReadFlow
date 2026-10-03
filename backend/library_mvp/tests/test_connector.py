@@ -117,12 +117,16 @@ class ProtocolTests(unittest.IsolatedAsyncioTestCase):
     async def test_ping_is_truthful_and_has_only_declared_capabilities(self):
         page = await self.client.get("/connector/ping")
         self.assertEqual(page.status_code, 200)
-        self.assertIn("RetainPDF experimental", page.text)
+        self.assertIn("ReadFlow 正在接收 Zotero Connector 的保存。", page.text)
+        for internal in ("RetainPDF", "experimental", "synthetic", "Firefox", "5.0.216"):
+            self.assertNotIn(internal, page.text)
         self.assertNotIn("Zotero is running", page.text)
         response = await self.post("ping", {"activeURL": "https://example.invalid/ignored"})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers["x-zotero-connector-api-version"], "3")
         self.assertEqual(response.headers["x-zotero-version"], "RetainPDF/4.2.5-experimental")
+        for header in ("x-zotero-version", "x-zotero-connector-api-version"):
+            self.assertEqual(page.headers[header], response.headers[header])
         prefs = response.json()["prefs"]
         for key in ["downloadAssociatedFiles", "supportsAttachmentUpload"]:
             self.assertTrue(prefs[key])

@@ -43,7 +43,7 @@ export function ResearchLibraryView({ api = researchLibraryApi }: { api?: Resear
     if (!load) { setConnector({ state: "unavailable" }); return; }
     const controller = new AbortController(); setConnector({ state: "loading" });
     Promise.resolve().then(() => load(controller.signal)).then((data) => {
-      if (!data || !["experimental", "disabled", "coexist", "unsupported"].includes(data.status)) throw new Error("Unknown Connector status");
+      if (!data || !["listening", "busy", "error", "experimental", "disabled", "coexist", "unsupported"].includes(data.status)) throw new Error("Unknown Connector status");
       if (!controller.signal.aborted) setConnector({ state: "ready", data });
     }).catch(() => { if (!controller.signal.aborted) setConnector({ state: "failed" }); });
     return () => controller.abort();
@@ -175,6 +175,9 @@ function connectorDescription(value: ConnectorState): string {
   if (!("data" in value)) return "浏览器抓取：状态读取失败，文献管理仍可使用。";
   const port = Number.isInteger(value.data.port) && value.data.port! > 0 && value.data.port! <= 65535 ? String(value.data.port) : "未知";
   switch (value.data.status) {
+    case "listening": return `浏览器抓取：ReadFlow 正在接收 Zotero Connector 的保存（127.0.0.1:${port}）。`;
+    case "busy": return `浏览器抓取：端口 ${port} 已被占用，ReadFlow 未启用接收；文献管理仍可使用。`;
+    case "error": return "浏览器抓取：接收服务出错，请在工作台设置中查看状态。";
     case "experimental": {
       const check = value.data.partial_acceptance;
       const publicSample = check?.public_samples?.some((sample) => sample.site === "arxiv.org" && sample.identifier === "2503.03480" && sample.revision === "v4");

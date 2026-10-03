@@ -12,7 +12,7 @@ export async function hardeningBrowser() {
   const favicon = html.match(/<link rel="icon"[^>]+>/)?.[0] ?? "";
   const browser = await chromium.launch({ executablePath: process.env.READFLOW_CHROME_PATH || "/usr/bin/google-chrome", headless: true, args: ["--no-sandbox", "--disable-background-networking", "--disable-component-update", "--disable-sync", "--no-first-run"] });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: "light" });
-  await context.addInitScript(() => { let copied = ""; Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async (value) => { copied = value; }, readText: async () => copied } }); });
+  await context.addInitScript(() => { window.__FRONT_RUNTIME_CONFIG__ = { apiBase: "http://hardening.test" }; let copied = ""; Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async (value) => { copied = value; }, readText: async () => copied } }); });
   const page = await context.newPage(); page.setDefaultTimeout(12000);
   const errors = [], unexpected = [];
   page.on("pageerror", (error) => errors.push(error.name));
@@ -21,6 +21,7 @@ export async function hardeningBrowser() {
     if (url.origin !== "http://hardening.test") { unexpected.push(url.origin); return route.abort(); }
     if (path === "/workbench.html") return route.fulfill({ contentType: "text/html; charset=utf-8", body: `<!doctype html><html lang="zh-CN"><head><title>ReadFlow</title>${favicon}<link rel="stylesheet" href="/dist/css/workbench.css"></head><body><div id="workbench-root"></div><script type="module" src="/fixture.js"></script></body></html>` });
     if (path === "/fixture.js") return route.fulfill({ contentType: "text/javascript", body: bundle.outputFiles[0].text });
+    if (path === "/api/v1/fonts") return route.fulfill({ json: { code: 0, data: { fonts: [{ family: "Source Han Serif SC", files: [], available: true }] } } });
     if (path === "/legacy.html") return route.fulfill({ contentType: "text/html; charset=utf-8", body: '<!doctype html><link rel="stylesheet" href="/legacy.css"><div id="root"></div><script type="module" src="/legacy-fixture.js"></script>' });
     if (path === "/legacy-fixture.js") return route.fulfill({ contentType: "text/javascript", body: legacy.outputFiles.find((file) => file.path.endsWith(".js")).text });
     if (path === "/legacy.css") return route.fulfill({ contentType: "text/css", body: await readFile(resolve(root, "src/app/research-library/styles.css")) });

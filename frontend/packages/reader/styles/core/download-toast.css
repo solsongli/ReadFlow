@@ -27,7 +27,7 @@
 
 
 @utility download-toast-title {
-  font-size: 13px;
+  font-size: calc(13px * var(--readflow-ui-scale, 1));
   font-weight: 700;
   color: var(--ink);
   line-height: 1.3;
@@ -35,7 +35,7 @@
 
 
 @utility download-toast-status {
-  font-size: 12px;
+  font-size: calc(12px * var(--readflow-ui-scale, 1));
   color: color-mix(in srgb, var(--ink) 65%, var(--muted));
   line-height: 1.4;
 }
@@ -70,7 +70,7 @@
 
 
 @utility download-toast-meta {
-  font-size: 11px;
+  font-size: calc(11px * var(--readflow-ui-scale, 1));
   color: var(--muted);
   line-height: 1.35;
 }

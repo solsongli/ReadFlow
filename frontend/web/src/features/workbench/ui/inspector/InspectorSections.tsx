@@ -13,7 +13,7 @@ export function Section({ title, aside, children }: { title: string; aside?: Rea
   return (
     <section aria-label={title} className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <h3 className="m-0 text-[12px] font-semibold text-wb-text-3">{title}</h3>
+        <h3 className="m-0 text-[0.75rem] font-semibold text-wb-text-3">{title}</h3>
         {aside}
       </div>
       {children}
@@ -42,7 +42,7 @@ export function GroupsSection({ row, groups }: { row: WorkbenchRow; groups: Work
           </Chip>
         ))}
         <GroupPicker itemIds={[row.id]}>
-          <button type="button" title="加入分组（G）" className="wb-transition h-[26px] rounded-full border-0 bg-transparent px-2.5 text-[12.5px] text-wb-link hover:bg-wb-hover">加入分组…</button>
+          <button type="button" title="加入分组（G）" className="wb-transition h-[1.625rem] rounded-full border-0 bg-transparent px-2.5 text-[0.78125rem] text-wb-link hover:bg-wb-hover">加入分组…</button>
         </GroupPicker>
       </div>
     </Section>
@@ -53,7 +53,7 @@ export function MetadataSection({ row }: { row: WorkbenchRow }) {
   const wb = useWorkbench();
   return (
     <Section title="信息">
-      <dl className="m-0 overflow-hidden rounded-xl bg-wb-panel-2 text-[13px]">
+      <dl className="m-0 overflow-hidden rounded-xl bg-wb-panel-2 text-[0.8125rem]">
         <Field label="类型">{ITEM_TYPE_LABEL[row.item_type] ?? row.item_type}</Field>
         <Field label="日期">{row.date || "—"}</Field>
         <Field label="出处">
@@ -66,7 +66,7 @@ export function MetadataSection({ row }: { row: WorkbenchRow }) {
           <InlineEdit value={row.citekey} placeholder="设置引用键" label="引用键" className="text-right"
             validate={(value) => (!value || /^[A-Za-z0-9_:\-.]{1,100}$/.test(value) ? null : "只能用字母、数字和 _ : - .")}
             onSave={(citekey) => void wb.updateState(row.id, { citekey }, citekey ? "引用键已固定" : "已恢复自动引用键")} />
-          {row.citekey_pinned ? <span title="清空引用键可恢复自动生成" className="ml-1.5 whitespace-nowrap text-[11px] text-wb-text-3">已固定</span> : null}
+          {row.citekey_pinned ? <span title="清空引用键可恢复自动生成" className="ml-1.5 whitespace-nowrap text-[0.6875rem] text-wb-text-3">已固定</span> : null}
         </Field>
         <Field label="标签"><span className="flex flex-wrap justify-end gap-1">{row.tags.length ? row.tags.map((tag) => <Chip key={tag}>{tag}</Chip>) : "—"}</span></Field>
         <Field label="来源">{SOURCE_LABEL[row.source] ?? row.source}</Field>
@@ -79,8 +79,8 @@ export function AbstractSection({ item }: { item: PaperItem | null }) {
   const [expanded, setExpanded] = useState(false);
   if (!item?.abstract) return null;
   return (
-    <Section title="摘要" aside={<button type="button" aria-expanded={expanded} onClick={() => setExpanded(!expanded)} className="border-0 bg-transparent p-0 text-[12px] text-wb-link">{expanded ? "收起" : "展开"}</button>}>
-      <p className={cn("m-0 text-[13px] leading-[1.55] text-wb-text-2", !expanded && "line-clamp-4")}>{item.abstract}</p>
+    <Section title="摘要" aside={<button type="button" aria-expanded={expanded} onClick={() => setExpanded(!expanded)} className="border-0 bg-transparent p-0 text-[0.75rem] text-wb-link">{expanded ? "收起" : "展开"}</button>}>
+      <p className={cn("m-0 text-[0.8125rem] leading-[1.55] text-wb-text-2", !expanded && "line-clamp-4")}>{item.abstract}</p>
     </Section>
   );
 }

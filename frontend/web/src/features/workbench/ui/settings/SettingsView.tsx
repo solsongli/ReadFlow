@@ -21,13 +21,13 @@ export function SettingsView() {
   const selected = SETTINGS_SECTIONS.find((entry) => entry.id === section)!;
   const Page = PAGES[section];
   return <section aria-label="ReadFlow 设置" className="flex min-h-0 min-w-0 flex-1 flex-col bg-wb-panel">
-    <header className="flex h-[52px] shrink-0 items-center gap-3 border-b border-wb-line-soft px-4"><Button variant="ghost" size="sm" icon={<ChevronLeft size={15} aria-hidden="true" />} onClick={wb.closeSettings}>完成</Button><span className="text-[12px] text-wb-text-3">设置</span></header><ServiceBanner />
+    <header className="flex h-[3.25rem] shrink-0 items-center gap-3 border-b border-wb-line-soft px-4"><Button variant="ghost" size="sm" icon={<ChevronLeft size={15} aria-hidden="true" />} onClick={wb.closeSettings}>完成</Button><span className="text-[0.75rem] text-wb-text-3">设置</span></header><ServiceBanner />
     <div className="flex min-h-0 flex-1">
       <nav aria-label="设置分类" className="wb-scroll w-[184px] shrink-0 border-r border-wb-line-soft bg-wb-sidebar p-2.5">
-        {SETTINGS_SECTIONS.map((entry) => { const Icon = ICONS[entry.id]; return <button key={entry.id} type="button" aria-current={entry.id === section ? "page" : undefined} onClick={() => wb.setSettingsSection(entry.id)} className={cn("wb-transition mb-1 flex min-h-9 w-full items-center gap-2.5 rounded-lg px-2 text-left text-[13px]", entry.id === section ? "bg-wb-selected font-medium" : "hover:bg-wb-hover")}><span aria-hidden="true" className={cn("inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--wb-settings-on-icon)]", COLORS[entry.id])}><Icon size={15} strokeWidth={1.8} /></span>{entry.title}</button>; })}
+        {SETTINGS_SECTIONS.map((entry) => { const Icon = ICONS[entry.id]; return <button key={entry.id} type="button" aria-current={entry.id === section ? "page" : undefined} onClick={() => wb.setSettingsSection(entry.id)} className={cn("wb-transition mb-1 flex min-h-9 w-full items-center gap-2.5 rounded-lg px-2 text-left text-[0.8125rem]", entry.id === section ? "bg-wb-selected font-medium" : "hover:bg-wb-hover")}><span aria-hidden="true" className={cn("inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--wb-settings-on-icon)]", COLORS[entry.id])}><Icon size={15} strokeWidth={1.8} /></span>{entry.title}</button>; })}
       </nav>
       <main aria-label={selected.title} className="wb-scroll min-w-0 flex-1"><div className="mx-auto flex w-full max-w-[850px] flex-col gap-5 px-6 py-7">
-        <div><h1 className="m-0 text-[28px] font-bold tracking-[-0.025em]">{selected.title}</h1>{section !== "about" ? <p className="mb-0 mt-2 text-[13px] text-wb-text-3">{selected.description}</p> : null}</div>
+        <div><h1 className="m-0 text-[1.75rem] font-bold tracking-[-0.025em]">{selected.title}</h1>{section !== "about" ? <p className="mb-0 mt-2 text-[0.8125rem] text-wb-text-3">{selected.description}</p> : null}</div>
         <Page key={section} />
       </div></main>
     </div>

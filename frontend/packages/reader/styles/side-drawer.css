@@ -35,14 +35,14 @@
   gap: 12px;
   padding: 12px 14px;
   border-bottom: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
-  font-size: 14px;
+  font-size: calc(14px * var(--readflow-ui-scale, 1));
 }
 
 .reader-side-drawer-head span {
   display: block;
   margin-top: 3px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: calc(11px * var(--readflow-ui-scale, 1));
   font-weight: 500;
 }
 
@@ -59,7 +59,7 @@
   background: color-mix(in srgb, var(--ink) 6%, transparent);
   color: var(--ink);
   box-shadow: none;
-  font-size: 18px;
+  font-size: calc(18px * var(--readflow-ui-scale, 1));
   line-height: 1;
 }
 

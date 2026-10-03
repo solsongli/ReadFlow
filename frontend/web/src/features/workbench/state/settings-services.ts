@@ -1,12 +1,16 @@
 import { createHeadlessTranslationSettings, createHeadlessAgentSettings } from "@/features/credentials/domain.js";
 import { researchLibraryApi } from "@/platform/api/research-library.js";
 import { createSettingsGlossaries } from "./settings-glossaries.js";
+import { createSettingsConnector } from "./settings-connector.js";
+import { createSettingsFonts } from "./settings-fonts.js";
 
 export function createSettingsServices() {
   return {
     translation: createHeadlessTranslationSettings(),
     agent: createHeadlessAgentSettings(),
     glossaries: createSettingsGlossaries(),
+    connector: createSettingsConnector(),
+    fonts: createSettingsFonts(),
     ocr: {
       modules: researchLibraryApi.ocrModules, preview: researchLibraryApi.ocrPreview,
       install: researchLibraryApi.installOcr, remove: researchLibraryApi.removeOcr, cancel: researchLibraryApi.cancelOcrInstall,

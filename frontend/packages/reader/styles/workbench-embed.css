@@ -1,8 +1,16 @@
-/* Only chrome adopts the workbench font; PDF layers and translated prose keep their layout fonts. */
+/* UI only: PDF canvas/text-layer fonts and page zoom remain owned by PDF.js. */
 html[data-reader-embed="workbench"] :is(
   .reader-workspace-bar,
   .reader-assistant-rail,
   .reader-assistant-dock-header,
+  .reader-assistant-dock,
+  .reader-float-ai,
+  #reader-markdown-panel,
+  .reader-notes-panel,
+  .reader-dialog-backdrop,
+  .reader-region-markdown-popover,
+  .reader-region-copy-toast,
+  .reader-pane-selector-menu,
   .reader-react-hud,
   .reader-fab,
   .reader-notes-panel-head,
@@ -11,12 +19,30 @@ html[data-reader-embed="workbench"] :is(
   .reader-boot-loading,
   .reader-react-error
 ) {
-  --font-sans: "ReadFlow Inter", "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-sans: var(--readflow-ui-font, "ReadFlow Inter", "Noto Sans CJK SC", system-ui, sans-serif);
   --font-display: var(--font-sans);
+  --text-xs: calc(0.75rem * var(--readflow-ui-scale, 1));
+  --text-sm: calc(0.875rem * var(--readflow-ui-scale, 1));
+  --text-base: calc(1rem * var(--readflow-ui-scale, 1));
+  --text-lg: calc(1.125rem * var(--readflow-ui-scale, 1));
+  --text-xl: calc(1.25rem * var(--readflow-ui-scale, 1));
+  --text-2xl: calc(1.5rem * var(--readflow-ui-scale, 1));
   font-family: var(--font-sans);
 }
 html[data-reader-embed="workbench"] .reader-react-hud button,
 html[data-reader-embed="workbench"] .reader-react-hud input,
 html[data-reader-embed="workbench"] .reader-react-hud kbd {
   font-family: inherit;
+}
+html[data-reader-embed="workbench"] .reader-react-hud { max-width: calc(100vw - 2rem); flex-wrap: wrap; }
+html[data-reader-embed="workbench"] .reader-sel-pop-card { flex-wrap: wrap; }
+
+/* Tailwind-based panel content uses these tokens; native PDF text has inline PDF.js sizes. */
+html[data-reader-embed="workbench"] {
+  --text-xs: calc(0.75rem * var(--readflow-ui-scale, 1));
+  --text-sm: calc(0.875rem * var(--readflow-ui-scale, 1));
+  --text-base: calc(1rem * var(--readflow-ui-scale, 1));
+  --text-lg: calc(1.125rem * var(--readflow-ui-scale, 1));
+  --text-xl: calc(1.25rem * var(--readflow-ui-scale, 1));
+  --text-2xl: calc(1.5rem * var(--readflow-ui-scale, 1));
 }

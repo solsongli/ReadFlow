@@ -11,8 +11,8 @@ const QuickCard = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonE
 }>(function QuickCard({ name, description, tone, icon: Icon, className, ...props }, ref) {
   return (
     <button ref={ref} type="button" aria-label={name} className={cn("wb-transition flex h-full w-full min-w-0 flex-col gap-2.5 rounded-[14px] border-0 bg-wb-desk-card p-3.5 text-left shadow-wb-card hover:bg-wb-desk-inset disabled:cursor-not-allowed disabled:opacity-50", className)} {...props}>
-      <span aria-hidden="true" className={cn("inline-flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg text-wb-on-tool", tone)}><Icon size={17} strokeWidth={1.8} /></span>
-      <span className="flex min-w-0 flex-col gap-1"><span className="text-[14px] font-semibold tracking-[-0.01em]">{name}</span><span className="text-[12px] leading-[1.4] text-wb-text-3">{description}</span></span>
+      <span aria-hidden="true" className={cn("inline-flex h-[1.875rem] w-[30px] shrink-0 items-center justify-center rounded-lg text-wb-on-tool", tone)}><Icon size={17} strokeWidth={1.8} /></span>
+      <span className="flex min-w-0 flex-col gap-1"><span className="text-[0.875rem] font-semibold tracking-[-0.01em]">{name}</span><span className="text-[0.75rem] leading-[1.4] text-wb-text-3">{description}</span></span>
     </button>
   );
 });

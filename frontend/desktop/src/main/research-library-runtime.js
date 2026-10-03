@@ -113,7 +113,7 @@ function createResearchLibraryRuntime(options = {}) {
     const serviceEntry = resolveResearchServiceEntry(settings);
     const nativeBase = validateLoopbackBase(settings.backendBase);
     if (!nativeBase || !settings.desktopApiKey) throw new Error("research library requires a loopback native backend");
-    const connectorPort = settings.connectorPort === undefined || settings.connectorPort === ""
+    const connectorPort = settings.connectorPort == null || settings.connectorPort === ""
       ? null : Number(settings.connectorPort);
     if (connectorPort !== null && (!Number.isInteger(connectorPort) || connectorPort < 1024 || connectorPort > 65535)) {
       throw new Error("RETAIN_PDF_RESEARCH_CONNECTOR_PORT must be between 1024 and 65535");
@@ -127,6 +127,7 @@ function createResearchLibraryRuntime(options = {}) {
       .split(settings.desktopApiKey).join("<native-key>");
     const args = ["-B", serviceEntry, "--port", "0", "--data-root", settings.dataRoot, "--native-base", nativeBase];
     if (connectorPort !== null) args.push("--connector-port", String(connectorPort));
+    if (settings.connectorState) args.push("--connector-state", JSON.stringify(settings.connectorState));
     const env = {
       ...(settings.env || process.env),
       PYTHONUNBUFFERED: "1",

@@ -84,7 +84,7 @@ export function debMetadata(pkg, installedSize) {
   const executable = "readflow";
   const installRoot = `/opt/${productName}`;
   const dependencies = [
-    "libc6 (>= 2.35)", "libgcc-s1", "libstdc++6", "ca-certificates",
+    "libc6 (>= 2.35)", "libgcc-s1", "libstdc++6", "ca-certificates", "fontconfig",
     "libgtk-3-0 | libgtk-3-0t64", "libglib2.0-0 | libglib2.0-0t64",
     "libnss3 (>= 3.26)", "libnspr4", "libatk1.0-0 | libatk1.0-0t64",
     "libatk-bridge2.0-0 | libatk-bridge2.0-0t64", "libatspi2.0-0 | libatspi2.0-0t64",

@@ -49,9 +49,9 @@ export function OcrLauncher({ children }: { children: ReactNode }) {
     <PopoverRoot open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent align="start" aria-label="本地 OCR" className="w-[440px] max-w-[calc(100vw-24px)] p-4">
-        <h2 className="m-0 text-[15px] font-semibold">本地 OCR</h2>
-        <p className="mb-3 mt-2 text-[12px] text-wb-text-3">{loading ? "正在检查模块与文献…" : reason}</p>
-        {error ? <p role="alert" className="text-[12px] text-wb-text-2">{error} <Button size="sm" disabled={busy} onClick={() => setAttempt(attempt + 1)}>重试</Button></p> : null}
+        <h2 className="m-0 text-[0.9375rem] font-semibold">本地 OCR</h2>
+        <p className="mb-3 mt-2 text-[0.75rem] text-wb-text-3">{loading ? "正在检查模块与文献…" : reason}</p>
+        {error ? <p role="alert" className="text-[0.75rem] text-wb-text-2">{error} <Button size="sm" disabled={busy} onClick={() => setAttempt(attempt + 1)}>重试</Button></p> : null}
         {!loading ? <div className="wb-scroll max-h-[min(320px,40vh)]">
           {rows.length ? rows.map((row) => {
             const available = canStartOcr(row, jobs);
@@ -59,10 +59,10 @@ export function OcrLauncher({ children }: { children: ReactNode }) {
               <label key={row.id} className="wb-transition flex items-start gap-2 rounded-lg px-2 py-2.5 hover:bg-wb-hover">
                 <input type="checkbox" aria-label={row.title} checked={selected.includes(row.id)} disabled={!ready || !available || busy || Boolean(error)}
                   onChange={(event) => setSelected((ids) => event.target.checked ? [...ids, row.id] : ids.filter((id) => id !== row.id))} className="mt-0.5 accent-wb-text" />
-                <span className="min-w-0 text-[13px]"><span className="line-clamp-2" title={row.title}>{row.title}</span>{!available ? <span className="text-[12px] text-wb-text-3">已有 OCR 任务</span> : null}</span>
+                <span className="min-w-0 text-[0.8125rem]"><span className="line-clamp-2" title={row.title}>{row.title}</span>{!available ? <span className="text-[0.75rem] text-wb-text-3">已有 OCR 任务</span> : null}</span>
               </label>
             );
-          }) : <p className="py-4 text-[12px] text-wb-text-3">没有需要 OCR 的文献。</p>}
+          }) : <p className="py-4 text-[0.75rem] text-wb-text-3">没有需要 OCR 的文献。</p>}
         </div> : null}
         <div className="mt-3 flex items-center justify-end gap-2">
           {!ready || error ? <Button onClick={() => wb.openSettings("ocr")}>打开 OCR 设置</Button> : null}

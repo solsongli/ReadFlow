@@ -45,7 +45,7 @@
   background: color-mix(in srgb, var(--paper) 88%, transparent);
   box-shadow: 0 8px 24px color-mix(in srgb, var(--shadow-color) 7%, transparent);
   font: inherit;
-  font-size: 11.5px;
+  font-size: calc(11.5px * var(--readflow-ui-scale, 1));
   font-weight: 650;
   cursor: pointer;
   transition: color 140ms ease, background 140ms ease, border-color 140ms ease, transform 100ms ease;
@@ -114,7 +114,7 @@
   background: transparent;
   color: color-mix(in srgb, var(--ink) 62%, var(--muted));
   font: inherit;
-  font-size: 11.5px;
+  font-size: calc(11.5px * var(--readflow-ui-scale, 1));
   font-weight: 650;
   cursor: pointer;
   transition: background 130ms ease, color 130ms ease, transform 100ms ease;
@@ -234,7 +234,7 @@
   color: color-mix(in srgb, var(--ink) 72%, var(--muted));
   background: transparent;
   font: inherit;
-  font-size: 12px;
+  font-size: calc(12px * var(--readflow-ui-scale, 1));
   font-weight: 620;
   text-align: left;
   cursor: pointer;
@@ -292,7 +292,7 @@
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   color: var(--ink, var(--ink));
-  font-size: 13px;
+  font-size: calc(13px * var(--readflow-ui-scale, 1));
   font-weight: 600;
   cursor: pointer;
   appearance: none;
@@ -351,7 +351,7 @@
 
 .reader-boot-loading-text {
   text-align: center;
-  font-size: 13px;
+  font-size: calc(13px * var(--readflow-ui-scale, 1));
   font-weight: 600;
   color: var(--ink);
   letter-spacing: -0.01em;

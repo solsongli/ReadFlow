@@ -12,7 +12,7 @@ export const MenuTrigger = DropdownMenu.Trigger;
 export function MenuContent({ className, sideOffset = 4, ...props }: ComponentPropsWithoutRef<typeof DropdownMenu.Content>) {
   return (
     <DropdownMenu.Portal>
-      <DropdownMenu.Content sideOffset={sideOffset} className={cn(SURFACE, "min-w-48 max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-auto p-1.5 text-[13px]", className)} {...props} />
+      <DropdownMenu.Content sideOffset={sideOffset} className={cn(SURFACE, "min-w-48 max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-auto p-1.5 text-[0.8125rem]", className)} {...props} />
     </DropdownMenu.Portal>
   );
 }
@@ -34,7 +34,7 @@ export function MenuItem({
     <DropdownMenu.Item className={cn(ITEM, danger && "text-wb-danger", className)} {...props}>
       <span className="inline-flex w-4 shrink-0 justify-center text-wb-text-3">{icon}</span>
       <span className="flex-1">{children}</span>
-      {shortcut ? <span className="text-[11px] text-wb-text-4">{shortcut}</span> : null}
+      {shortcut ? <span className="text-[0.6875rem] text-wb-text-4">{shortcut}</span> : null}
     </DropdownMenu.Item>
   );
 }
@@ -74,7 +74,7 @@ export function MenuSeparator() {
 }
 
 export function MenuLabel({ children }: { children: ReactNode }) {
-  return <DropdownMenu.Label className="px-2 pb-1 pt-1.5 text-[11px] font-semibold text-wb-text-3">{children}</DropdownMenu.Label>;
+  return <DropdownMenu.Label className="px-2 pb-1 pt-1.5 text-[0.6875rem] font-semibold text-wb-text-3">{children}</DropdownMenu.Label>;
 }
 
 export const PopoverRoot = Popover.Root;

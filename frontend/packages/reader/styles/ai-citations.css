@@ -16,7 +16,7 @@
   border-radius: 4px;
   background: color-mix(in srgb, var(--ink) 6%, transparent);
   color: color-mix(in srgb, var(--ink) 55%, var(--muted));
-  font-size: 11px;
+  font-size: calc(11px * var(--readflow-ui-scale, 1));
   font-weight: 600;
   line-height: 1.4;
   vertical-align: baseline;
@@ -39,7 +39,7 @@
 
 .reader-ai-citations-head {
   color: var(--muted);
-  font-size: 12px;
+  font-size: calc(12px * var(--readflow-ui-scale, 1));
   font-weight: 500;
 }
 
@@ -59,7 +59,7 @@
   border-radius: 8px;
   background: transparent;
   color: var(--muted);
-  font-size: 12px;
+  font-size: calc(12px * var(--readflow-ui-scale, 1));
   line-height: 1.35;
   text-align: left;
   cursor: pointer;

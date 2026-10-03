@@ -1,5 +1,6 @@
 // 工作台状态（纯 reducer）。副作用在 controller.ts；本文件不 import React、不访问网络。
 import type { SettingsSection } from "./settings.js";
+import { DEFAULT_TYPOGRAPHY, type TypographyPrefs } from "./typography.js";
 import { initialNotesState, type NotesState } from "./notes.js";
 import { createStore } from "@/platform/store/store.js";
 import type { PaperItem, ResearchOcrJob } from "@/platform/contracts/research-library.js";
@@ -39,7 +40,7 @@ export interface Notice {
   actionLabel?: string;
 }
 
-export interface Prefs {
+export interface Prefs extends TypographyPrefs {
   sort: WorkbenchSort;
   order: SortOrder;
   layout: ListLayout;
@@ -81,6 +82,7 @@ export interface WorkbenchState extends Prefs {
 export const LIBRARY_TAB = "library";
 
 export const DEFAULT_PREFS: Prefs = {
+  ...DEFAULT_TYPOGRAPHY,
   sort: "added",
   order: "desc",
   layout: "list",
@@ -198,6 +200,6 @@ export function createWorkbenchStore(prefs: Partial<Prefs> = {}) {
 export type WorkbenchStore = ReturnType<typeof createWorkbenchStore>;
 
 export function prefsOf(state: S): Prefs {
-  const { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView } = state;
-  return { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView };
+  const { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont } = state;
+  return { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont };
 }

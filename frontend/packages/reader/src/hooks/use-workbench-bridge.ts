@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { parseWorkbenchEmbed, parseWorkbenchSchemeMessage, trustedWorkbenchMessage, validReaderProgress, type ReaderProgressMessage } from "../domain/workbench-embed.js";
-import { applyWorkbenchScheme } from "../shared/theme/theme.js";
+import { applyWorkbenchAppearance, applyWorkbenchScheme } from "../shared/theme/theme.js";
 
 /** Installed only for explicit workbench embeds, with listeners owned by the mounted Reader. */
 export function useWorkbenchSchemeBridge() {
@@ -10,7 +10,7 @@ export function useWorkbenchSchemeBridge() {
     const receive = (event: MessageEvent) => {
       if (!trustedWorkbenchMessage(event, window.location.origin, window.parent)) return;
       const message = parseWorkbenchSchemeMessage(event.data);
-      if (message) applyWorkbenchScheme(message.scheme);
+      if (message) { applyWorkbenchScheme(message.scheme); if (message.appearance) applyWorkbenchAppearance(message.appearance); }
     };
     window.addEventListener("message", receive);
     if (embed.itemId) window.parent.postMessage({ type: "readflow:reader-ready", itemId: embed.itemId }, window.location.origin);

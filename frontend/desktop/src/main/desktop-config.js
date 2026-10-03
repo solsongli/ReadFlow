@@ -34,6 +34,7 @@ function createDesktopConfigStore(app, options = {}) {
       baseUrl: DEFAULT_BASE_URL,
       developerConfig: {},
       closeToTrayHintShown: false,
+      zoteroConnector: { enabled: true },
     };
   }
 
@@ -175,6 +176,7 @@ function normalizeDesktopConfig(raw = {}) {
       ? { ...raw.developerConfig }
       : {},
     closeToTrayHintShown: !!raw.closeToTrayHintShown,
+    zoteroConnector: { enabled: typeof raw.zoteroConnector?.enabled === "boolean" ? raw.zoteroConnector.enabled : true },
   };
 }
 
@@ -192,6 +194,7 @@ function mergeDesktopConfig(currentConfig, payload = {}) {
     "model",
     "baseUrl",
     "closeToTrayHintShown",
+    "zoteroConnector",
   ];
   for (const key of keys) {
     if (hasOwn(payload, key)) {

@@ -29,7 +29,7 @@
   box-shadow: 0 4px 16px color-mix(in srgb, var(--shadow-color) 6%, transparent);
   backdrop-filter: blur(12px);
   transform: translateX(-50%);
-  font-size: 12px;
+  font-size: calc(12px * var(--readflow-ui-scale, 1));
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--muted, var(--muted));
@@ -192,7 +192,7 @@
   border: 1px solid color-mix(in srgb, var(--ink) 18%, var(--line));
   background: color-mix(in srgb, var(--paper) 88%, transparent);
   color: var(--ink);
-  font-size: 12px;
+  font-size: calc(12px * var(--readflow-ui-scale, 1));
   line-height: 1;
   padding: 6px 10px;
   border-radius: 999px;
@@ -306,7 +306,7 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--ink) 92%, transparent);
   color: var(--paper);
-  font-size: 9px;
+  font-size: calc(9px * var(--readflow-ui-scale, 1));
   font-weight: 750;
   line-height: 1;
   white-space: nowrap;
@@ -348,7 +348,7 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--ink) 86%, transparent);
   color: var(--paper);
-  font-size: 9px;
+  font-size: calc(9px * var(--readflow-ui-scale, 1));
   font-weight: 720;
   line-height: 1;
   white-space: nowrap;
@@ -454,7 +454,7 @@
   padding: 80px 24px;
   text-align: center;
   color: var(--muted, var(--muted));
-  font-size: 13px;
+  font-size: calc(13px * var(--readflow-ui-scale, 1));
   font-weight: 600;
 }
 
@@ -471,7 +471,7 @@
   border-radius: 12px;
   background: color-mix(in srgb, var(--ink) 92%, transparent);
   color: var(--paper);
-  font-size: 12px;
+  font-size: calc(12px * var(--readflow-ui-scale, 1));
   font-weight: 600;
 }
 
@@ -492,7 +492,7 @@
   border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
   background: color-mix(in srgb, var(--warn) 14%, var(--paper, #fff));
   color: var(--ink);
-  font-size: 12px;
+  font-size: calc(12px * var(--readflow-ui-scale, 1));
   font-weight: 600;
   box-shadow: 0 8px 24px color-mix(in srgb, var(--ink) 12%, transparent);
 }
@@ -512,7 +512,7 @@
   border-radius: 999px;
   background: transparent;
   color: inherit;
-  font-size: 16px;
+  font-size: calc(16px * var(--readflow-ui-scale, 1));
   line-height: 1;
   cursor: pointer;
 }
