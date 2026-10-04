@@ -129,6 +129,9 @@ function createResearchLibraryRuntime(options = {}) {
     if (settings.connectorState) args.push("--connector-state", JSON.stringify(settings.connectorState));
     const env = {
       ...(settings.env || process.env),
+      READFLOW_TYPST_BIN: settings.env?.TYPST_BIN || "",
+      READFLOW_TYPST_PACKAGES: settings.env?.TYPST_PACKAGE_PATH || "",
+      READFLOW_FONT_DIRS: settings.env?.RETAIN_PDF_TYPST_FONT_DIRS || "",
       READFLOW_APP_VERSION: settings.appVersion || "",
       PYTHONUNBUFFERED: "1",
       PYTHONUTF8: "1",

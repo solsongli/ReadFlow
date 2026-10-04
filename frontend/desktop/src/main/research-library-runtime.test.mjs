@@ -31,7 +31,9 @@ function fakeChild(pid = 12345) {
 function settings(entry, root) {
   return { serviceEntry: entry, pythonRuntime: { command: "/selected/bundled/python3" },
     dataRoot: path.join(root, "data"), backendBase: "http://127.0.0.1:47100",
-    appVersion: "0.9.5", desktopApiKey: "synthetic-desktop-key", env: { PYTHONHOME: "/selected/bundled", PYTHONPATH: "selected-packages" },
+    appVersion: "0.9.5", desktopApiKey: "synthetic-desktop-key", env: { PYTHONHOME: "/selected/bundled",
+      PYTHONPATH: "selected-packages", TYPST_BIN: "/selected/typst/bin/typst",
+      TYPST_PACKAGE_PATH: "/selected/typst-packages", RETAIN_PDF_TYPST_FONT_DIRS: "/selected/fonts" },
     timeoutMs: 1500 };
 }
 
@@ -70,6 +72,9 @@ test("uses the already selected Python and keeps authentication out of arguments
   assert.equal(invocation[2].env.READFLOW_APP_VERSION, "0.9.5");
   assert.equal(invocation[2].env.PYTHONHOME, "/selected/bundled");
   assert.equal(invocation[2].env.PYTHONPATH, "selected-packages");
+  assert.equal(invocation[2].env.READFLOW_TYPST_BIN, "/selected/typst/bin/typst");
+  assert.equal(invocation[2].env.READFLOW_TYPST_PACKAGES, "/selected/typst-packages");
+  assert.equal(invocation[2].env.READFLOW_FONT_DIRS, "/selected/fonts");
   assert.equal(invocation[2].env.RETAIN_PDF_RESEARCH_NATIVE_API_KEY, "synthetic-desktop-key");
   assert.ok(invocation[1].includes("--connector-port"));
   assert.deepEqual(JSON.parse(invocation[1][invocation[1].indexOf("--connector-state") + 1]), { status: "disabled", port: 23219 });

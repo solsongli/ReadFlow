@@ -1,6 +1,24 @@
 # RetainPDF 科研阅读版本（ReadFlow）：私有交接快照
 
-## 最新状态（2026-10-04，ReadFlow 0.9.5 已在本机安装：仓库整理与收尾）
+## 最新状态（2026-10-04 下午，ReadFlow 0.9.6 已打包待安装：块级翻译）
+
+- **翻译重构第一阶段（X1 / X1b / X1c，Astra 实现，Claude 验收）**：
+  - **拆块**：PyMuPDF 把 PDF 拆成带类型和坐标的块。图、表、公式裁成矢量 PDF。
+  - **翻译**：逐块批量翻译，同时最多 2 个请求，凭据只放在内存里。
+  - **阅读器**：单击块弹出译文卡；已有译文时自动进入块模式。
+  - **排版与导出**：内置 Typst 生成单栏译文 PDF；可导出 LaTeX 工程。
+  - 代码在 `backend/library_mvp/paper_blocks_*.py` 和 `frontend/web/src/features/paper-blocks/`。数据目录 `paper-blocks/` 已登记到 `data_layout.py`。
+- **未新增模型或依赖。** 下一阶段可接入 PP-DocLayout-S（4.8MB）和 PP-OCRv5 mobile（约 21MB）。这些需要打包时联网下载，要先征得用户同意。
+- **安装包**：`readflow_0.9.6_amd64.deb`，SHA256 `73e0f0a4a3a8b1a13169bac89e9502f8e927c40de6f8310f449d0a6f4c05a5ae`。
+  - 用户不在、无法输入密码，所以**还没有安装**，本机仍是 0.9.5。
+  - **不要用 0.9.6 去打开真实数据目录**：它会新建 `paper-blocks/`，0.9.5 遇到不认识的目录会拒绝启动。安装：`sudo dpkg -i frontend/desktop/dist-readflow/readflow_0.9.6_amd64.deb`。
+- **测试**：web 329、桌面 99、后端 325。完整 Electron 的 `--headed` 二次启动通过（数据含 paper-blocks 缓存）。
+- **事故**：验收时误调用了一次**真实 DeepSeek**。
+  - 原因：预览里的翻译设置是 DeepSeek（deepseek-flash）；后端直接请求模型，浏览器的路由拦截管不到。
+  - 发出内容：公开论文 BabelDOC 的 123 个文本块，约 3–4 万 token。
+  - 防范：此后在 Playwright 里把 `/blocks/translate`、`/assistance/translate` 的请求体改写成本地假服务。
+
+## 此前状态（2026-10-04，ReadFlow 0.9.5 已在本机安装：仓库整理与收尾）
 
 - **M1（Astra 实现，Claude 验收）**：
   - 删除 9 个上游 GitHub 工作流，新增 `readflow-ci.yml`：只跑 Web、桌面、文献库测试；不响应标签，不用 secrets，不发布。

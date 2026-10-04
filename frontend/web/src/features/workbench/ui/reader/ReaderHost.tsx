@@ -1,3 +1,4 @@
+import { usePaperBlocks } from "@/features/paper-blocks/index.js";
 import { useReaderAssistance } from "./useReaderAssistance.js";
 import { useReaderCanvas } from "./useReaderCanvas.js";
 import { Settings } from "lucide-react";
@@ -7,15 +8,27 @@ import { buildApiHeaders, buildApiUrl } from "@/platform/config/runtime.js";
 import { cn } from "@/ui/lib/utils.js";
 import type { ReaderTab } from "../../domain/workbench-store.js";
 import { formatGbt7714 } from "../../domain/citation.js";
-import { activeTranslation, translationProgress } from "../../domain/translation.js";
 import { useWb, useWorkbench } from "../context.js";
 export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean }) {
   const wb = useWorkbench();
   const annotationSemantics = useWb((state) => state.annotationSemantics);
   const tone = useWb((state) => state.paperTone);
+  const language = useWb((state) => state.blockLanguage);
+  const disabled = useWb((state) => state.blockModeDisabled);
+  const hintDismissed = useWb((state) => state.blockModeHintDismissed);
   const row = tab.row;
   const canvas = useReaderCanvas(tab.itemId, active, row?.notes_count ?? 0);
   const assistance = useReaderAssistance(tab.itemId, row?.title || "", canvas.addText);
+  const blocks = usePaperBlocks(
+    tab.itemId,
+    tab.attachmentId || "",
+    assistance,
+    active,
+    language,
+    row?.translation.status === "done",
+    (message) => wb.notify(message, "success"),
+    { disabled, hintDismissed, save: (prefs) => wb.setPrefs(prefs) },
+  );
   if (!row || !tab.attachmentId) {
     return (
       <div role="status" className={cn("p-6 text-wb-text-3", !active && "hidden")}>
@@ -29,6 +42,7 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
     <div data-wb-reader-active={active} className={cn("absolute inset-0", !active && "hidden")}>
       <PaperReader
         assistance={assistance}
+        blockOverlay={blocks.overlay}
         {...canvas.ports}
         canvas={canvas.dock}
         panels={{ 画布: canvas.dock }}
@@ -41,9 +55,12 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
         }}
         key={tab.attachmentId}
         toolbarTools={
-          <IconButton label="工作台设置" title="工作台设置（Ctrl ,）" onClick={() => wb.openSettings()}>
-            <Settings size={16} />
-          </IconButton>
+          <>
+            {blocks.tools}
+            <IconButton label="工作台设置" title="工作台设置（Ctrl ,）" onClick={() => wb.openSettings()}>
+              <Settings size={16} />
+            </IconButton>
+          </>
         }
         onFocusChange={(focused) => wb.store.actions.updateTab(tab.id, { focused })}
         metadata={row}
@@ -58,7 +75,11 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
           headers,
         }}
         translated={
-          job ? { url: buildApiUrl("/api/v1", `/jobs/${encodeURIComponent(job)}/pdf`), headers } : undefined
+          blocks.translated
+            ? { url: blocks.translated, headers }
+            : job
+              ? { url: buildApiUrl("/api/v1", `/jobs/${encodeURIComponent(job)}/pdf`), headers }
+              : undefined
         }
         progress={(page, pages) => void wb.readerProgress({ itemId: tab.itemId, page, pages })}
         quote={(text, page, format) =>
@@ -70,15 +91,10 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
           )
         }
         reveal={(id) => void wb.revealNotePaper(id)}
-        translation={{
-          label: translationProgress(row.translation),
-          running: activeTranslation(row.translation),
-          percent: row.translation.percent,
-          start: () => void wb.translations.start([row.id]),
-          cancel: () => void wb.translations.cancel(row.id),
-        }}
+        translation={blocks.translation}
       />
       {canvas.picker}
+      {blocks.panel}
     </div>
   );
 }

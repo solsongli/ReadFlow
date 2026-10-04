@@ -1,4 +1,5 @@
 import { flashcardMock } from "../flashcards/mock.mjs";
+import { blocksMock } from "../paper-blocks/mock.mjs";
 import { assistanceMock } from "./assistance-mock.mjs";
 import { canvasMock } from "../thought-canvas/mock.mjs";
 import { annotationsMarkdown } from "../../src/features/paper-reader/domain/annotations/export.js";
@@ -103,6 +104,7 @@ export async function readerBrowser(query = "", fixture = "tests/paper-reader/fi
       { configured: query.includes("configured") },
     );
     const flashcards = flashcardMock();
+    const blocks = await blocksMock(query);
     await context.route("**/*", async (route) => {
       const url = new URL(route.request().url()),
         p = url.pathname;
@@ -111,8 +113,12 @@ export async function readerBrowser(query = "", fixture = "tests/paper-reader/fi
         return route.abort();
       }
       if (await flashcards.route(route)) return;
+      if (await blocks.route(route)) return;
       if (await assistance.route(route)) return;
       if (await canvases.route(route)) return;
+      if (p === "/api/v1/fonts") return route.fulfill({ json: { fonts: [
+        { family: "Source Han Serif SC", available: true },
+      ] } });
       if (p === "/workbench.html")
         return route.fulfill({
           contentType: "text/html",
@@ -169,7 +175,8 @@ export async function readerBrowser(query = "", fixture = "tests/paper-reader/fi
         return route.fulfill({ json: { bookmarks, seconds } });
       }
       let file;
-      if (/^\/api\/research\/attachments\/[^/]+\/pdf$/.test(p)) file = resolve("tests/fixtures/paper.pdf");
+      if (/^\/api\/research\/attachments\/[^/]+\/pdf$/.test(p))
+        file = resolve(query.includes("blocks") ? "tests/fixtures/blocks/paper.pdf" : "tests/fixtures/paper.pdf");
       if (p === "/api/v1/jobs/task/pdf") file = resolve("tests/fixtures/paper-translated.pdf");
       if (p === "/src/assets/readflow-logo.svg") file = resolve(p.slice(1));
       if (/^\/fixtures\/paper(?:-translated|-100|-no-outline|-images)?\.pdf$/.test(p)) file = resolve("tests" + p);
@@ -198,7 +205,7 @@ export async function readerBrowser(query = "", fixture = "tests/paper-reader/fi
     if (fixture === "tests/paper-reader/fixture.tsx")
       await page.locator('[data-paper-page="1"] .pr-text-layer span').first().waitFor();
     return {
-      flashcards,      browser,
+      flashcards, blocks, browser,
       context,
       page,
       errors,

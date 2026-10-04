@@ -50,6 +50,7 @@ def create_app(data_root: Path, *, bridge: NativeBridge | None = None,
             yield
         finally:
             # Cancel consumers before closing the SQLite connection they share.
+            await asyncio.to_thread(app.state.paper_blocks.close)
             reader_stopped = await asyncio.to_thread(app.state.reader_assistance.close)
             agent_stopped = await asyncio.to_thread(app.state.library_agent.close)
             await asyncio.to_thread(app.state.ocr_jobs.close)
@@ -265,5 +266,7 @@ def create_app(data_root: Path, *, bridge: NativeBridge | None = None,
     register_flashcard_routes(app, store, json_body)
     from .reader_assistance import register_reader_assistance
     register_reader_assistance(app, store, json_body, allowed=allow_external_models)
+    from .paper_blocks_routes import register_paper_blocks
+    register_paper_blocks(app, store, json_body)
 
     return app

@@ -49,6 +49,9 @@ export interface Notice {
 export interface Prefs extends TypographyPrefs {
   reviewNewLimit: number;
   reviewLimit: number;
+  blockLanguage: string;
+  blockModeDisabled: boolean;
+  blockModeHintDismissed: boolean;
   annotationSemantics: Semantics;
   paperTone: "auto" | "white" | "sepia" | "night";
   sort: WorkbenchSort;
@@ -96,6 +99,9 @@ export const LIBRARY_TAB = "library";
 export const DEFAULT_PREFS: Prefs = {
   reviewNewLimit: 20,
   reviewLimit: 200,
+  blockLanguage: "zh-CN",
+  blockModeDisabled: false,
+  blockModeHintDismissed: false,
   paperTone: "auto",
   annotationSemantics: { ...DEFAULT_SEMANTICS },
   ...DEFAULT_TYPOGRAPHY,
@@ -216,6 +222,6 @@ export function createWorkbenchStore(prefs: Partial<Prefs> = {}) {
 export type WorkbenchStore = ReturnType<typeof createWorkbenchStore>;
 
 export function prefsOf(state: S): Prefs {
-  const { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit } = state;
-  return { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit };
+  const { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit, blockLanguage, blockModeDisabled, blockModeHintDismissed } = state;
+  return { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit, blockLanguage, blockModeDisabled, blockModeHintDismissed };
 }

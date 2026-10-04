@@ -26,6 +26,9 @@ def completion_content(body):
         payload = {}
     if not isinstance(payload, dict):
         payload = {}
+    if isinstance(payload.get('blocks'), list):
+        return json.dumps({'blocks': [{'id': block['id'], 'text': translated(block.get('text'))}
+                        for block in payload['blocks']]}, ensure_ascii=False)
     items = payload.get('items', [])
     if not items:
         items = [{'item_id': identity, 'source_text': text.split('风格提示：')[0].split('仅供理解')[0].strip()}

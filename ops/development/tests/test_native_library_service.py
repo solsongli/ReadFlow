@@ -236,6 +236,8 @@ class UsedLibraryRestartTests(unittest.IsolatedAsyncioTestCase):
                 AgentConfig(root / 'agent-config.json').save({
                     'base_url': 'http://127.0.0.1:9/v1', 'model': 'fixture', 'api_key': '',
                 })
+                first.state.paper_blocks.storage.extract(imported['attachment'])
+                self.assertTrue(list((root / 'paper-blocks').glob('*/blocks.json')))
             self.assertTrue(list((root / 'annotation-images').glob('*.png')))
             self.assertTrue(list((root / 'canvas-images').glob('*.png')))
             for _ in range(2):
@@ -248,10 +250,12 @@ class UsedLibraryRestartTests(unittest.IsolatedAsyncioTestCase):
                         response = await client.get('/api/research/healthz', headers={'X-RetainPDF-Internal': 'a' * 64})
                         self.assertEqual(response.status_code, 200)
                     self.assertEqual(len(app.state.store.canvases.get(canvas['id'])['nodes']), 1)
+                    blocks = app.state.paper_blocks.status(imported['item']['id'])['document']
+                    self.assertTrue(blocks['blocks'])
 
     async def test_owned_image_directories_cannot_be_symlinks(self):
         from library_mvp.store import Store, StoreError
-        for name in ('annotation-images', 'canvas-images', 'blobs'):
+        for name in ('annotation-images', 'canvas-images', 'blobs', 'paper-blocks'):
             with tempfile.TemporaryDirectory() as tmp:
                 root = service.prepare_data_root(Path(tmp) / 'library')
                 outside = Path(tmp) / 'outside'

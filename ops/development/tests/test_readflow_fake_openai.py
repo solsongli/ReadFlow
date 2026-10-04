@@ -5,6 +5,12 @@ import json
 
 
 class FakeCompletionTests(unittest.TestCase):
+    def test_readflow_block_batch_preserves_ids_and_protected_fragments(self):
+        rows = [{'id': 'abc', 'text': 'Method __RF_abc_0__'}, {'id': 'def', 'text': 'Result'}]
+        body = {'messages': [{'role': 'user', 'content': json.dumps({'blocks': rows})}]}
+        translated = json.loads(completion_content(body))['blocks']
+        self.assertEqual(translated, [{'id': r['id'], 'text': '【译】' + r['text']} for r in rows])
+
     def test_plain_text_echo_has_test_prefix(self):
         body = {'messages': [{'role': 'user', 'content': '【当前原文开始】Hello【当前原文结束】'}]}
         self.assertEqual(completion_content(body), '【译】Hello')

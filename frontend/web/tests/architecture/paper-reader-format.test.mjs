@@ -12,7 +12,8 @@ function files(root) {
 }
 test("paper reader uses readable line widths rather than compressed modules", () => {
   const errors = [];
-  for (const file of [...files("src/features/paper-reader"), ...files("src/features/thought-canvas"), ...files("src/features/flashcards")]) {
+  for (const file of [...files("src/features/paper-reader"), ...files("src/features/thought-canvas"),
+    ...files("src/features/flashcards"), ...files("src/features/paper-blocks")]) {
     const lines = readFileSync(file, "utf8").split("\n");
     lines.forEach((line, index) => {
       // Long literal text (including Tailwind classes and URLs) is not executable compression.

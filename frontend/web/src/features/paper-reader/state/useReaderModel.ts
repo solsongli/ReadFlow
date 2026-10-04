@@ -306,6 +306,7 @@ export function useReaderModel(ports: ReaderPorts) {
     onTextClick: (event: React.MouseEvent) => {
       const target = hovered.activate(event);
       if (target) {
+        event.preventDefault();
         jump(target.page, target.y, undefined, mode === "translated" ? "source" : mode);
       }
     },

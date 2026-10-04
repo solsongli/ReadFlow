@@ -509,3 +509,35 @@ Web 全量 937 项通过，桌面 lint 与 99 项通过；后端普通套件 277
 - `/api/research/connector/status` 只返回 ReadFlow 公共字段，版本由 `app.getVersion()` 经子进程环境提供，独立服务无版本注入时显示“开发版”。握手 GET/POST ping、协议头与 prefs 没有改动，Connector 全量测试通过。
 - 验证数字、性能与 deb SHA 见 0.9.5 版本说明。日志/截图在 `/tmp/readflow-m1/`。完整 Electron headless 窗口未就绪，已中止隔离检查；包内 Python 服务富数据重启 2/2 通过，桌面两次启动需宿主补验。检查脚本添加 90 秒看门狗、有限退出等待和专属 profile/PID 出生时间校验，不操作其他应用。
 - 验收（Claude，2026-10-04）：预览中逐项核对六项修复，均通过，未拦截到任何外部请求，AI 出题的请求只在点「发送」后出现。PNG 导出发现英文在单词中间断行、来源文字被压扁、缺少批注色条、留白过大，已修复：新增 `thought-canvas/domain/text-wrap.ts` 和 5 项测试，Web 共 322 项通过。重新打包后，在本机正常桌面环境下完成完整 Electron 二次启动，两次都就绪。
+
+## 块级翻译（X1，0.9.6）
+
+- `backend/library_mvp/paper_blocks_{model,extract,graphics,storage,translate,render,service,routes}.py` 为独立实现，不调用或复制上游翻译流水线。`paper-blocks/<sha256>/` 保存版本化块清单、矢量 PDF、PNG 缩略图、译文缓存与生成结果，已集中登记到 `data_layout.py`，沿用所有权与防符号链接检查。
+- schema v1：块 id 由页码、bbox 和文本生成；`anchors` 保留跨栏／跨页段落的全部位置，包含未旋转页面 bbox、原生 PDF bbox、旋转后归一化 view_bbox。页面记录 CropBox、MediaBox、旋转、两套矩阵、文字状态；块记录类型、保护片段、caption_id、asset、extractor 和 confidence。后续版面模型可替换提取器，OCR 可补无文字页的文本，仍输出此 schema。
+- CPU 工作线程提取，PyMuPDF 操作串行；每篇最多一个全文任务，可与单块任务并存；单全文最多两批并行，全服务最多两个模型请求，按 12 块／约 9000 字一批。默认跳过图表本体、公式、页眉页脚、作者与参考文献。占位符要求精确出现一次，批量格式错误只重试对应块，仍失败则保留原文。
+- 沿用 R4 的 `translation_config`、外部模型开关、术语表查询、`run_chat` 超时／脱敏和取消控制。配置仅在任务内存中；取消立即清空配置并中止传输，结束清理引用；不存 Key 或 Key 的哈希。缓存键为块 id、目标语言、URL／模型／术语表指纹，按请求传入设置。模型回显即使使用 JSON Unicode 转义，也会在解码后再次脱敏。
+- 新接口以 `/api/research/workbench/items/{id}/blocks` 为根：GET 状态与清单，POST `/extract`、`/translate`、`/jobs/{job}/cancel`，GET `/files/{name}` 与 `/latex`。提取和翻译返回异步任务；同附件并行任务复用，活动状态 800ms 轮询，闲置 5s。
+- Typst 模板固定，通过 `json()` 读数据，不插值执行文本。已实测内置 0.15.1 支持 `image("crop.pdf")`，优先嵌矢量 PDF，个别素材失败再试 SVG，仍失败则回退原文。图注与图表保持同页；参考文献保留原文，附录图表不因参考文献范围标记而被删除。LaTeX ZIP 使用逐字符转义的 xeCJK 模板和裁剪 PDF，本机无 XeLaTeX，未编译。
+- 桌面从既有资源路径传入 `READFLOW_TYPST_BIN`、`READFLOW_TYPST_PACKAGES`、`READFLOW_FONT_DIRS`；预览走相同主进程解析。源码运行可显式指定这些变量，或查找仓库现有 unpacked 资源；CI 没有内置 Typst 时，仅实排版用例跳过。
+- 前端 `features/paper-blocks/{domain,state,ui}` 通过出口供 ReaderHost 使用；paper-reader 只提供原文 overlay 插槽，不依赖块 API。阅读器全文按钮走新流程；新结果优先，缺少新结果时保留旧 PDF。其余文献库／书桌兼容任务入口和统计暂不迁移，以限制本阶段范围。
+- 块模式在存在当前语言译文时自动开启，手动关闭作为全局安全偏好记住。开启只提取本地结构，单击译文卡里的按钮才调用模型；原有拖选、批注工具和引用／图表点击先处理。图表卡解析对应图注，译文可复制或交给现有笔记、画布、闪卡入口。目标语言在工作台偏好中保存；「导出译文」可下载 PDF 或 LaTeX 工程。
+- 合成素材位于 `frontend/web/tests/fixtures/blocks/`，`generate.py` 使用 Typst 生成双栏 PDF，并生成坐标交叉验证与离线译文样例。`paper-blocks.test.mjs` 用实际 pdf.js 视口检查 CropBox／MediaBox 偏移与四个旋转角度。
+- 离线 UI：`cd frontend/web && node --import ./tests/helpers/register-jsx.mjs tests/paper-blocks/smoke.mjs`。已有阅读器与选段工具的回归使用同目录 `paper-reader/*-smoke.mjs`，浏览器串行且禁用 GPU。测试不调用模型。
+- 性能仅在其他测试及浏览器结束后单独执行：`PYTHONPATH=. <内置 python> -m backend.library_mvp.tests.benchmark_paper_blocks --output /tmp/readflow-x1/benchmark.json`。真实输入仅使用仓库已有普通 PDF，拒绝符号链接；不参考其对应项目源码。
+- 假服务验收：由维护者以 `--allow-external-models` 启动预览后，运行 `python3 ops/development/readflow_fake_openai.py --port 48991`。翻译设置用自定义服务、`http://127.0.0.1:48991/v1`、模型 `readflow-test` 与任意非空测试占位凭据。此流程不依赖 AI 运行时端口。请求是 `/v1/chat/completions`，消息内为 `{"blocks":[{"id","text","type"}]}`，响应 `choices[0].message.content` 为同 id 的 `{"blocks":[{"id","text"}]}` JSON；假服务逐块加「【译】」。
+- 完整验证、样例统计、性能、包校验及二次启动结果见 `docs/readflow/版本说明-0.9.6.md`；日志和截图保存在 `/tmp/readflow-x1/`。本轮不启停预览，不安装 deb，不运行完整 Electron。
+
+
+### X1b 验收返修（仍为 0.9.6）
+
+- 新增 `paper_blocks_lines/text/inline.py`，按物理行保留 bbox、字体、字号、字重、基线和段落信号。提取器升为 heuristic-2；schema v1 兼容扩展 protected.runs、source_lines、figure_text 及 anchor 段落标记，旧缓存字符串与新结构化缓存均可读。
+- 三篇真实样例各有独立结构回归：标题单块、续行字体／行距、架构图／表格的完整几何覆盖、图内文本不进正文、重复边缘文本不进 heading、跨边界没有缩进或段前间距。匹配不依赖具体文章文案。前后统计见 0.9.6 版本说明。
+- 任务区分 extract/block/full，全文仅按 sha256 去重；单块按块 id、语言、配置指纹去重，可与全文共存。每个全文最多两批并行，全服务 semaphore 限制两条请求；取消遍历该任务的全部 RequestControl，立即清理配置引用。
+- 每批返回缓存增量，merge_cache 在锁内重新读取、合并、原子写回。进度在批完成和保存后累计；上下标、本地空白均由占位符映射还原，模型只能返回 id/text，不能提供可执行排版结构。目标语言在提示中使用完整名称。
+- GET blocks 增补 jobs、scope、block_id、language、has_translation、needs_extract；按查询语言读取对应服务指纹缓存。UI 分别追踪全文与当前单块，避免互相禁用按钮；已有当前语言译文自动开启，关闭状态与一次性提示沿用工作台安全 prefs。旧清单只触发本地重提取，不会自动调用模型。
+- Typst 使用固定 rich() 函数从 JSON 的 text/super/sub 生成内容；React InlineRuns 用原生元素，源文偏移按 Unicode 码点处理，无 innerHTML。导出／复制仍使用纯文本字段。
+- Web 329、桌面 99、后端 317（含独立慢测）、启动器／假服务 24 项通过。离线新增 6 组、原块模式 9 组通过，单 Chrome、禁用 GPU，模型用内存桩。样例 PDF 已重写至原验收目录；完整重打与包内二次启动结果见版本说明。
+
+语言缓存上下文只在成功批提交或命中成功缓存后切换；失败的新服务请求不会遮蔽已有译文。不同缓存键合并，同键以最后成功提交的结果为准。
+
+X1b 最终包：224,542,336 字节，SHA-256 `e98831473b752c3373bfacc121bbe9cf1d8707f02c45e591e68d184b654abf3d`；完整构建、内容校验、63 ELF 与包内服务二次启动 2/2 通过。

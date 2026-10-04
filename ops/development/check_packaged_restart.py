@@ -43,6 +43,8 @@ async def seed(resources, root):
         (root / 'optional-ocr/fixture').mkdir(parents=True, exist_ok=True)
         (root / 'optional-ocr/fixture/model.bin').write_bytes(b'synthetic fixture, never loaded')
         AgentConfig(root / 'agent-config.json').save({'base_url': 'http://127.0.0.1:9/v1', 'model': 'fixture', 'api_key': ''})
+        app.state.paper_blocks.storage.extract(imported['attachment'])
+        assert list((root / 'paper-blocks').glob('*/blocks.json'))
 
 
 def check(unpacked, home):
@@ -51,6 +53,9 @@ def check(unpacked, home):
     data = home / 'profile/chromium/data/research-library'
     env = {'PATH': '/usr/bin:/bin', 'LANG': 'C.UTF-8', 'HOME': str(home),
            'XDG_CONFIG_HOME': str(home / '.config'), 'RETAIN_PDF_RESEARCH_CONNECTOR_PORT': '',
+           'READFLOW_TYPST_BIN': str(resources / 'backend/typst/bin/typst'),
+           'READFLOW_TYPST_PACKAGES': str(resources / 'backend/typst-packages'),
+           'READFLOW_FONT_DIRS': str(resources / 'backend/fonts'),
            'PYTHONDONTWRITEBYTECODE': '1'}
     subprocess.run([str(python), '-I', '-B', str(Path(__file__).resolve()), str(unpacked),
                     '--seed', str(data)], env=env, check=True)
@@ -75,12 +80,17 @@ def check(unpacked, home):
                 with urlopen(Request(base + path, headers={'X-RetainPDF-Internal': token}), timeout=5) as response:
                     return json.load(response)
             assert get('/api/research/healthz')['ok']
-            assert len(get('/api/research/items')['items']) == 1
+            items = get('/api/research/items')['items']
+            assert len(items) == 1
+            blocks = get('/api/research/workbench/items/' + items[0]['id'] + '/blocks')
+            assert blocks['document']['blocks']
+            assert blocks['renderer_ready']
             assert len(get('/api/research/workbench/canvases')['items']) == 1
             assert len(get('/api/research/workbench/flashcards')['items']) == 1
             status = get('/api/research/connector/status')
             assert status['status'] == 'disabled' and status['client'] == 'ReadFlow'
-            results.append({'run': number + 1, 'health': True, 'persistent_items': 1, 'connector': 'disabled'})
+            results.append({'run': number + 1, 'health': True, 'persistent_items': 1,
+                            'blocks_cache': True, 'connector': 'disabled'})
         finally:
             child.terminate()
             try:

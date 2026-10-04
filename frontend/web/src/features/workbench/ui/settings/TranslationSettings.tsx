@@ -3,11 +3,22 @@ import { useEffect, useState } from "react";
 import type { TranslationDraft, SettingsFeedback } from "@/features/credentials/domain.js";
 import { Button } from "@/ui/wb/Button.js";
 import { SecretField } from "@/ui/wb/SecretField.js";
-import { useWorkbench } from "../context.js";
+import { useWb, useWorkbench } from "../context.js";
 import { SETTINGS_INPUT, SettingsCard, SettingsRow, SettingsStatus } from "./SettingsParts.js";
 import { RenderFontSettings } from "./RenderFontSettings.js";
 
-export function TranslationSettings() { return <><TranslationServiceSettings /><RenderFontSettings /></>; }
+export function TranslationSettings() {
+  const wb = useWorkbench();
+  const language = useWb((state) => state.blockLanguage);
+  return <><TranslationServiceSettings />
+    <SettingsCard title="块级翻译" description="阅读器块级译文采用内置思源宋体；下方排版字体用于兼容任务。">
+      <SettingsRow label="目标语言">
+      <select aria-label="块翻译目标语言" className={SETTINGS_INPUT} value={language}
+        onChange={(event) => wb.setPrefs({ blockLanguage: event.target.value })}>
+        <option value="zh-CN">中文</option><option value="en">English</option><option value="ja">日本語</option>
+        <option value="de">Deutsch</option><option value="fr">Français</option>
+      </select></SettingsRow></SettingsCard><RenderFontSettings /></>;
+}
 
 function TranslationServiceSettings() {
   const wb = useWorkbench();

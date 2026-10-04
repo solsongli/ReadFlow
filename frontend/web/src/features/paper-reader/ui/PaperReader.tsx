@@ -23,6 +23,7 @@ import { Preview } from "./Preview.js";
 import { SelectionTools } from "./SelectionTools.js";
 export interface PaperReaderProps extends ReaderPorts {
   toolbarTools?: ReactNode;
+  blockOverlay?: (page: number, interactive: boolean) => ReactNode;
   canvas?: ReactNode;
   selectionTools?: ReactNode;
   panels?: Partial<Record<"批注" | "画布" | "AI", ReactNode>>;
@@ -251,6 +252,7 @@ export function PaperReader(ports: PaperReaderProps) {
                 ? undefined
                 : (page) => (
                     <>
+                      {ports.blockOverlay?.(page + 1, c.tool === "select")}
                       <AnnotationLayer page={page} rows={byPage.get(page) ?? []} controller={c} />
                       <CanvasBadges rows={byPage.get(page) ?? []} ports={ports} />
                       <CardBadges rows={byPage.get(page) ?? []} />

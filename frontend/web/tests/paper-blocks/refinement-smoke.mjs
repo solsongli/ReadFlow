@@ -1,0 +1,62 @@
+import assert from "node:assert/strict";
+import { mkdir } from "node:fs/promises";
+import { readerBrowser } from "../paper-reader/browser.mjs";
+const output = "/tmp/readflow-x1b/screenshots";
+await mkdir(output, { recursive: true });
+const env = await readerBrowser("?blocks&configured", "tests/paper-reader/integration-fixture.tsx");
+const { page, blocks } = env;
+const button = name => page.getByRole("button", { name, exact: true });
+async function open() {
+  await page.getByRole("option", { name: "Paper a", exact: true }).dblclick();
+  const input = page.getByRole("spinbutton", { name: "页码" });
+  await input.fill("1"); await input.press("Enter");
+  await page.locator('[data-paper-page="1"] .pr-text-layer span').first().waitFor();
+}
+try {
+  await open();
+  assert.equal(await button("块模式").getAttribute("aria-pressed"), "false");
+  await button("翻译全文").click();
+  await page.getByText("翻译 35%", { exact: true }).first().waitFor();
+  blocks.finish();
+  await page.waitForFunction(() => [...document.querySelectorAll("button")].find(b => b.textContent === "块模式")?.getAttribute("aria-pressed") === "true");
+  await page.getByText("单击段落查看译文；拖动仍是选字和批注", { exact: true }).waitFor();
+  await page.screenshot({ path: output + "/auto-mode-hint.png" });
+  await button("知道了").click();
+  const span = page.locator('[data-paper-page="1"] .pr-text-layer span').filter({ hasText: "useful value" }).first();
+  await span.click();
+  const card = page.getByRole("dialog", { name: "块译文", exact: true });
+  await card.locator("sup").first().waitFor();
+  assert.ok(await card.locator("sub").count());
+  await page.screenshot({ path: output + "/inline-math.png" });
+  await card.getByRole("button", { name: "重新翻译", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: "单块翻译 · 35%" }).waitFor();
+  const single = blocks.requests().at(-1).id;
+  await button("补翻／重新排版").click();
+  await page.getByText("翻译 35%", { exact: true }).first().waitFor();
+  const full = blocks.requests().at(-1).id;
+  assert.notEqual(single, full);
+  assert.equal(blocks.requests().at(-1).block_id, undefined);
+  await page.screenshot({ path: output + "/concurrent-jobs.png" });
+  blocks.finish(single);
+  await page.getByRole("status").filter({ hasText: "单块翻译 · 35%" }).waitFor({ state: "hidden" });
+  await button("取消翻译").click();
+  await button("补翻／重新排版").waitFor();
+  await card.getByRole("button", { name: "关闭", exact: true }).click();
+  await button("块模式").click();
+  await page.reload();
+  await open();
+  assert.equal(await button("块模式").getAttribute("aria-pressed"), "false");
+  assert.equal(await page.getByText("单击段落查看译文；拖动仍是选字和批注", { exact: true }).count(), 0);
+  await button("块模式").click();
+  await page.evaluate(() => window.fixture.wb.setPrefs({ blockLanguage: "en" }));
+  await page.waitForFunction(() => [...document.querySelectorAll("button")].find(b => b.textContent === "块模式")?.getAttribute("aria-pressed") === "false");
+  await page.evaluate(() => window.fixture.wb.setPrefs({ blockLanguage: "zh-CN", theme: "dark" }));
+  await page.waitForFunction(() => [...document.querySelectorAll("button")].find(b => b.textContent === "块模式")?.getAttribute("aria-pressed") === "true");
+  await span.click();
+  await card.locator("sup").first().waitFor();
+  await page.screenshot({ path: output + "/inline-math-dark.png" });
+  assert.deepEqual(env.errors, []); assert.deepEqual(env.unexpected, []);
+  console.log("PASS 6 refinement groups: auto mode, dismissible hint, scripts, independent jobs, persistent opt-out, language scope");
+} finally {
+  await env.browser.close();
+}

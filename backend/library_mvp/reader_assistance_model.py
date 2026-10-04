@@ -53,7 +53,7 @@ def context(value, item):
 
 def mapped_error(error, secret=''):
     if isinstance(error, StoreError):
-        return {'code': error.code, 'message': error.message}
+        return {'code': error.code, 'message': str(error).replace(secret, '[已隐藏]') if secret else str(error)}
     detail = getattr(error, 'safe_error', None)
     if detail:
         return detail
