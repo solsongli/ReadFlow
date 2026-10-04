@@ -31,3 +31,14 @@ class ReadFlowCiTests(unittest.TestCase):
         self.assertIn('--test-concurrency=2', web['scripts']['test'])
         desktop = json.loads((ROOT / 'frontend/desktop/package.json').read_text())
         self.assertIn('--test-concurrency=2', desktop['scripts']['test'])
+
+    def test_lock_links_every_workspace_for_npm_ci(self):
+        # The first GitHub run failed in `npm ci` because three workspace links were missing.
+        lock = json.loads((ROOT / 'package-lock.json').read_text())['packages']
+        for pattern in json.loads((ROOT / 'package.json').read_text())['workspaces']:
+            for manifest in sorted(ROOT.glob(pattern + '/package.json')):
+                path = manifest.parent.relative_to(ROOT).as_posix()
+                package = json.loads(manifest.read_text())
+                self.assertIn(path, lock)
+                self.assertEqual(lock[path].get('version'), package.get('version'), path)
+                self.assertEqual(lock.get('node_modules/' + package['name']), {'resolved': path, 'link': True}, path)

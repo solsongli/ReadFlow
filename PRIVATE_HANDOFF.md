@@ -1,6 +1,27 @@
 # RetainPDF 科研阅读版本（ReadFlow）：私有交接快照
 
-## 最新状态（2026-10-03，ReadFlow 0.9.4 已在本机安装：全新阅读器）
+## 最新状态（2026-10-04，ReadFlow 0.9.5 已在本机安装：仓库整理与收尾）
+
+- **M1（Astra 实现，Claude 验收）**：
+  - 删除 9 个上游 GitHub 工作流，新增 `readflow-ci.yml`：只跑 Web、桌面、文献库测试；不响应标签，不用 secrets，不发布。
+  - 发布约定见 `docs/ops/readflow-release.md`：标签只用 `readflow-vX.Y.Z`。
+- **六项修复**：
+  - 夜间模式下位图保持原色；
+  - 闪卡「让 AI 出题」（沿用 R4 的隐私确认）；
+  - 画布导出 PNG；
+  - 没有笔记时隐藏「查看全部 0 条」；
+  - Connector 状态接口只返回 ReadFlow 字段；
+  - 导入 PDF 时读取 Author / Subject / Keywords。
+- **验收补修**：PNG 导出原先会在英文单词中间断行、把来源文字压扁、缺少批注色条、留白过大。Claude 新增 `thought-canvas/domain/text-wrap.ts` 和 5 项测试，修复后重新打包。
+- **测试**：web 322、桌面 99、后端 285 + 1 项慢基准跳过、CI 约束 2 项。
+- **二次启动**：
+  - 完整 Electron 必须在**有界面的桌面**上验证：`node frontend/desktop/scripts/check-existing-data.mjs <unpacked> --headed`。在 headless 沙箱里窗口不会就绪。
+  - 另有包内服务检查脚本 `ops/development/check_packaged_restart.py`。
+- **安装包**：`readflow_0.9.5_amd64.deb`，224,529,672 字节，SHA256 `ac3c716d20eca5755517490d1ffb3139c1d3229792887aea59d8c00827bfe92b`。已安装，并在真实数据上启动：文献库、AI 服务、Connector 23119 均正常。
+- **快照**：ReadFlow 提交 `8ba567b`，首次运行新 CI。
+- **假服务端口**：以**当次**预览日志为准。端口没有被挪开时用 41160，不要沿用旧日志里的 41161。
+
+## 此前状态（2026-10-03，ReadFlow 0.9.4 已在本机安装：全新阅读器）
 
 - **用户选定方向**：阅读器选 A（批注工作台）+ B（自由画布），要求「完全和现在不一样，一看就是经常读论文的人做的」。
 - **新阅读器**：分 R1–R5 从零重写，代码在 `frontend/web/src/features/paper-reader`。直接使用 pdf.js 4.8（Apache-2.0），不复用上游阅读器代码。
