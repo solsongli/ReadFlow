@@ -1,3 +1,4 @@
+import { PngExport } from "./PngExport.js";
 import { EdgeEditor } from "./EdgeEditor.js";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/ui/wb/Button.js";
@@ -187,7 +188,7 @@ function CanvasSurface({
       <CanvasToolbar
         title={data.name}
         titleControl={titleControl}
-        endControl={endControl}
+        endControl={<><PngExport data={data} surface={g.root} />{endControl}</>}
         gesture={g}
         add={add}
         fit={() => g.setView(fit(data.nodes, size.width, size.height))}

@@ -10,6 +10,7 @@
 @source "../../features/workbench/**/*.{ts,tsx}";
 @source "../../features/paper-reader/**/*.{ts,tsx}";
 @source "../../features/flashcards/**/*.{ts,tsx}";
+@source "../../features/reader-assistance/**/*.{ts,tsx}";
 @source "../../ui/wb/**/*.{ts,tsx}";
 
 @theme inline {
@@ -244,3 +245,5 @@
 .tc-markdown :is(ul,ol) { padding-left: 1.25em; margin: .3em 0; }
 .tc-markdown a { color: var(--wb-link); }
 .tc-edge-label { background: var(--tc-edge-label-bg); color: var(--tc-edge-label-text); }
+
+.pr-page .pr-image-colors { filter: none; mix-blend-mode: normal; display: var(--pr-image-display, none); }

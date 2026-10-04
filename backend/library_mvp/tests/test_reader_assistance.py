@@ -206,3 +206,26 @@ class ReaderAssistanceTests(unittest.IsolatedAsyncioTestCase):
         saved = ReaderConversations(self.store).load(self.item)
         self.assertEqual(len(saved['messages']), 2)
         self.assertTrue(saved['consent_target'])
+
+    async def test_flashcard_suggestion_uses_existing_consent_stream_and_never_creates_card(self):
+        from ops.development.readflow_fake_openai import completion_content
+        calls = []
+        def fake(config, messages, delta=None, **kwargs):
+            calls.append(messages)
+            result = completion_content({'stream': True, 'messages': messages})
+            if delta:
+                delta(result)
+            return result
+        self.service.chat = fake
+        payload = await self.payload(question='请生成一张问答闪卡建议，只返回 front 和 back JSON。')
+        denied = await self.client.post(self.root + '/ask', json={**payload, 'consent': False})
+        self.assertEqual(denied.status_code, 409)
+        self.assertEqual(calls, [])
+        response = await self.client.post(self.root + '/ask', json=payload)
+        self.assertEqual(response.status_code, 200)
+        events = [json.loads(line[6:]) for line in response.text.splitlines() if line.startswith('data: ')]
+        answer = next(event['text'] for event in events if event['type'] == 'done')
+        self.assertEqual(set(json.loads(answer)), {'front', 'back'})
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(self.store.flashcards.list(), [])
+        self.assertEqual(self.store.annotations.list(), [])

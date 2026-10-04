@@ -1,6 +1,6 @@
 {
   "name": "retain-pdf-desktop",
-  "version": "0.9.4",
+  "version": "0.9.5",
   "private": true,
   "description": "ReadFlow research library, bilingual reading and PDF translation desktop application",
   "homepage": "https://github.com/Lsy-aia/ReadFlow",
@@ -11,8 +11,8 @@
   "main": "main.js",
   "scripts": {
     "dev": "node scripts/run-local.mjs",
-    "lint": "eslint --max-warnings=0 main.js preload.js src/main scripts/pack-current-asar.mjs scripts/remote-windows.mjs scripts/run-local.mjs scripts/linux-runtime.mjs scripts/linux-runtime.test.mjs scripts/package-readflow-linux.mjs scripts/package-readflow-linux.test.mjs",
-    "test": "npm run lint && node --test scripts/runtime-prune.test.mjs scripts/linux-runtime.test.mjs src/main/*.test.mjs scripts/package-readflow-linux.test.mjs",
+    "lint": "eslint --max-warnings=0 main.js preload.js src/main scripts/pack-current-asar.mjs scripts/remote-windows.mjs scripts/run-local.mjs scripts/linux-runtime.mjs scripts/linux-runtime.test.mjs scripts/package-readflow-linux.mjs scripts/package-readflow-linux.test.mjs scripts/check-existing-data.mjs",
+    "test": "npm run lint && node --test --test-concurrency=2 scripts/runtime-prune.test.mjs scripts/linux-runtime.test.mjs src/main/*.test.mjs scripts/package-readflow-linux.test.mjs",
     "sync:win-frontend": "node scripts/sync-win-frontend.mjs",
     "install-git-hooks": "sh scripts/install-git-hooks.sh",
     "smoke:frontend-bundle": "node scripts/check-frontend-bundle.mjs",

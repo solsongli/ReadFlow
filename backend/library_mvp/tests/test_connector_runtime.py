@@ -53,6 +53,9 @@ class ConnectorRuntimeTests(unittest.IsolatedAsyncioTestCase):
                     for status in ["listening", "busy", "disabled", "error"]:
                         app.state.connector_status = {"status": status, "port": 23119, "occupant": "Zotero（PID 1234）"}
                         value = (await client.get("/api/research/connector/status")).json()
+                        self.assertEqual(value["client"], "ReadFlow")
+                        self.assertNotIn("partial_acceptance", value)
+                        self.assertNotIn("real_connector_verified", value)
                         self.assertEqual(value["status"], status)
                         self.assertEqual(value["port"], 23119)
                         self.assertEqual(value["occupant"], "Zotero（PID 1234）")

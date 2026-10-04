@@ -32,3 +32,10 @@ class FakeCompletionTests(unittest.TestCase):
         result = completion_content(body)
         self.assertIn('这是假回答 (p. 2)', result)
         self.assertNotIn('【译】', result)
+
+    def test_flashcard_suggestion_is_structured_and_bounded(self):
+        result = completion_content({'stream': True, 'messages': [
+            {'role': 'user', 'content': '请根据以下选段提出一张问答闪卡建议。'}]})
+        value = json.loads(result)
+        self.assertEqual(set(value), {'front', 'back'})
+        self.assertTrue(value['front'] and value['back'])

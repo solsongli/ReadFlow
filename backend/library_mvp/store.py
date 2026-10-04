@@ -398,6 +398,8 @@ class Store:
                 page_count = document.page_count
                 if page_count < 1 or page_count > MAX_PAGES:
                     raise StoreError("PDF_PAGE_LIMIT", "PDF must contain 1 to 2000 pages.")
+                from .pdf_metadata import pdf_metadata
+                suggested_metadata = pdf_metadata(document.metadata or {})
                 suggested_title = ((document.metadata or {}).get("title") or "").strip()[:1000]
         except StoreError:
             raise
@@ -425,7 +427,7 @@ class Store:
                     return result
             if item_id is None:
                 item_id = new_id()
-                self._write_item(item_id, self._metadata({"title": suggested_title or filename.rsplit(".", 1)[0]}),
+                self._write_item(item_id, self._metadata({**suggested_metadata, "title": suggested_title or filename.rsplit(".", 1)[0]}),
                                  created_at=now())
             existing = self.db.execute("SELECT * FROM attachments WHERE item_id=? AND sha256=?", (item_id, digest)).fetchone()
             if existing is not None:

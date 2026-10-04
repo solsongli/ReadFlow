@@ -1,0 +1,8 @@
+# CPU-only packages used by the local-library test suite; no OCR engines or model SDKs.
+fastapi==0.142.1
+starlette==1.7.0
+pydantic==2.13.5
+httpx==0.28.1
+PyMuPDF==1.26.5
+requests==2.32.5
+uvicorn==0.54.0

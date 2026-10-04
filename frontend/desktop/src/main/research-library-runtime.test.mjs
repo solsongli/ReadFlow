@@ -31,7 +31,7 @@ function fakeChild(pid = 12345) {
 function settings(entry, root) {
   return { serviceEntry: entry, pythonRuntime: { command: "/selected/bundled/python3" },
     dataRoot: path.join(root, "data"), backendBase: "http://127.0.0.1:47100",
-    desktopApiKey: "synthetic-desktop-key", env: { PYTHONHOME: "/selected/bundled", PYTHONPATH: "selected-packages" },
+    appVersion: "0.9.5", desktopApiKey: "synthetic-desktop-key", env: { PYTHONHOME: "/selected/bundled", PYTHONPATH: "selected-packages" },
     timeoutMs: 1500 };
 }
 
@@ -67,6 +67,7 @@ test("uses the already selected Python and keeps authentication out of arguments
   child.stdout.write('url":"http://127.0.0.1:49200"}\n');
   assert.equal(await starting, "http://127.0.0.1:49200");
   assert.equal(invocation[0], "/selected/bundled/python3");
+  assert.equal(invocation[2].env.READFLOW_APP_VERSION, "0.9.5");
   assert.equal(invocation[2].env.PYTHONHOME, "/selected/bundled");
   assert.equal(invocation[2].env.PYTHONPATH, "selected-packages");
   assert.equal(invocation[2].env.RETAIN_PDF_RESEARCH_NATIVE_API_KEY, "synthetic-desktop-key");

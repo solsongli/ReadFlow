@@ -497,3 +497,15 @@ Web 全量 937 项通过，桌面 lint 与 99 项通过；后端普通套件 277
 - 离线场景：三种卡型、挖空、编辑、高亮与角标、翻面评分、重新加载后按卡组续复习、回源、书桌、浅深色；两种来源删除选择；AI 成功清空与失败保留。仅一个禁用 GPU 的 Chrome，所有请求拦截为假数据。
 - 慢基准：2000 文献/附件/笔记、20 分组，冷请求 190.75 ms、均值 143.53 ms、P95 194.45 ms；仅最后单独运行一次。随后发现并修复卡组断点，补跑前端验证与打包，未重复或并行做性能测量。
 - 日志、截图及审计清单：`/tmp/readflow-r5/`。安装包信息见 0.9.4 版本说明；不启停预览、不安装或启动成品。
+
+
+## 仓库整理与收尾（M1，0.9.5）
+
+- 删除 9 个上游工作流，仅新增 `readflow-ci.yml`。具体逐项理由、发布标签约定和二次启动命令见 `docs/ops/readflow-release.md`。根 workspaces 和 lockfile 保持一致；CI 使用 Node 22 与已实测版本的 Python 3.11 依赖，不打包、不跑 Rust、不用 secrets。后端黄金请求体测试依赖 Node/esbuild，backend job 也安装根 npm 依赖并构建共享包。
+- PDF 图片原色：从 pdf.js operator list 解析图像操作，累积 save/restore、Form 与仿射变换，得到页面四边形；只分配图像外接区域位图，原色覆盖在夜间 PDF 上。随离屏页清空像素；原图和恢复层同时显示，避免短暂负片。矢量图不识别，复杂透明/裁剪区域是已知局限。
+- 将 ReadFlow 自有 R4 会话端口抽到 `features/reader-assistance`，避免 paper-reader 与 flashcards 相互依赖。AI 出题仍通过 `/workbench/items/{id}/assistance/ask`，沿用服务指纹、隐私确认、外部模型开关、流式传输与错误脱敏；只将有效 front/back JSON 建议填入表单，不自动保存。已补取消信号和跨服务确认重置。
+- PNG 使用 Canvas 2D 与现有连线路由绘制整个逻辑图，不依赖视口裁剪和新依赖；包含图片、卡片、元数据、分组、连线与标签。读取现有主题令牌，限制为最长边 8192 / 1600 万像素。
+- 空笔记卡不显示“查看全部 0 条”。PDF 新建条目保守读取 Author/Subject/Keywords，不覆盖已有条目；工具名过滤、逗号倒装姓名与多作者均有测试。
+- `/api/research/connector/status` 只返回 ReadFlow 公共字段，版本由 `app.getVersion()` 经子进程环境提供，独立服务无版本注入时显示“开发版”。握手 GET/POST ping、协议头与 prefs 没有改动，Connector 全量测试通过。
+- 验证数字、性能与 deb SHA 见 0.9.5 版本说明。日志/截图在 `/tmp/readflow-m1/`。完整 Electron headless 窗口未就绪，已中止隔离检查；包内 Python 服务富数据重启 2/2 通过，桌面两次启动需宿主补验。检查脚本添加 90 秒看门狗、有限退出等待和专属 profile/PID 出生时间校验，不操作其他应用。
+- 验收（Claude，2026-10-04）：预览中逐项核对六项修复，均通过，未拦截到任何外部请求，AI 出题的请求只在点「发送」后出现。PNG 导出发现英文在单词中间断行、来源文字被压扁、缺少批注色条、留白过大，已修复：新增 `thought-canvas/domain/text-wrap.ts` 和 5 项测试，Web 共 322 项通过。重新打包后，在本机正常桌面环境下完成完整 Electron 二次启动，两次都就绪。

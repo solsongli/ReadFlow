@@ -14,6 +14,8 @@ def translated(value):
 def completion_content(body):
     messages = body.get('messages', [])
     user = str(next((m.get('content', '') for m in reversed(messages) if m.get('role') == 'user'), ''))
+    if '闪卡建议' in user:
+        return json.dumps({'front': '这段证据支持什么结论？', 'back': '这是仅供验收的闪卡建议。'}, ensure_ascii=False)
     system = '\n'.join(str(m.get('content', '')) for m in messages if m.get('role') == 'system')
     if 'Cite known pages as' in system and 'Context:' in system:
         return '这是假回答 (p. 2)。\n\n' + '这是本地假服务的流式问答测试，不代表论文结论。' * 5

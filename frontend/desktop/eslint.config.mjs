@@ -18,7 +18,7 @@ const nodeGlobals = {
 
 export default [
   {
-    files: ["main.js", "preload.js", "src/main/**/*.js", "src/main/**/*.mjs", "scripts/run-local.mjs", "scripts/linux-runtime*.mjs", "scripts/package-readflow-linux*.mjs"],
+    files: ["main.js", "preload.js", "src/main/**/*.js", "src/main/**/*.mjs", "scripts/run-local.mjs", "scripts/check-existing-data.mjs", "scripts/linux-runtime*.mjs", "scripts/package-readflow-linux*.mjs"],
     languageOptions: {
       ecmaVersion: "latest",
       globals: nodeGlobals,
@@ -29,7 +29,7 @@ export default [
     },
   },
   {
-    files: ["src/main/**/*.mjs", "scripts/run-local.mjs", "scripts/linux-runtime*.mjs", "scripts/package-readflow-linux*.mjs"],
+    files: ["src/main/**/*.mjs", "scripts/run-local.mjs", "scripts/check-existing-data.mjs", "scripts/linux-runtime*.mjs", "scripts/package-readflow-linux*.mjs"],
     languageOptions: {
       sourceType: "module",
     },

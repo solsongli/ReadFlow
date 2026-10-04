@@ -33,7 +33,7 @@ function Fixture() {
         localStorage.setItem("fixture-tone", value);
       }}
       source={{
-        url: `/fixtures/${large ? "paper-100" : fallback ? "paper-no-outline" : "paper"}.pdf`,
+        url: `/fixtures/${location.search.includes("images") ? "paper-images" : large ? "paper-100" : fallback ? "paper-no-outline" : "paper"}.pdf`,
         headers: {},
       }}
       translated={{ url: "/fixtures/paper-translated.pdf", headers: {} }}

@@ -41,9 +41,13 @@ export interface EvidenceResult {
 export interface AiStatus { status: string; model_verified: boolean; message: string }
 
 export interface ConnectorStatus {
-  status: "listening" | "busy" | "disabled" | "error" | "experimental" | "coexist" | "unsupported";
-  port?: number | null; occupant?: string | null; real_connector_verified: boolean; code?: string; message?: string;
-  partial_acceptance?: { tested_at: string; connector_version: string; browser: string; fixture: string; passed: string[]; public_samples?: Array<{ site: string; identifier: string; revision: string }> };
+  client: "ReadFlow";
+  product_version: string;
+  status: "listening" | "busy" | "disabled" | "error";
+  port?: number | null;
+  occupant?: string | null;
+  code?: string;
+  message?: string;
 }
 
 export interface ResearchAgentStatus { configured: boolean; base_url: string; model: string; api_key_configured?: boolean; external_models_allowed: boolean; model_verified: false; claim_support_verified: false; local_search_available: boolean }

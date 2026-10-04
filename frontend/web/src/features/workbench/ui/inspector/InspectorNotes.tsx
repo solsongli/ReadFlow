@@ -15,6 +15,6 @@ export function InspectorNotes({ row, item }: { row: WorkbenchRow; item: PaperIt
     </button>)}
     {!notes.length ? <p className="m-0 px-3.5 py-3 text-[0.75rem] text-wb-text-3">{item ? "还没有笔记，写下你的第一个想法。" : "正在读取笔记…"}</p> : null}
     <button type="button" onClick={() => void wb.notes.createFor(row)} className="wb-info-row wb-transition relative block w-full px-3.5 py-2.5 text-left text-[0.75rem] text-wb-link hover:bg-wb-hover">新建笔记</button>
-    <button type="button" onClick={() => void wb.notes.open(row)} className="wb-info-row wb-transition relative block w-full px-3.5 py-2.5 text-left text-[0.75rem] text-wb-link hover:bg-wb-hover">查看全部 {row.notes_count} 条</button>
+    {row.notes_count > 0 ? <button type="button" onClick={() => void wb.notes.open(row)} className="wb-info-row wb-transition relative block w-full px-3.5 py-2.5 text-left text-[0.75rem] text-wb-link hover:bg-wb-hover">查看全部 {row.notes_count} 条</button> : null}
   </div></section>;
 }

@@ -1,3 +1,4 @@
+import { AiSuggestion } from "./AiSuggestion.js";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/ui/wb/Button.js";
 import { cloze, type Card, type CardKind, type CardSource, type Deck } from "../domain/model.js";
@@ -116,6 +117,7 @@ export function CardEditor({
             </button>
           ))}
         </div>
+        <AiSuggestion source={draft} kind={kind} apply={(value) => { setFront(value.front); setBack(value.back); }} />
         {kind === "cloze" ? (
           <div>
             <p className="text-wb-text-3">在原文中选词，再点「挖空」。</p>

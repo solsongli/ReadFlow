@@ -47,7 +47,9 @@ export function assistanceMock(query) {
       return true;
     }
     if (value.remember) session.consent_target = status.target;
-    const text = "这是假回答 (p. 2)\n\n**本地证据**，请核对原文。";
+    const text = value.question.includes("闪卡建议")
+      ? JSON.stringify({ front: "这段证据支持什么结论？", back: "这是仅供验收的闪卡建议。" })
+      : "这是假回答 (p. 2)\n\n**本地证据**，请核对原文。";
     session.messages.push({
       id: String(session.messages.length),
       role: "user",

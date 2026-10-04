@@ -1,3 +1,4 @@
+import { restoreImageColors } from "../state/image-colors.js";
 import { rasterRatio } from "../domain/navigation.js";
 import { useEffect, useRef, useState } from "react";
 import { TextLayer, type PDFDocumentProxy, type PageSize, type renderQueue } from "../state/document.js";
@@ -34,6 +35,7 @@ export function PdfPage({
   painted: () => void;
   overlay?: React.ReactNode;
 }) {
+  const imageColors = useRef<HTMLCanvasElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null),
     text = useRef<HTMLDivElement>(null);
   const [links, setLinks] = useState<LinkBox[]>([]),
@@ -43,8 +45,11 @@ export function PdfPage({
     let gone = false,
       task: { cancel: () => void } | undefined,
       layer: TextLayer | undefined;
+    const imageTarget = imageColors.current!;
     const target = canvas.current!,
       container = text.current!;
+    target.style.visibility = "hidden";
+    imageTarget.style.visibility = "hidden";
     queue.run(async () => {
       if (gone) {
         return;
@@ -68,6 +73,12 @@ export function PdfPage({
         if (gone) {
           return;
         }
+        await restoreImageColors(page, target, imageTarget, viewport, ratio, () => gone).catch(() => {
+          if (!gone) setError("本页图片原色恢复失败；文字与阅读仍可用。");
+        });
+        if (gone) return;
+        target.style.visibility = "visible";
+        imageTarget.style.visibility = "visible";
         painted();
         const content = await page.getTextContent();
         if (gone) {
@@ -105,6 +116,7 @@ export function PdfPage({
       task?.cancel();
       layer?.cancel();
       target.width = target.height = 0;
+      imageTarget.width = imageTarget.height = 0;
       container.replaceChildren();
     };
   }, [pdf, number, scale, queue]);
@@ -141,6 +153,11 @@ export function PdfPage({
       onMouseLeave={onLeave}
     >
       <canvas ref={canvas} aria-label={`第 ${number} 页`} className="absolute inset-0 h-full w-full" />
+      <canvas
+        ref={imageColors}
+        aria-hidden="true"
+        className="pr-image-colors pointer-events-none absolute inset-0 h-full w-full"
+      />
       <div ref={text} className="pr-text-layer" style={{ "--scale-factor": scale } as React.CSSProperties} />
       {links.map((link, index) => {
         const [x1, y1, x2, y2] = link.rect;

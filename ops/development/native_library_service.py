@@ -126,11 +126,8 @@ def create_native_app(data_root: Path, *, internal_token: str, native_base: str,
 
     @app.get("/api/research/connector/status")
     def connector_status():
-        status = dict(app.state.connector_status)
-        service = getattr(app.state, "connector_service", None)
-        if service is not None:
-            status = {**service.status(), **status}
-        return status
+        from library_mvp.connector_status import public_connector_status
+        return public_connector_status(app.state.connector_status)
 
     return app
 

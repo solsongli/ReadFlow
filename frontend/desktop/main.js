@@ -130,6 +130,7 @@ async function startDesktopGateway({ apiPort, backendRoot, pythonRuntime, env })
     updateSplashProgress(88, "正在启动文献管理", "正在连接独立本地文献库");
     await researchLibraryRuntime.start({
       appRoot: __dirname,
+      appVersion: app.getVersion(),
       backendRoot,
       pythonRuntime,
       env,

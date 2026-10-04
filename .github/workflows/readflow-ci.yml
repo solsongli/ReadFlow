@@ -1,0 +1,70 @@
+name: ReadFlow CI
+"on":
+  push:
+    branches: [checkpoint-20261001]
+  pull_request: {}
+  workflow_dispatch: {}
+permissions:
+  contents: read
+env:
+  GOMAXPROCS: '2'
+  UV_THREADPOOL_SIZE: '2'
+  PYTHONDONTWRITEBYTECODE: '1'
+jobs:
+  web:
+    if: github.ref_type != 'tag'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: readflow-web-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm --prefix frontend/web run typecheck
+      - run: npm --prefix frontend/web run build
+      - run: npm --prefix frontend/web test
+  desktop:
+    if: github.ref_type != 'tag'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: readflow-desktop-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: sudo apt-get update && sudo apt-get install -y patchelf binutils gcc
+      - run: npm --prefix frontend/desktop test
+  backend:
+    if: github.ref_type != 'tag'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: readflow-backend-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: backend/library_mvp/requirements-ci.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm --prefix frontend/web run prepare:workspace
+      - run: python -m pip install -r backend/library_mvp/requirements-ci.txt
+      - run: python -m unittest discover -s backend/library_mvp/tests
+        env:
+          PYTHONPATH: .
+          READFLOW_BENCHMARK: '0'

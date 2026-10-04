@@ -129,6 +129,7 @@ function createResearchLibraryRuntime(options = {}) {
     if (settings.connectorState) args.push("--connector-state", JSON.stringify(settings.connectorState));
     const env = {
       ...(settings.env || process.env),
+      READFLOW_APP_VERSION: settings.appVersion || "",
       PYTHONUNBUFFERED: "1",
       PYTHONUTF8: "1",
       PYTHONDONTWRITEBYTECODE: "1",
