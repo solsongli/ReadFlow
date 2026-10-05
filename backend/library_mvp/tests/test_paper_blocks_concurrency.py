@@ -37,8 +37,18 @@ class ConcurrentBlocks(unittest.TestCase):
             patch.object(self.service.storage, "extract", return_value=self.doc),
             patch("backend.library_mvp.paper_blocks_service.runtime_paths", return_value=("", "", "")),
             patch(
-                "backend.library_mvp.paper_blocks_service.render",
+                "backend.library_mvp.paper_blocks_outputs.render",
                 return_value={"render_fallback": [], "label_fallback": []},
+            ),
+            patch(
+                "backend.library_mvp.paper_blocks_outputs.render_layout",
+                return_value={
+                    "layout_overflow": [],
+                    "layout_truncated": [],
+                    "render_fallback": [],
+                    "label_fallback": [],
+                    "seconds": 0,
+                },
             ),
         ]
         for p in self.patches:

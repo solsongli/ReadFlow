@@ -24,9 +24,10 @@ export function fitTypography(
   height: number,
   base: number,
   measure = (size: number) => lineCount(text, width, size) * size * 1.18,
+  minimumRatio = 0.65,
 ) {
   const original = Math.max(1, base),
-    minimum = original * 0.65;
+    minimum = original * minimumRatio;
   if (measure(original) <= height) return { size: original, overflow: false };
   if (measure(minimum) > height) return { size: minimum, overflow: true };
   let lo = minimum,

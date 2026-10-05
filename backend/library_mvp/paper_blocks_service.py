@@ -1,17 +1,18 @@
 """Small owned task runner. Credentials live only in running worker arguments, never job snapshots."""
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
 import json
 import threading
 import uuid
 from .store import StoreError
 from .ai_runtime import RequestControl
 from .paper_blocks_storage import BlockStorage, write_json
-from .paper_blocks_model import cache_key, service_fingerprint, EXTRACTOR_VERSION, SKIP
+from .paper_blocks_model import cache_key, EXTRACTOR_VERSION, SKIP
 from .paper_blocks_translate import translate_blocks
 from .paper_blocks_inline import rich_text, source_runs
-from .paper_blocks_render import render, latex_zip, runtime_paths
-from .reader_assistance_model import translation_config, mapped_error
+from .paper_blocks_render import latex_zip, runtime_paths
+from .paper_blocks_outputs import render_snapshot
+from .paper_blocks_options import submission
+from .reader_assistance_model import mapped_error
 from .paper_blocks_labels import translation_units, translated_labels
 from .paper_blocks_transport import token_usage
 from .document_models import revision
@@ -90,30 +91,11 @@ class BlockService:
             "renderer_ready": renderer,
         }
 
-    def start(self, item, body, *, extraction=False):
+    def start(self, item, body, *, extraction=False, render_only=False):
         if self.closed:
             raise StoreError("service_closed", "文献服务正在关闭。", 503)
         entry = self.storage.attachment(item, body.get("attachment_id"))
-        config, terms, fingerprint = {}, [], ""
-        language = body.get("language", "zh-CN")
-        if language not in ("zh-CN", "en", "ja", "de", "fr"):
-            raise StoreError("INVALID_LANGUAGE", "暂不支持该目标语言。")
-        if not extraction:
-            self.assistance.gate()
-            config = translation_config(body.get("translation"))
-            terms = body["translation"].get("glossary_entries") or []
-            identity = body["translation"].get("glossary_id")
-            if identity:
-                try:
-                    glossary = self.assistance.bridge.reader_glossary(identity)
-                    terms = glossary.get("entries", []) if glossary.get("enabled", True) else []
-                except Exception:
-                    config.clear()
-                    raise StoreError("glossary_unavailable", "当前术语表无法读取，请检查设置。", 503) from None
-            if not isinstance(terms, list) or len(json.dumps(terms)) > 100000:
-                config.clear()
-                raise StoreError("INVALID_GLOSSARY", "术语表格式无效或过大。")
-            fingerprint = service_fingerprint(config, terms)
+        config, terms, language, fingerprint = submission(self, entry, body, extraction, render_only)
         scope = "extract" if extraction else "block" if body.get("block_id") else "full"
         with self.lock:
             active = next(
@@ -170,6 +152,7 @@ class BlockService:
                 extraction,
                 body.get("image_text") is not False,
                 body.get("current_page") if type(body.get("current_page")) is int else None,
+                render_only,
             )
             return dict(job)
 
@@ -186,6 +169,7 @@ class BlockService:
         extraction,
         image_text=True,
         current_page=None,
+        render_only=False,
     ):
         token = self.controls[identity]
         secret = config.get("api_key", "")
@@ -207,6 +191,20 @@ class BlockService:
             root = self.storage.directory(entry)
             if extraction:
                 update(status="done", phase="已提取", percent=100)
+                return
+            if render_only:
+                render_snapshot(
+                    self,
+                    entry,
+                    document,
+                    language,
+                    fingerprint,
+                    check,
+                    update,
+                    image_text,
+                    {"usage": token_usage({}), "notices": [], "translation_fallback": []},
+                )
+                update(status="done", phase="完成", percent=100)
                 return
             blocks = document["blocks"]
             title = next((b["text"] for b in blocks if b["type"] == "title"), "")
@@ -298,24 +296,22 @@ class BlockService:
             check()
             if any(cache_key(block, language, fingerprint) in cache for block in blocks):
                 select_context()
-            if not block_id:
-                update(phase="正在排版译文 PDF", percent=90)
-                with self.pdf_lock:
-                    with self.lock:
-                        cache = self.storage.cache(entry)
-                    warnings = render(root, document, cache, language, fingerprint, check, image_text=image_text)
-                check()
-                result = {
-                    "usage": dict(self.jobs[identity]["usage"]),
-                    "image_text": image_text,
-                    "notices": self.policy.notices(config),
-                    "language": language,
-                    "fingerprint": fingerprint,
-                    "revision": datetime.now(timezone.utc).isoformat(),
-                    "translation_fallback": failed,
-                    **warnings,
-                }
-                write_json(root / "result.json", result)
+            if not block_id or self.storage.result(entry):
+                render_snapshot(
+                    self,
+                    entry,
+                    document,
+                    language,
+                    fingerprint,
+                    check,
+                    update,
+                    image_text,
+                    {
+                        "usage": dict(self.jobs[identity]["usage"]),
+                        "notices": self.policy.notices(config),
+                        "translation_fallback": failed,
+                    },
+                )
             update(status="done", phase="完成", percent=100, translation_fallback=failed)
         except Exception as error:
             if token["cancel"].is_set():

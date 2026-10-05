@@ -89,6 +89,8 @@ export function useBlockReading(
           page={page}
           active={active && (enabled || inline) && interactive}
           highlighted={hovered || selected?.id}
+          geometry={status?.document?.pages?.find((p) => p.page === page)}
+          labelHints={inline && imageText}
           expand={inline ? open : undefined}
           open={(block, x, y) => {
             if (["figure", "table"].includes(block.type) && block.asset) {

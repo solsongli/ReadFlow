@@ -22,13 +22,22 @@ def register_paper_blocks(app, store, json_body):
     async def translate(item_id: str, request: Request):
         return service.start(item_id, await json_body(request))
 
+    @app.post(root + "/render", status_code=202)
+    async def render_cached(item_id: str, request: Request):
+        body = await json_body(request)
+        if set(body) - {"attachment_id", "language", "image_text"}:
+            raise StoreError("INVALID_FIELD", "本地排版只接受附件、语言和图内文字选项。")
+        return service.start(item_id, body, render_only=True)
+
     @app.post(root + "/jobs/{identity}/cancel")
     def cancel(item_id: str, identity: str):
         return service.cancel(item_id, identity)
 
     @app.get(root + "/files/{name}")
     def file(item_id: str, name: str, attachment_id: str | None = None):
-        if name != "translated.pdf" and not re.fullmatch(r"[a-f0-9]{24}\.(?:pdf|png)", name):
+        if name not in {"translated.pdf", "translated-layout.pdf"} and not re.fullmatch(
+            r"[a-f0-9]{24}\.(?:pdf|png)", name
+        ):
             raise StoreError("NOT_FOUND", "文件不存在。", 404)
         entry = service.storage.attachment(item_id, attachment_id)
         path = service.storage.directory(entry) / name

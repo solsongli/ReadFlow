@@ -30,6 +30,11 @@ export async function blocksMock(query) {
       }
     });
   }
+  if (query.includes("x7")) {
+    result = { revision: "layout-test", language, layout_ready: true, reflow_ready: true };
+    const label = document?.blocks.find((b) => b.type === "figure" && b.figure_text?.length)?.figure_text[0];
+    if (label) label.translation = "这是用于检查自动缩小和完整悬停提示的较长图内标签";
+  }
   const jobs = [],
     requests = [];
   const active = (job) => ["running", "queued", "cancelling"].includes(job.status);
@@ -57,6 +62,7 @@ export async function blocksMock(query) {
   };
   return {
     requests: () => requests,
+    legacy() { result = { revision: "legacy", language }; },
     publishBatch(text = "【首批译文】") {
       const job = jobs.find((j) => active(j) && j.scope === "full");
       if (!job) return;
@@ -124,6 +130,8 @@ export async function blocksMock(query) {
       if (!/^\/api\/research\/workbench\/items\/[^/]+\/blocks(?:\/|$)/.test(path)) return false;
       if (/\/files\/[a-f0-9]{24}\.pdf$/.test(path)) {
         await route.fulfill({ body: await readFile(`/tmp/readflow-x6/${corpus ? corpus + "/" : ""}assets/${path.split("/").at(-1)}`), contentType: "application/pdf" });
+      } else if (path.endsWith("/files/translated-layout.pdf")) {
+        await route.fulfill({ body: await readFile("/tmp/readflow-x7/fixture/translated-layout.pdf"), contentType: "application/pdf" });
       } else if (path.endsWith("/files/translated.pdf")) {
         await route.fulfill({
           body: await readFile("tests/fixtures/blocks/translated.pdf"),
@@ -138,6 +146,12 @@ export async function blocksMock(query) {
           status: "done",
           percent: 100,
         };
+        jobs.push(job);
+        await route.fulfill({ status: 202, json: job });
+      } else if (path.endsWith("/render")) {
+        requests.push({ render_only: true, ...route.request().postDataJSON() });
+        result = { revision: "local-render", language, layout_ready: true, reflow_ready: true };
+        const job = { id: "local-render", scope: "full", phase: "完成", status: "done", percent: 100 };
         jobs.push(job);
         await route.fulfill({ status: 202, json: job });
       } else if (path.endsWith("/translate")) {

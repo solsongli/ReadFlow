@@ -140,11 +140,11 @@ try {
   checks.push("failed request retry, new Typst PDF and comparison mode");
   await button("导出译文").click();
   const pdfDownload = page.waitForEvent("download");
-  await page.getByRole("menuitem", { name: "下载译文 PDF", exact: true }).click();
-  assert.equal((await pdfDownload).suggestedFilename(), "ReadFlow-译文.pdf");
+  await page.getByRole("menuitem", { name: "重排 PDF", exact: true }).click();
+  assert.equal((await pdfDownload).suggestedFilename(), "ReadFlow-重排译文.pdf");
   await button("导出译文").click();
   const latexDownload = page.waitForEvent("download");
-  await page.getByRole("menuitem", { name: "导出 LaTeX 工程", exact: true }).click();
+  await page.getByRole("menuitem", { name: "LaTeX 工程", exact: true }).click();
   assert.equal((await latexDownload).suggestedFilename(), "ReadFlow-LaTeX.zip");
   checks.push("PDF and LaTeX downloads");
 
@@ -154,9 +154,10 @@ try {
     .filter({ hasText: "Vector method diagram" })
     .first();
   await diagram.click();
-  await card.getByText(/【译】\s*Figure\s*1/).waitFor();
+  const figure = page.getByRole("dialog", { name: "图表放大", exact: true });
+  await figure.getByText(/【译】\s*Figure\s*1/).waitFor();
   await page.screenshot({ path: output + "/figure-caption.png" });
-  await card.getByRole("button", { name: "关闭", exact: true }).click();
+  await figure.getByRole("button", { name: "关闭", exact: true }).click();
   checks.push("figure click resolves its translated caption");
   const unmarked = page
     .locator('[data-annotation-source=true] [data-paper-page="1"] .pr-text-layer span')

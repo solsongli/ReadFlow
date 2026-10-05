@@ -11,6 +11,7 @@ export function parseWorkbenchPrefs(raw: string | null | undefined): Partial<Pre
     for (const key of Object.keys(DEFAULT_PREFS) as Array<keyof Prefs>) {
       if (key in value && typeof value[key] === typeof DEFAULT_PREFS[key]) (prefs as Record<string, unknown>)[key] = value[key];
     }
+    prefs.translationFormat = prefs.translationFormat === "reflow" ? "reflow" : "layout";
     prefs.blockLanguage = ["zh-CN", "en", "ja", "de", "fr"].includes(prefs.blockLanguage || "") ? prefs.blockLanguage : "zh-CN";
     prefs.reviewNewLimit = Number.isFinite(prefs.reviewNewLimit)
       ? Math.max(0, Math.min(1000, Math.floor(prefs.reviewNewLimit!))) : 20;

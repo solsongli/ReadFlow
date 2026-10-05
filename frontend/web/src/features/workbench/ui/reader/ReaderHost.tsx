@@ -15,6 +15,7 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
   const annotationSemantics = useWb((state) => state.annotationSemantics);
   const tone = useWb((state) => state.paperTone);
   const language = useWb((state) => state.blockLanguage);
+  const format = useWb((state) => state.translationFormat);
   const imageText = useWb((state) => state.blockImageText);
   const disabled = useWb((state) => state.blockModeDisabled);
   const hintDismissed = useWb((state) => state.blockModeHintDismissed);
@@ -31,7 +32,7 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
     row?.translation.status === "done",
     (message) => wb.notify(message, "success"),
     { disabled, hintDismissed, save: (prefs) => wb.setPrefs(prefs) },
-    { imageText, currentPage: () => currentPage.current },
+    { imageText, currentPage: () => currentPage.current, format, setFormat: (translationFormat) => wb.setPrefs({ translationFormat }) },
   );
   if (!row || !tab.attachmentId) {
     return (
@@ -48,6 +49,7 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
         assistance={assistance}
         blockOverlay={blocks.overlay}
         inlineAvailable={blocks.inlineAvailable}
+        layoutAligned={blocks.layoutAligned}
         registerBlockNavigation={blocks.registerBlockNavigation}
         translationPanel={blocks.sidebar}
         {...canvas.ports}

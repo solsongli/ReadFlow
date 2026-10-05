@@ -23,8 +23,10 @@ export function blocksApi(item: string, attachment: string, language = "zh-CN") 
     status: async () => (await request(`?language=${encodeURIComponent(language)}`)).json(),
     start: async (body: unknown, extract = false) =>
       (await request(extract ? "/extract" : "/translate", "POST", body)).json(),
+    render: async (body: unknown) => (await request("/render", "POST", body)).json(),
     cancel: async (id: string) => request(`/jobs/${encodeURIComponent(id)}/cancel`, "POST", {}),
     latex: async () => (await request("/latex")).blob(),
-    pdf: async () => (await request("/files/translated.pdf")).blob(),
+    pdf: async (format: "layout" | "reflow" = "layout") =>
+      (await request(`/files/${format === "layout" ? "translated-layout.pdf" : "translated.pdf"}`)).blob(),
   };
 }

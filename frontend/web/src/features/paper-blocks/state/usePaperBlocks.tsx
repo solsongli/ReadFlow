@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/ui/wb/Button.js";
-import { MenuRoot, MenuTrigger, MenuContent, MenuItem } from "@/ui/wb/Menu.js";
-import { downloadBlob } from "@/platform/utils/downloads.js";
+import { BlockTools } from "../ui/BlockTools.js";
+import { pdfFormats, type TranslationFormat } from "../domain/formats.js";
 import type { AssistancePorts } from "@/features/reader-assistance/domain.js";
 import { blocksApi } from "./api.js";
 import { useBlockMode, type BlockModePreferences } from "./useBlockMode.js";
@@ -22,7 +22,12 @@ export function usePaperBlocks(
     hintDismissed: true,
     save: () => {},
   },
-  options: { imageText: boolean; currentPage?: () => number } = { imageText: true },
+  options: {
+    imageText: boolean;
+    currentPage?: () => number;
+    format?: TranslationFormat;
+    setFormat?: (format: TranslationFormat) => void;
+  } = { imageText: true },
 ) {
   const api = useMemo(() => blocksApi(item, attachment, language), [item, attachment, language]);
   const [status, setStatus] = useState<BlockStatus | null>(null);
@@ -35,7 +40,7 @@ export function usePaperBlocks(
   const [error, setError] = useState("");
   const [dismissed, setDismissed] = useState("");
   const [sending, setSending] = useState(false);
-  const lastRequest = useRef<{ id?: string; force: boolean; extract: boolean }>({
+  const lastRequest = useRef<{ id?: string; force: boolean; extract: boolean; render?: boolean }>({
     force: false,
     extract: false,
   });
@@ -158,15 +163,33 @@ export function usePaperBlocks(
       if (mounted.current) setSending(false);
     }
   }
+  async function renderCached() {
+    if (sending || running) return;
+    setSending(true);
+    setError("");
+    lastRequest.current = { force: false, extract: false, render: true };
+    try {
+      const job = await api.render({ attachment_id: attachment, language, image_text: options.imageText });
+      if (mounted.current) setStatus((old) => ({ ...old!, job, jobs: [...(old?.jobs || []), job] }));
+      await refresh();
+    } catch (failure) {
+      if (mounted.current) setError((failure as Error).message);
+    } finally {
+      if (mounted.current) setSending(false);
+    }
+  }
+  const variant = pdfFormats(status?.result || null, options.format || "layout");
   const blocks = status?.document?.blocks || [];
   const block = blocks.find((b) => b.id === selected?.id);
   const usage = usageText(jobs.full?.usage ?? status?.result?.usage);
   const issue = error || (dismissed === status?.job?.id ? "" : status?.job?.error?.message);
   const fallbacks = fallbackMessages(status?.result || null, status?.job || null);
   return {
-    translated: status?.result
-      ? api.url(`/files/translated.pdf?revision=${encodeURIComponent(status.result.revision)}`)
-      : undefined,
+    layoutAligned: variant.selected === "layout",
+    translated:
+      status?.result && variant.selected
+        ? api.url(`/files/${variant.filename}?revision=${encodeURIComponent(status.result.revision)}`)
+        : undefined,
     translation: {
       running,
       label: jobs.full ? `${jobs.full.phase} ${jobs.full.percent}%` : "翻译全文",
@@ -185,59 +208,24 @@ export function usePaperBlocks(
     sidebar: reading.sidebar,
     overlay: reading.overlay,
     tools: (
-      <>
-        {usage ? (
-          <span className="max-w-60 text-xs text-wb-text-3" role="status" title={usage}>
-            {usage}
-          </span>
-        ) : null}
-        <Button
-          size="sm"
-          aria-pressed={enabled}
-          onClick={() => {
-            mode.toggle();
-            setSelected(null);
-            extractionStarted.current = false;
-          }}
-        >
-          块模式
-        </Button>
-        {status?.result || legacyAvailable ? (
-          <Button size="sm" disabled={running} onClick={() => void start()}>
-            {status?.result ? "补翻／重新排版" : "翻译全文（块级）"}
-          </Button>
-        ) : null}
-        <MenuRoot>
-          <MenuTrigger asChild>
-            <Button size="sm" disabled={!status?.document || running}>
-              导出译文
-            </Button>
-          </MenuTrigger>
-          <MenuContent>
-            <MenuItem
-              disabled={!status?.result}
-              onSelect={() =>
-                void api
-                  .pdf()
-                  .then((blob) => downloadBlob(blob, "ReadFlow-译文.pdf"))
-                  .catch(() => setError("译文下载失败，请重试。"))
-              }
-            >
-              下载译文 PDF
-            </MenuItem>
-            <MenuItem
-              onSelect={() =>
-                void api
-                  .latex()
-                  .then((blob) => downloadBlob(blob, "ReadFlow-LaTeX.zip"))
-                  .catch(() => setError("导出失败，请重试。"))
-              }
-            >
-              导出 LaTeX 工程
-            </MenuItem>
-          </MenuContent>
-        </MenuRoot>
-      </>
+      <BlockTools
+        status={status}
+        api={api}
+        format={options.format || "layout"}
+        setFormat={options.setFormat}
+        enabled={enabled}
+        running={running}
+        legacy={legacyAvailable}
+        usage={usage}
+        start={() => void start()}
+        render={() => void renderCached()}
+        error={setError}
+        toggle={() => {
+          mode.toggle();
+          setSelected(null);
+          extractionStarted.current = false;
+        }}
+      />
     ),
     panel: (
       <>
@@ -300,7 +288,8 @@ export function usePaperBlocks(
                 disabled={running}
                 onClick={() => {
                   const request = lastRequest.current;
-                  void start(request.id, request.force, request.extract);
+                  if (request.render) void renderCached();
+                  else void start(request.id, request.force, request.extract);
                 }}
               >
                 重试

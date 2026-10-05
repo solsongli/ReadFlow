@@ -22,6 +22,21 @@ export function fallbackMessages(result: BlockStatus["result"], job: BlockJob | 
   ]).size;
   if (translation)
     messages.push({ kind: "translation", text: `${translation} 个块未完成翻译，暂用原文，可补翻。` });
+  if (result?.layout_overflow?.length)
+    messages.push({
+      kind: "layout-overflow",
+      text: `原版式 ${result.layout_overflow.length} 个块压缩了行距，其中 ${result.layout_truncated?.length || 0} 个块显示省略；块卡片可看全文。`,
+    });
+  if (result?.layout_render_fallback?.length)
+    messages.push({
+      kind: "layout-preserved",
+      text: `原版式 ${result.layout_render_fallback.length} 个区域保留原文，未覆盖图表或不可编辑文字。`,
+    });
+  if (result?.layout_label_fallback?.length)
+    messages.push({
+      kind: "layout-label",
+      text: `原版式 ${result.layout_label_fallback.length} 个图内标签保留原文。`,
+    });
   const render = result?.render_fallback?.length || 0;
   if (render) messages.push({ kind: "render", text: `${render} 个块排版失败，已退回原文。` });
   const labels = result?.label_fallback?.length || 0;

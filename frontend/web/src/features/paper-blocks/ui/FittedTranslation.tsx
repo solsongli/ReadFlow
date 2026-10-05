@@ -7,11 +7,13 @@ export function FittedTranslation({
   runs,
   base,
   label = false,
+  heading = false,
 }: {
   text: string;
   runs?: InlineRun[];
   base: number;
   label?: boolean;
+  heading?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null),
     content = useRef<HTMLDivElement>(null);
@@ -31,26 +33,40 @@ export function FittedTranslation({
     if (!size.width || !size.height) return;
     element.style.removeProperty("-webkit-line-clamp");
     element.style.display = "block";
-    const fitted = fitTypography(text, size.width, size.height, base);
+    const ratio = label ? 0.35 : 0.65;
+    element.style.fontWeight = heading ? "700" : "400";
+    element.style.lineHeight = heading ? "1" : "1.18";
+    const fitted = heading
+      ? { size: base, overflow: false }
+      : fitTypography(text, size.width, size.height, base, undefined, ratio);
     element.style.fontSize = `${fitted.size}px`;
-    if (!label) {
+    if (!heading) {
       const actual = element.scrollHeight;
       if (actual > size.height) {
-        fitted.size = Math.max(base * 0.65, fitted.size * Math.sqrt(size.height / actual) * 0.97);
+        fitted.size = Math.max(base * ratio, fitted.size * Math.sqrt(size.height / actual) * 0.97);
         element.style.fontSize = `${fitted.size}px`;
         if (element.scrollHeight > size.height) {
-          fitted.size = base * 0.65;
+          fitted.size = base * ratio;
           element.style.fontSize = `${fitted.size}px`;
         }
       }
       fitted.overflow = element.scrollHeight > size.height;
     }
+    fitted.overflow = element.scrollHeight > size.height;
     element.style.display = "-webkit-box";
-    element.style.webkitLineClamp = String(Math.max(1, Math.floor(size.height / (fitted.size * 1.18))));
+    element.style.webkitLineClamp = String(
+      Math.max(1, Math.floor(size.height / (fitted.size * (heading ? 1 : 1.18)))),
+    );
     setOverflow(fitted.overflow);
-  }, [text, runSignature, base, size, label]);
+  }, [text, runSignature, base, size, label, heading]);
   return (
-    <div ref={root} className={label ? "pb-label-text" : "pb-inline-text"} data-inline-overflow={overflow}>
+    <div
+      ref={root}
+      className={label ? "pb-label-text" : "pb-inline-text"}
+      data-inline-overflow={overflow}
+      data-inline-heading={heading}
+      data-original-size={base}
+    >
       <div ref={content} className="pb-fitted-content">
         <InlineRuns text={text} runs={runs} />
       </div>

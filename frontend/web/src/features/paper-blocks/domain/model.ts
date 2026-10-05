@@ -50,6 +50,13 @@ export interface BlockStatus {
   language?: string;
   result: {
     revision: string;
+    layout_ready?: boolean;
+    reflow_ready?: boolean;
+    layout_overflow?: string[];
+    layout_truncated?: string[];
+    layout_render_fallback?: string[];
+    layout_label_fallback?: string[];
+    layout_seconds?: number;
     language: string;
     fallback_blocks?: string[];
     render_fallback?: string[];

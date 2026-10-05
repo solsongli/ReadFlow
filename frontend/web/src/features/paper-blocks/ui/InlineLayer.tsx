@@ -74,6 +74,7 @@ export const InlineLayer = memo(function InlineLayer({
           base:
             (block.text_size || block.size || 10) * typographyScale(p.anchor.view_bbox, p.anchor.bbox, width),
           label: false,
+          heading: ["title", "heading"].includes(block.type),
         }));
     }
     if (imageText && geometry && ["figure", "table"].includes(block.type) && block.page === page) {
@@ -87,6 +88,7 @@ export const InlineLayer = memo(function InlineLayer({
           runs: undefined,
           base: ((l.size || 8) * width) / geometry.width,
           label: true,
+          heading: false,
         }));
     }
     return [];
@@ -113,7 +115,13 @@ export const InlineLayer = memo(function InlineLayer({
               height: `${(entry.box[3] - entry.box[1]) * 100}%`,
             }}
           >
-            <FittedTranslation text={entry.text} runs={entry.runs} base={entry.base} label={entry.label} />
+            <FittedTranslation
+              text={entry.text}
+              runs={entry.runs}
+              base={entry.base}
+              label={entry.label}
+              heading={entry.heading}
+            />
           </div>
         ))}
     </div>

@@ -90,6 +90,20 @@ export function FigureViewer({
         }}
         onPointerMove={(e) => {
           const d = drag.current;
+          if (!d) {
+            const target = [...e.currentTarget.querySelectorAll<HTMLElement>("[data-viewer-label]")].find(
+              (node) => {
+                const box = node.getBoundingClientRect();
+                return (
+                  e.clientX >= box.left &&
+                  e.clientX <= box.right &&
+                  e.clientY >= box.top &&
+                  e.clientY <= box.bottom
+                );
+              },
+            );
+            e.currentTarget.title = target?.dataset.labelTranslation || "";
+          }
           if (d) setView((v) => ({ ...v, x: d.left + e.clientX - d.x, y: d.top + e.clientY - d.y }));
         }}
         onPointerUp={() => {
@@ -117,6 +131,7 @@ export function FigureViewer({
                         <div
                           key={label.id}
                           data-viewer-label
+                          data-label-translation={label.translation}
                           className="pointer-events-none absolute overflow-hidden"
                           style={{
                             left: `${((box[0] - anchor[0]) / (anchor[2] - anchor[0])) * 100}%`,

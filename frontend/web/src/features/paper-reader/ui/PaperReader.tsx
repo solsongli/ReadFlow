@@ -201,7 +201,7 @@ export function PaperReader(ports: PaperReaderProps) {
       ) : null}
       {mode === "compare" ? (
         <div className="flex justify-between border-b border-wb-line-soft px-4 py-1 text-[0.6875rem] text-wb-text-3">
-          <span>原文 / 译文 · 同页号对应，缺页停在末页</span>
+          <span>{ports.layoutAligned ? "原版式译文 · 同页同位置对齐" : "重排译文 · 同页号对应，缺页停在末页"}</span>
           <label>
             <input type="checkbox" checked={sync} onChange={(event) => setSync(event.target.checked)} />{" "}
             同步滚动

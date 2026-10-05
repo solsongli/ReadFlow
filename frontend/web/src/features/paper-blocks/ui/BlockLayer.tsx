@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { labelAt } from "../domain/reading.js";
+import type { PageGeometry } from "../domain/model.js";
 import { blockAt, plainClick, type Block } from "../domain/model.js";
 export function BlockLayer({
   blocks,
@@ -7,6 +9,8 @@ export function BlockLayer({
   open,
   expand,
   highlighted,
+  geometry,
+  labelHints,
 }: {
   blocks: Block[];
   page: number;
@@ -14,10 +18,12 @@ export function BlockLayer({
   open: (block: Block, x: number, y: number) => void;
   expand?: (block: Block, x: number, y: number) => void;
   highlighted?: string;
+  geometry?: PageGeometry;
+  labelHints?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
-  const latest = useRef({ blocks, open });
-  latest.current = { blocks, open };
+  const latest = useRef({ blocks, open, geometry, labelHints });
+  latest.current = { blocks, open, geometry, labelHints };
   const [hover, setHover] = useState<ReturnType<typeof blockAt>>();
   useEffect(() => {
     const element = root.current?.closest<HTMLElement>("[data-paper-page]");
@@ -48,7 +54,17 @@ export function BlockLayer({
       if (start && event.buttons)
         moved = Math.max(moved, Math.hypot(event.clientX - start.x, event.clientY - start.y));
       const value = !event.buttons && eligible(event) ? hit(event) : undefined;
-      element.title = value?.block.translation || "";
+      const rect = element.getBoundingClientRect();
+      const label = latest.current.labelHints
+        ? labelAt(
+            latest.current.blocks,
+            page,
+            latest.current.geometry,
+            (event.clientX - rect.left) / rect.width,
+            (event.clientY - rect.top) / rect.height,
+          )
+        : undefined;
+      element.title = label?.translation || value?.block.translation || "";
       setHover((old) => (old?.block.id === value?.block.id && old?.anchor === value?.anchor ? old : value));
     };
     const click = (event: MouseEvent) => {
@@ -75,6 +91,7 @@ export function BlockLayer({
     element.addEventListener("pointerleave", leave);
     return () => {
       clearTimeout(pending);
+      element.title = "";
       element.removeEventListener("pointerdown", down);
       element.removeEventListener("pointermove", move);
       element.removeEventListener("click", click);

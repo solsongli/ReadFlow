@@ -47,7 +47,15 @@ async def seed(resources, root):
         (root / 'optional-ocr/fixture').mkdir(parents=True, exist_ok=True)
         (root / 'optional-ocr/fixture/model.bin').write_bytes(b'synthetic fixture, never loaded')
         AgentConfig(root / 'agent-config.json').save({'base_url': 'http://127.0.0.1:9/v1', 'model': 'fixture', 'api_key': ''})
-        app.state.paper_blocks.storage.extract(imported['attachment'])
+        document = app.state.paper_blocks.storage.extract(imported['attachment'])
+        from library_mvp.paper_blocks_layout import render_layout
+        from library_mvp.paper_blocks_model import cache_key
+        cache = {cache_key(block, 'zh-CN', 'restart-fixture'): {'text': '本地译文排版重启校验'}
+                 for block in document['blocks']}
+        folder = app.state.paper_blocks.storage.directory(imported['attachment'])
+        render_layout(store.attachment_path(imported['attachment']['id']), folder, document,
+                      cache, 'zh-CN', 'restart-fixture')
+        assert (folder / 'translated-layout.pdf').is_file()
         assert list((root / 'paper-blocks').glob('*/blocks.json'))
         assert list((root / 'paper-blocks').glob('*/layout-*.json'))
         assert list((root / 'paper-blocks').glob('*/ocr-page-*.json'))
@@ -95,12 +103,15 @@ def check(unpacked, home):
             assert blocks['document']['capabilities']['ocr']
             assert blocks['document']['capabilities']['layout'] == 'PP-DocLayout-S'
             assert blocks['renderer_ready']
+            with urlopen(Request(base + '/api/research/workbench/items/' + items[0]['id'] +
+                                 '/blocks/files/translated-layout.pdf', headers={'X-RetainPDF-Internal': token}), timeout=5) as pdf:
+                assert pdf.read(5) == b'%PDF-'
             assert len(get('/api/research/workbench/canvases')['items']) == 1
             assert len(get('/api/research/workbench/flashcards')['items']) == 1
             status = get('/api/research/connector/status')
             assert status['status'] == 'disabled' and status['client'] == 'ReadFlow'
             results.append({'run': number + 1, 'health': True, 'persistent_items': 1,
-                            'blocks_cache': True, 'layout_cache': True, 'ocr_cache': True, 'connector': 'disabled'})
+                            'blocks_cache': True, 'layout_cache': True, 'ocr_cache': True, 'layout_pdf': True, 'connector': 'disabled'})
         finally:
             child.terminate()
             try:
@@ -124,6 +135,13 @@ if __name__ == '__main__':
     if args.seed and not any(part.name.startswith('readflow-') for part in args.seed.resolve().parents):
         raise SystemExit('Seed mode requires a dedicated readflow-* temporary directory')
     if args.seed:
+        # The Electron check seeds without the desktop's env; resolve bundled tools from the same app.
+        backend = unpacked / 'resources/backend'
+        for name, value in (('READFLOW_TYPST_BIN', backend / 'typst/bin/typst'),
+                            ('READFLOW_TYPST_PACKAGES', backend / 'typst-packages'),
+                            ('READFLOW_FONT_DIRS', backend / 'fonts'),
+                            ('READFLOW_MODELS_DIR', backend / 'models')):
+            os.environ.setdefault(name, str(value))
         asyncio.run(seed(unpacked / 'resources', args.seed.resolve()))
     else:
         with tempfile.TemporaryDirectory(prefix='readflow-packaged-restart-') as tmp:

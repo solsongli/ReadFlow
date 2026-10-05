@@ -111,3 +111,22 @@ export function blockCopyText(block: Block, blocks: Block[], page: number) {
     (block.figure_text || []).map((l) => l.translation || l.text).join("\n")
   );
 }
+
+export function labelAt(
+  blocks: Block[],
+  page: number,
+  geometry: PageGeometry | undefined,
+  x: number,
+  y: number,
+) {
+  if (!geometry) return undefined;
+  for (const block of blocks) {
+    if (block.page !== page || !["figure", "table"].includes(block.type)) continue;
+    for (const label of block.figure_text || []) {
+      if (!label.translation || !label.bbox) continue;
+      const box = labelBox(label.bbox, geometry);
+      if (x >= box[0] && x <= box[2] && y >= box[1] && y <= box[3]) return label;
+    }
+  }
+  return undefined;
+}

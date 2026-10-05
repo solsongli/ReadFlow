@@ -67,6 +67,7 @@ export interface PaperMetadata {
 }
 export interface ReaderPorts {
   inlineAvailable?: boolean;
+  layoutAligned?: boolean;
   registerBlockNavigation?: (jump: (page: number, offset: number) => void) => (() => void);
   assistance?: AssistancePorts;
   canvasLinks?: Array<{ canvas_id: string; node_id: string; annotation_id: string; name: string }>;
