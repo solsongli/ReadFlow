@@ -72,7 +72,7 @@ class BlockJobTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((await self.settled(response.json()["id"]))["status"], "done")
         repeated = await self.client.post(self.url + "/translate", json=payload)
         await self.settled(repeated.json()["id"])
-        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(len(self.calls), 2)  # Echo-only fake fails QA and receives one strict retry.
         state = (await self.client.get(self.url)).json()
         self.assertTrue(state["has_translation"])
         self.assertFalse((await self.client.get(self.url + "?language=en")).json()["has_translation"])

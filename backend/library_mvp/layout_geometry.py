@@ -46,30 +46,69 @@ def owned_lines(box, lines, obstacles):
     # Native PDF lines can span several labels/columns. Group only their owned
     # contiguous glyphs; never erase an entire shared line for one short label.
     result = []
+    x0, y0, x1, y1 = box
+
+    def intersection(a, b):
+        return max(0, min(a[2], b[2]) - max(a[0], b[0])) * max(0, min(a[3], b[3]) - max(a[1], b[1]))
+
     for line in lines:
-        if not fitz.Rect(line["bbox"]).intersects(box):
+        if intersection(line["bbox"], box) <= 0:
             continue
         group = None
         for span in line["spans"]:
             for char in span["chars"]:
-                rect = fitz.Rect(char["bbox"])
+                rect = char["bbox"]
+                cx, cy = (rect[0] + rect[2]) / 2, (rect[1] + rect[3]) / 2
+                size = max(0, rect[2] - rect[0]) * max(0, rect[3] - rect[1])
                 owned = (
-                    box.contains((rect.tl + rect.br) / 2)
-                    and overlap(rect, box) >= area(rect) * 0.5
-                    and not any(overlap(rect, obstacle) > area(rect) * 0.2 for obstacle in obstacles)
+                    x0 <= cx <= x1
+                    and y0 <= cy <= y1
+                    and intersection(rect, box) >= size * 0.5
+                    and not any(intersection(rect, obstacle) > size * 0.2 for obstacle in obstacles)
                 )
                 if not owned:
                     if group is not None:
-                        result.extend(free_rects(group & box, obstacles))
+                        result.extend(free_rects(fitz.Rect(group) & box, obstacles))
                         group = None
                     continue
-                if group is not None and rect.x0 - group.x1 > max(8, rect.height * 2):
-                    result.extend(free_rects(group & box, obstacles))
+                if group is not None and rect[0] - group[2] > max(8, (rect[3] - rect[1]) * 2):
+                    result.extend(free_rects(fitz.Rect(group) & box, obstacles))
                     group = None
-                group = rect if group is None else group | rect
+                group = (
+                    list(rect)
+                    if group is None
+                    else [
+                        min(group[0], rect[0]),
+                        min(group[1], rect[1]),
+                        max(group[2], rect[2]),
+                        max(group[3], rect[3]),
+                    ]
+                )
         if group is not None:
-            result.extend(free_rects(group & box, obstacles))
+            result.extend(free_rects(fitz.Rect(group) & box, obstacles))
     return result
+
+
+def residual_counts(lines, masks):
+    # Y bands avoid an all-glyphs × all-redactions scan and PyMuPDF Point allocation.
+    bands = {}
+    for rect in masks:
+        for band in range(int(rect.y0 // 32), int(rect.y1 // 32) + 1):
+            bands.setdefault(band, []).append(tuple(rect))
+    visible = zero = 0
+    for line in lines:
+        for span in line["spans"]:
+            for char in span["chars"]:
+                if not char["c"].strip():
+                    continue
+                a, b, c, d = char["bbox"]
+                x, y = (a + c) / 2, (b + d) / 2
+                if any(l <= x <= r and t <= y <= bottom for l, t, r, bottom in bands.get(int(y // 32), [])):
+                    if (c - a) * (d - b) < 0.001:
+                        zero += 1
+                    else:
+                        visible += 1
+    return visible, zero
 
 
 def text_color(box, lines):

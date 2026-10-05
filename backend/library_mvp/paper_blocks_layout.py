@@ -1,15 +1,26 @@
 """ReadFlow page-preserving PDF renderer. Text-only, line-level redactions plus fitted HTML."""
 from collections import defaultdict
+from contextlib import ExitStack
 from pathlib import Path
 import re
 import time
 import pymupdf as fitz
 from .layout_fonts import prepare_fonts
 from .layout_text import TRANSLATABLE, allocate, plain
-from .layout_geometry import area, free_rects, native_lines, owned_lines, text_color, visible_images
+from .layout_geometry import (
+    area,
+    free_rects,
+    native_lines,
+    owned_lines,
+    text_color,
+    visible_images,
+    residual_counts,
+)
 from .layout_fit import fit
 from .layout_page import isolate_background
 from .layout_regions import ruled_tables
+from .layout_save import save_pdf
+from . import layout_incremental as incremental
 from .paper_blocks_model import cache_key
 from .paper_blocks_inline import source_runs, rich_text
 from .paper_blocks_labels import translated_labels
@@ -68,7 +79,9 @@ def tasks_for(document, cache, language, fingerprint, image_text):
 def translated_outline(pdf, document, cache, language, fingerprint):
     toc = pdf.get_toc(simple=False)
     key = lambda value: re.sub(r"\W", "", value).casefold()
-    headings = {key(b.get("outline_title", b["text"])): b for b in document["blocks"] if b["type"] == "heading"}
+    headings = {
+        key(b.get("outline_title", b["text"])): b for b in document["blocks"] if b["type"] == "heading"
+    }
     for index, entry in enumerate(toc):
         block = headings.get(key(entry[1]))
         if block:
@@ -95,11 +108,11 @@ def render_layout(
     check=lambda: None,
     *,
     image_text=True,
+    density="balanced",
     progress=lambda *_: None,
 ):
     started = time.perf_counter()
     tasks, regions = tasks_for(document, cache, language, fingerprint, image_text)
-    archive, fonts, _ = prepare_fonts(root, [plain(t["runs"]) for page in tasks.values() for t in page], check)
     audit = {
         "pages": [],
         "residual_source_chars": 0,
@@ -108,12 +121,49 @@ def render_layout(
         "layout_truncated": [],
         "render_fallback": [],
         "label_fallback": [],
+        "rendered_pages": [],
+        "reused_pages": [],
     }
     output = Path(root) / "translated-layout.pending.pdf"
-    with fitz.open(source) as pdf:
+    with fitz.open(source) as pdf, ExitStack() as resources:
+        signatures = incremental.signatures(source, len(pdf), tasks, regions, density)
+        prior = incremental.previous(root, signatures)
+        graft = None
+        if prior:
+            resources.enter_context(prior[0])
+            graft = fitz.Graftmap(pdf)
+            if signatures == prior[1]:
+                audit = {
+                    **prior[2],
+                    "rendered_pages": [],
+                    "reused_pages": list(range(1, len(pdf) + 1)),
+                    "seconds": round(time.perf_counter() - started, 3),
+                }
+                write_json(Path(root) / "layout-audit.json", audit)
+                return {key: value for key, value in audit.items() if key != "pages"}
+        archive, fonts, _ = prepare_fonts(
+            root, [plain(t["runs"]) for page in tasks.values() for t in page], check
+        )
         for index in range(len(pdf)):
             check()
             page = pdf[index]
+            if (
+                prior
+                and signatures[index] == prior[1][index]
+                and all(
+                    getattr(page, k) == getattr(prior[0][index], k)
+                    for k in ("mediabox", "cropbox", "rotation")
+                )
+            ):
+                incremental.graft_content(pdf, prior[0], index, graft)
+                record = prior[2]["pages"][index]
+                audit["pages"].append(record)
+                incremental.add_counts(audit, record["stats"])
+                audit["reused_pages"].append(index + 1)
+                progress(index + 1, len(pdf))
+                continue
+            before = incremental.start_counts(audit)
+            audit["rendered_pages"].append(index + 1)
             lines = native_lines(page)
             images = visible_images(page) if tasks[index + 1] else []
             tables = ruled_tables(page, regions[index + 1]) if tasks[index + 1] else []
@@ -166,6 +216,7 @@ def render_layout(
                                 text_color(box, lines),
                                 task["label"],
                                 check,
+                                density=density,
                             )
                         except Exception:
                             check()
@@ -218,37 +269,45 @@ def render_layout(
                             graphics=fitz.PDF_REDACT_LINE_ART_NONE,
                             text=fitz.PDF_REDACT_TEXT_REMOVE,
                         )
-                        remaining = [
-                            char
-                            for line in native_lines(page)
-                            for span in line["spans"]
-                            for char in span["chars"]
-                            if char["c"].strip()
-                        ]
-                        for char in remaining:
-                            glyph = fitz.Rect(char["bbox"])
-                            if any(mask.contains((glyph.tl + glyph.br) / 2) for mask in masks):
-                                key = "zero_width_source_chars" if area(glyph) < 0.001 else "residual_source_chars"
-                                audit[key] += 1
+                        visible, zero = residual_counts(native_lines(page), masks)
+                        audit["residual_source_chars"] += visible
+                        audit["zero_width_source_chars"] += zero
                         isolate_background(page)
                         page = pdf.reload_page(page)
-                        for rect, placement in prepared:
-                            page.show_pdf_page(rect, placement["doc"], 0)
+                        # The public show_pdf_page scans destination resources. Build on
+                        # an empty page, then graft once to the expensive original page.
+                        with fitz.open() as overlay:
+                            layer = overlay.new_page(width=bounds.width, height=bounds.height)
+                            for rect, placement in prepared:
+                                layer.show_pdf_page(rect, placement["doc"], 0)
+                            page.show_pdf_page(bounds, overlay, 0)
                     finally:
                         pdf.xref_set_key(page.xref, "Annots", original_annots)
                         page = pdf.reload_page(page)
-                audit["pages"].append({"page": index + 1, "records": records})
+                audit["pages"].append(
+                    {"page": index + 1, "records": records, "stats": incremental.delta(audit, before)}
+                )
                 progress(index + 1, len(pdf))
             finally:
                 for _, placement in prepared:
                     placement["doc"].close()
         translated_outline(pdf, document, cache, language, fingerprint)
         check()
-        pdf.save(output, garbage=4, deflate=True, clean=True)
+        save_pdf(pdf, output, check)
     check()
     output.replace(Path(root) / "translated-layout.pdf")
     for key in ("layout_overflow", "layout_truncated", "render_fallback", "label_fallback"):
         audit[key] = list(dict.fromkeys(audit[key]))
     audit["seconds"] = round(time.perf_counter() - started, 3)
     write_json(Path(root) / "layout-audit.json", audit)
+    path = Path(root) / "translated-layout.pdf"
+    write_json(
+        Path(root) / "layout-pages.json",
+        {
+            "version": incremental.VERSION,
+            "signatures": signatures,
+            "file_size": path.stat().st_size,
+            "mtime_ns": path.stat().st_mtime_ns,
+        },
+    )
     return {key: value for key, value in audit.items() if key != "pages"}

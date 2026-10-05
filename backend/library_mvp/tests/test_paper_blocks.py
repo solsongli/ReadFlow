@@ -304,6 +304,8 @@ class BlockTests(unittest.TestCase):
         secret = "synthetic-secret-never-store"
 
         def fake(config, messages, **kwargs):
+            if "READFLOW_PAPER_TERMS" in messages[0]["content"]:
+                return json.dumps({"terms": json.loads(messages[-1]["content"])["terms"]})
             rows = json.loads(messages[-1]["content"])["blocks"]
             return json.dumps({"blocks": [{"id": r["id"], "text": "【译】" + r["text"]} for r in rows]})
 

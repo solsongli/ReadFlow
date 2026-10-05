@@ -110,6 +110,7 @@ def text_blocks(rows, body_size, page_number, width, height, words=None):
             source_lines=[
                 {
                     "text": value,
+                    "lead": row.get("lead", ""),
                     "math_parts": list(row["math_parts"]),
                     "source": row.get("source", "native_text"),
                     "bbox": list(box),

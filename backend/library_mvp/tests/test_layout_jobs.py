@@ -52,6 +52,10 @@ class LayoutJobs(unittest.IsolatedAsyncioTestCase):
                     status = (await client.get(url)).json()
                     self.assertTrue(status["result"]["layout_ready"])
                     self.assertTrue(status["result"]["reflow_ready"])
+                    performance = status["result"]["performance"]
+                    self.assertGreater(performance["timings_s"]["render"], 0)
+                    self.assertGreaterEqual(performance["timings_s"]["extraction"], 0)
+                    self.assertEqual(performance["requests"]["count"], 0)
                     for name in ("translated-layout.pdf", "translated.pdf"):
                         file = await client.get(url + "/files/" + name)
                         self.assertEqual(file.status_code, 200)
@@ -60,5 +64,13 @@ class LayoutJobs(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(
                         (await client.post(url + "/render", json={"block_id": "bad"})).status_code, 400
                     )
+                    proposal = {"language": "zh-CN", "revision": 0,
+                                "entries": [{"source": "paragraph", "target": "段落"}]}
+                    edited = await client.patch(url + "/terms", json=proposal)
+                    self.assertEqual(edited.status_code, 200)
+                    self.assertTrue(edited.json()["affected"])
+                    self.assertEqual(edited.json()["revision"], 1)
+                    self.assertEqual((await client.patch(url + "/terms", json=proposal)).status_code, 409)
+                    self.assertEqual((await client.get(url)).json()["terms"]["entries"][0]["target"], "段落")
                 service.assistance.gate.assert_not_called()
                 service.assistance.chat.assert_not_called()

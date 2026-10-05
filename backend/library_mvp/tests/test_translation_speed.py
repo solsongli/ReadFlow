@@ -12,10 +12,28 @@ from backend.library_mvp.paper_blocks_model import service_fingerprint
 from backend.library_mvp.paper_blocks_transport import run_batch
 from backend.library_mvp.reader_assistance_transport import run_chat
 from backend.library_mvp.translation_speed import TranslationPolicy, workers
+from backend.library_mvp.translation_speed import parallel_workers
 from ops.development.readflow_fake_openai import completion_response, response_delay
 
 
 class TranslationSpeedTests(unittest.TestCase):
+    def test_deepseek_ramps_from_eight_to_sixteen_and_global_429_halves_it(self):
+        policy = TranslationPolicy()
+        config = self.config()
+        self.assertEqual(parallel_workers(config), 16)
+        self.assertEqual(parallel_workers(self.config(workers=3)), 3)
+        limits = []
+        for _ in range(17):
+            with policy.slot(config, RequestControl(10)) as permit:
+                limits.append(policy.limiter.limit)
+                policy.limiter.succeeded(permit.epoch, permit.ramp)
+        self.assertEqual(limits[0], 8)
+        self.assertEqual(limits[-1], 16)
+        self.assertEqual(sorted(set(limits)), [8, 10, 12, 14, 16])
+        with policy.slot(config, RequestControl(10)) as permit:
+            policy.limiter.rate_limited(permit.epoch)
+            self.assertEqual(policy.limiter.limit, 8)
+
     def config(self, **changes):
         return {
             "base_url": "https://api.deepseek.com/v1",

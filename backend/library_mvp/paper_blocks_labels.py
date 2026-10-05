@@ -43,7 +43,9 @@ def translatable_label(text):
 def identify_labels(block):
     for label in block.get("figure_text", []):
         label["id"] = block_id([{"page": block["page"], "bbox": label["bbox"]}], label["text"])
-        label["translatable"] = block["type"] not in {"algorithm", "code"} and translatable_label(label["text"])
+        label["translatable"] = block["type"] not in {"algorithm", "code"} and translatable_label(
+            label["text"]
+        )
 
 
 def translation_units(blocks):
@@ -72,6 +74,10 @@ def translated_labels(block, cache, language, fingerprint):
             "translation": rich_text(cache.get(cache_key(label, language, fingerprint)))
             if label.get("id") and label.get("translatable")
             else "",
+            "qa": value.get("qa")
+            if label.get("id")
+            and isinstance(value := cache.get(cache_key(label, language, fingerprint)), dict)
+            else None,
         }
         for label in block.get("figure_text", [])
     ]

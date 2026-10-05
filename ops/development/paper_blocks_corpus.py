@@ -197,6 +197,8 @@ def run_one(path, destination, label, options):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    from .paper_quality_report import arguments, run
+    arguments(parser)
     parser.add_argument("--corpus-dir", type=Path, default=os.environ.get("READFLOW_CORPUS_DIR"))
     parser.add_argument("--fixtures", type=Path)
     parser.add_argument("--safevla", type=Path, default=os.environ.get("READFLOW_SAFE_VLA_PDF"))
@@ -207,6 +209,8 @@ def main():
     parser.add_argument("--keep-assets", action="store_true", help="Retain intermediate vector crops/thumbnails")
     parser.add_argument("--worker-pdf", type=Path, help=argparse.SUPPRESS)
     options = parser.parse_args()
+    if options.quality_blocks:
+        return run(options)
     if not 1 <= options.limit_pages <= options.limit_over:
         parser.error("Expected 1 <= limit-pages <= limit-over")
     os.environ.update(

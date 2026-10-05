@@ -2,6 +2,7 @@
 import json
 import math
 from .paper_blocks_model import protect
+from .paper_terms import relevant
 
 
 def estimate_tokens(text):
@@ -27,19 +28,13 @@ def planned_batches(blocks, concurrency, title="", terms=None):
     # 2k estimated input tokens; one indivisible block may exceed this budget.
     if not blocks:
         return []
-    overhead = 240 + estimate_tokens(title[:500]) + estimate_tokens(json.dumps(terms or []))
+    # Weights omit repeated empty fields and glossary metadata, matching the wire body.
+    overhead = 230 + estimate_tokens(title[:500])
     weights = [
-        estimate_tokens(
-            json.dumps(
-                {
-                    "id": b["id"],
-                    "text": protect(b)[0],
-                    "type": b["type"],
-                    "section": b.get("section", "")[:250],
-                },
-                ensure_ascii=False,
-            )
-        )
+        estimate_tokens(protect(b)[0])
+        + 35
+        + estimate_tokens(b.get("previous_sentence", "")) * bool(b.get("previous_sentence"))
+        + sum(estimate_tokens(t["source"] + t["target"]) for t in relevant(terms or [], [b]))
         for b in blocks
     ]
     target = max(1, min(len(blocks), 2 * concurrency))
@@ -58,6 +53,17 @@ def planned_batches(blocks, concurrency, title="", terms=None):
         group = groups[index]
         middle = len(group) // 2
         groups[index : index + 1] = [group[:middle], group[middle:]]
+    # Coalesce using wire cost: repeated per-row terms overestimate a shared batch.
+    from .paper_prompts import messages_for
+
+    index = 0
+    while index + 1 < len(groups) and len(groups) > target:
+        combined = groups[index] + groups[index + 1]
+        messages, _ = messages_for(combined, terms or [], "zh-CN", title)
+        if estimate_tokens("".join(m["content"] for m in messages)) <= 2100:
+            groups[index : index + 2] = [combined]
+        else:
+            index += 1
     return groups
 
 

@@ -20,11 +20,21 @@ def workers(config):
     return 8 if official_deepseek(config) else 4
 
 
+def parallel_workers(config):
+    # Explicit low limits remain useful for constrained or shared accounts.
+    return 16 if official_deepseek(config) and workers(config) >= 8 else workers(config)
+
+
 class TranslationPolicy:
     def __init__(self):
         self.limiter = AdaptiveLimiter()
         self.lock = threading.Lock()
         self.unsupported = set()
+
+    def slot(self, config, control):
+        cap = parallel_workers(config)
+        ramp = target(config) if official_deepseek(config) and cap == 16 else None
+        return self.limiter.slot(control, cap, ramp=ramp)
 
     def thinking(self, config):
         with self.lock:
@@ -61,15 +71,27 @@ class AdaptiveLimiter:
         self.ceiling = 16
         self.successes = 0
         self.epoch = 0
+        self.ramps = {}
+        self.ramp_successes = {}
 
     @property
     def limit(self):
-        return min(self.ceiling, min(self.requests.values(), default=16))
+        return min(
+            self.ceiling,
+            min((min(cap, self.ramps.get(p.ramp, cap)) for p, cap in self.requests.items()), default=16),
+        )
 
     @contextmanager
-    def slot(self, control, requested):
+    def slot(self, control, requested, *, ramp=None):
         permit = Permit(self, control)
+        permit.ramp = ramp
         with self.condition:
+            if ramp is not None and ramp not in self.ramps:
+                if len(self.ramps) >= 128:
+                    live = {p.ramp for p in self.requests}
+                    self.ramps = {k: v for k, v in self.ramps.items() if k in live}
+                    self.ramp_successes = {k: v for k, v in self.ramp_successes.items() if k in live}
+                self.ramps[ramp] = 8
             self.requests[permit] = max(1, min(16, requested))
         try:
             permit.acquire()
@@ -87,13 +109,19 @@ class AdaptiveLimiter:
                 self.ceiling = max(1, self.limit // 2)
                 self.epoch += 1
             self.successes = 0
+            self.ramp_successes.clear()
             self.condition.notify_all()
 
-    def succeeded(self, epoch):
+    def succeeded(self, epoch, ramp=None):
         with self.condition:
             if epoch != self.epoch:
                 return
             self.successes += 1
+            if ramp in self.ramps:
+                self.ramp_successes[ramp] = self.ramp_successes.get(ramp, 0) + 1
+                if self.ramp_successes[ramp] >= 4:
+                    self.ramps[ramp] = min(16, self.ramps[ramp] + 2)
+                    self.ramp_successes[ramp] = 0
             if self.successes >= max(4, self.limit * 2):
                 self.ceiling = min(16, self.ceiling + 1)
                 self.successes = 0
@@ -105,6 +133,7 @@ class Permit:
         self.limiter, self.control = limiter, control
         self.held = False
         self.epoch = 0
+        self.ramp = None
 
     def acquire(self):
         limiter = self.limiter

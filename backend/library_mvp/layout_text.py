@@ -15,7 +15,8 @@ def html_runs(runs):
     for run in runs:
         text = html.escape(str(run.get("text", "")), quote=True).replace("\n", "<br>")
         tag = {"super": "sup", "sub": "sub"}.get(run.get("kind"))
-        output.append(f"<{tag}>{text}</{tag}>" if tag else text)
+        text = f"<{tag}>{text}</{tag}>" if tag else text
+        output.append(f"<strong>{text}</strong>" if run.get("bold") else text)
     return "<div>" + "".join(output) + "</div>"
 
 
@@ -25,7 +26,7 @@ def slice_runs(runs, start, end):
         text = run.get("text", "")
         piece = text[max(0, start - offset) : max(0, end - offset)]
         if piece:
-            result.append({"kind": run.get("kind", "text"), "text": piece})
+            result.append({**run, "kind": run.get("kind", "text"), "text": piece})
         offset += len(text)
     return result
 
@@ -40,7 +41,9 @@ def word_char(char):
 
 def boundaries(text):
     return [
-        i for i in range(1, len(text) + 1) if i == len(text) or not (word_char(text[i - 1]) and word_char(text[i]))
+        i
+        for i in range(1, len(text) + 1)
+        if i == len(text) or not (word_char(text[i - 1]) and word_char(text[i]))
     ]
 
 
@@ -59,7 +62,8 @@ def allocate(runs, areas):
             punctuation = [
                 i
                 for i in choices
-                if abs(i - target) <= max(8, (target - start) * 0.2) and re.match(r"[.!?。！？;；，,\s]", text[i - 1])
+                if abs(i - target) <= max(8, (target - start) * 0.2)
+                and re.match(r"[.!?。！？;；，,\s]", text[i - 1])
             ]
             end = min(punctuation or choices or [len(text)], key=lambda i: abs(i - target))
         result.append(slice_runs(runs, start, end))

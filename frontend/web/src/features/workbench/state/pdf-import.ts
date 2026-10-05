@@ -1,7 +1,8 @@
 import type { WorkbenchApi } from "@/platform/api/workbench.js";
 import { pdfFiles } from "../domain/resilience.js";
 
-export function createPdfImporter({ api, group, notify, failure, refresh, select }: {
+export function createPdfImporter({ api, group, notify, failure, refresh, select, imported: onImported }: {
+  imported?: (id: string) => void;
   select?: (id: string) => Promise<unknown> | void;
   api: WorkbenchApi; group: () => string | null; refresh: () => Promise<void>;
   notify: (message: string, tone?: "info" | "success" | "error") => void;
@@ -26,7 +27,8 @@ export function createPdfImporter({ api, group, notify, failure, refresh, select
       pending.push(async () => {
         if (!itemId) { const result = await api.upload(file); itemId = result.item?.id ?? null; duplicate = result.duplicate === true; title = result.item?.title || file.name; }
         if (groupId && itemId) await api.changeGroup(groupId, [itemId]);
-        if (duplicate && itemId) { duplicates++; duplicateItem = { id: itemId, title }; } else imported++;
+        if (duplicate && itemId) { duplicates++; duplicateItem = { id: itemId, title }; }
+        else { imported++; if (itemId) onImported?.(itemId); }
       });
     }
     async function attempt() {

@@ -11,6 +11,7 @@ import { createNotesController } from "./notes-controller.js";
 import { createReaderActions, type ReaderTarget } from "./reader-actions.js";
 import { createServiceRecovery } from "./service-recovery.js";
 import { createPdfImporter } from "./pdf-import.js";
+import { createAutoTranslation } from "./auto-translation.js";
 import { preferenceEvents, syncWorkbenchPreferences } from "./preferences-sync.js";
 import { parseWorkbenchPrefs, PREFS_KEY } from "../domain/preferences.js";
 import { normalizeTypography } from "../domain/typography.js";
@@ -272,11 +273,14 @@ export function createWorkbench(env: WorkbenchEnv) {
 
   const translations = createTranslations({ api, store, notify, openReader, refreshDesk, loadConfig: env.translationConfig });
 
-  const importPdfs = createPdfImporter({ api, group: () => get().groupId, notify, failure, refresh: refreshAll, select: revealNotePaper });
+  const autoTranslation = createAutoTranslation({ api, store, notify, config: env.translationConfig });
+  const importPdfs = createPdfImporter({ api, group: () => get().groupId, notify, failure,
+    refresh: refreshAll, select: revealNotePaper, imported: autoTranslation.enqueue });
 
   return {
     ...settings,
     translations,
+    autoTranslation,
     openSettings: (...args: Parameters<typeof settings.openSettings>) => notes.beforeLeave(() => settings.openSettings(...args)),
     notes,
     revealNotePaper,
@@ -285,7 +289,7 @@ export function createWorkbench(env: WorkbenchEnv) {
     notify,
     failure,
     retryService: recovery.retry,
-    dispose: () => { stopPreferences(); recovery.dispose(); },
+    dispose: () => { stopPreferences(); recovery.dispose(); autoTranslation.dispose(); },
     setLibraryOrder: (order: string[] | null) => { libraryOrder = order; },
     setShortcuts: (shortcutsOpen: boolean) => store.actions.patch({ shortcutsOpen }),
     dismissNotice,

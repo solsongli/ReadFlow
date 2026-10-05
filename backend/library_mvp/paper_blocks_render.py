@@ -21,9 +21,9 @@ TEMPLATE = r"""
 #set par(justify: true, leading: 0.75em)
 #let rich(runs) = {
   for r in runs {
-    if r.kind == "super" { super(r.text) }
-    else if r.kind == "sub" { sub(r.text) }
-    else { r.text }
+    let part = if r.kind == "super" { super(r.text) }
+      else if r.kind == "sub" { sub(r.text) } else { r.text }
+    if r.at("bold", default: false) { strong(part) } else { part }
   }
 }
 #for b in doc.blocks {

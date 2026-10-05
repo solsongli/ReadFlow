@@ -55,7 +55,8 @@ class ModelAdaptationTests(unittest.TestCase):
         for request in requests:
             body = json.loads(request["messages"][-1]["content"])
             self.assertEqual(body["paper_title"], "Synthetic paper")
-            self.assertTrue(all(b["section"] == "Methods" for b in body["blocks"]))
+            self.assertEqual(body["section"], "Methods")
+            self.assertTrue(all("section" not in b for b in body["blocks"]))
         return requests
 
     def test_fenced_json_is_accepted(self):

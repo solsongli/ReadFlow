@@ -11,10 +11,24 @@ export function TranslationSettings() {
   const wb = useWorkbench();
   const language = useWb((state) => state.blockLanguage);
   const imageText = useWb((state) => state.blockImageText);
+  const density = useWb((state) => state.layoutDensity);
+  const automatic = useWb((state) => state.autoTranslateImports);
+  const automaticStatus = useWb((state) => state.autoTranslation);
   return (
     <>
       <TranslationServiceSettings />
       <SettingsCard title="块级翻译" description="阅读器块级译文采用内置思源宋体；下方排版字体用于兼容任务。">
+        <SettingsRow label="原版式排版密度">
+          <select
+            aria-label="原版式排版密度"
+            className={SETTINGS_INPUT}
+            value={density}
+            onChange={(event) => wb.setPrefs({ layoutDensity: event.target.value as "balanced" | "compact" })}
+          >
+            <option value="balanced">均衡</option>
+            <option value="compact">紧凑</option>
+          </select>
+        </SettingsRow>
         <SettingsRow label="目标语言">
           <select
             aria-label="块翻译目标语言"
@@ -38,7 +52,38 @@ export function TranslationSettings() {
           />
         </SettingsRow>
       </SettingsCard>
+      <SettingsCard
+        title="导入后自动翻译"
+        description="默认关闭。开启后，新导入文献会在工作台空闲时发送到配置的服务，产生 token 费用；仍受外部模型开关控制。"
+      >
+        <SettingsRow label="空闲时自动翻译新导入的文献">
+          <input
+            type="checkbox"
+            aria-label="空闲时自动翻译新导入的文献"
+            checked={automatic}
+            onChange={(event) => {
+              wb.setPrefs({ autoTranslateImports: event.target.checked });
+              void wb.autoTranslation.tick(false);
+            }}
+          />
+        </SettingsRow>
+        {automaticStatus ? (
+          <div className="flex items-center gap-2 p-3 text-xs text-wb-text-3">
+            <span role="status" className="flex-1">
+              {automaticStatus.message} · 排队 {automaticStatus.queued} 篇
+            </span>
+            {automaticStatus.running || automaticStatus.queued ? (
+              <Button size="sm" onClick={() => void wb.autoTranslation.cancel()}>
+                取消自动翻译
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+      </SettingsCard>
       <p className="text-xs text-wb-text-3">图内文字开关也控制原位阅读和图表查看器的默认叠加显示。</p>
+      <p className="text-xs text-wb-text-3">
+        更改密度后，在阅读器点「仅重新排版」应用到已有译文，不产生模型费用。
+      </p>
       <RenderFontSettings />
     </>
   );
@@ -188,8 +233,8 @@ function TranslationServiceSettings() {
         </SettingsRow>
       </SettingsCard>
       <p className="m-0 text-xs text-wb-text-3">
-        关闭思考仅对已确认支持的 DeepSeek 官方服务生效，不影响 AI
-        伴读和出题。并发上限为所有翻译任务合计；遇到限流会自动降低。
+        关闭思考仅对已确认支持的 DeepSeek 官方服务生效，不影响 AI 伴读和出题。DeepSeek 并发设为 8 或以上时，从
+        8 自适应升至 16；较低设置保持上限。 并发上限为所有翻译任务合计；遇到限流会自动降低。
       </p>
       <div className="flex flex-wrap items-center gap-3">
         <Button disabled={busy} onClick={() => void run("detect")}>

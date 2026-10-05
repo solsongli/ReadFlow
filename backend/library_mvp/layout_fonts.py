@@ -212,13 +212,16 @@ def prepare_fonts(root, texts, check=lambda: None):
                         continue
                     original = regular.with_name("SourceHanSerifSC-Bold.otf") if weight == "bold" else regular
                     filename = weight + ".otf"
-                    (folder / filename).write_bytes(wrap_cff(seed, entry[0], data, original.read_bytes(), name))
+                    (folder / filename).write_bytes(
+                        wrap_cff(seed, entry[0], data, original.read_bytes(), name)
+                    )
                     names[weight] = filename
         if not names:
             raise StoreError("font_subset", "未生成可用的字形子集。")
         write_json(manifest, names)
     names = json.loads(manifest.read_text())
     css = "".join(
-        f'@font-face{{font-family:RF;src:url("{name}");font-weight:{weight}}}' for weight, name in names.items()
+        f'@font-face{{font-family:RF;src:url("{name}");font-weight:{weight}}}'
+        for weight, name in names.items()
     )
     return fitz.Archive(str(folder)), css, folder

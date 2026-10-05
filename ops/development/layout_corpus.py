@@ -47,6 +47,12 @@ def audit(source, target, report):
                 metrics[field + "_mismatches"] += getattr(left, key) != getattr(right, key)
             images, clipped = image_signature(left)
             new_images, new_clipped = image_signature(right)
+            # A new page-wide text Form contributes a page-wide clip without
+            # painting images. If every image invocation retains its hash and
+            # geometry, use the source visibility baseline instead of that clip.
+            if same_images(signature_image(left), signature_image(right)):
+                new_images, new_clipped = images, clipped
+                metrics["raw_image_identity_pages"] = metrics.get("raw_image_identity_pages", 0) + 1
             metrics["clipped_image_records"] = metrics.get("clipped_image_records", 0) + clipped
             metrics["output_clipped_image_records"] = metrics.get("output_clipped_image_records", 0) + new_clipped
             metrics["image_mismatches"] += not same_images(images, new_images)
@@ -91,7 +97,7 @@ def audit(source, target, report):
     return metrics
 
 
-def sheets(source, target, pages, output):
+def sheets(source, target, pages, output, labels=("Original", "Fake layout translation")):
     with tempfile.TemporaryDirectory(prefix="readflow-x7-raster-") as temporary:
         root = Path(temporary)
         for number in pages:
@@ -123,7 +129,7 @@ def sheets(source, target, pages, output):
                     sheet.paste(image.convert("RGB"), (10 + 620 * index, 35))
                 draw.text(
                     (10 + 620 * index, 10),
-                    ("Original" if index == 0 else "Fake layout translation") + f" p.{number}",
+                    labels[index] + f" p.{number}",
                     fill="black",
                 )
             sheet.save(output / f"comparison-p{number}.png")
@@ -143,7 +149,8 @@ def worker(options):
         for label in block.get("figure_text", []):
             if label.get("translation"):
                 cache[cache_key(label, "zh-CN", "layout-fake")] = {"text": label["translation"]}
-    outcome = render_layout(options.source, directory, document, cache, "zh-CN", "layout-fake")
+    outcome = render_layout(options.source, directory, document, cache, "zh-CN", "layout-fake",
+                            density=options.density)
     report = json.loads((directory / "layout-audit.json").read_text())
     metrics = {
         "name": options.name,
@@ -171,6 +178,8 @@ def main():
     parser.add_argument("--source", type=Path)
     parser.add_argument("--manifest", type=Path)
     parser.add_argument("--name")
+    parser.add_argument("--density", choices=("balanced", "compact"), default="balanced")
+    parser.add_argument("--only", help="Comma-separated subset; omit only for the final full corpus pass")
     options = parser.parse_args()
     if options.source:
         return worker(options)
@@ -184,6 +193,8 @@ def main():
         if any(p.is_symlink() for p in [source, *source.parents]):
             raise ValueError("Corpus source is not a regular file")
         name = metrics_file.parent.name
+        if options.only and name not in options.only.split(","):
+            continue
         dest = options.output / name
         dest.mkdir(exist_ok=True)
         with (dest / "worker.log").open("w") as log:
@@ -200,6 +211,7 @@ def main():
                     name,
                     "--output",
                     str(dest),
+                    "--density", options.density,
                 ],
                 stdout=log,
                 stderr=log,

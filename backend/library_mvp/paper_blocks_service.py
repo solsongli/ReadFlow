@@ -18,6 +18,8 @@ from .paper_blocks_transport import token_usage
 from .document_models import revision
 from .translation_speed import workers
 from .paper_blocks_batches import prioritize_pages
+from . import paper_terms
+from .paper_quality import summary
 
 
 class BlockService:
@@ -27,6 +29,7 @@ class BlockService:
         self.pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="readflow-blocks")
         self.lock = threading.RLock()
         self.pdf_lock = threading.Lock()
+        self.terms_lock = threading.Lock()
         self.policy = assistance.translation_policy
         self.jobs, self.controls = {}, {}
         self.closed = False
@@ -39,12 +42,18 @@ class BlockService:
             contexts = (
                 json.loads((root / "contexts.json").read_text()) if (root / "contexts.json").exists() else {}
             )
-            old = json.loads((root / "selection.json").read_text()) if (root / "selection.json").exists() else {}
+            old = (
+                json.loads((root / "selection.json").read_text())
+                if (root / "selection.json").exists()
+                else {}
+            )
             context = contexts.get(language, old if old.get("language") == language else {})
             cache = self.storage.cache(entry)
             jobs = [dict(j) for j in self.jobs.values() if j["sha256"] == entry["sha256"]]
         active = [j for j in jobs if j["status"] in ("queued", "running", "cancelling")]
-        job = next((j for j in active if j["scope"] == "full"), next(iter(active), jobs[-1] if jobs else None))
+        job = next(
+            (j for j in active if j["scope"] == "full"), next(iter(active), jobs[-1] if jobs else None)
+        )
         stale = bool(
             document
             and (
@@ -64,14 +73,27 @@ class BlockService:
                 )
                 has_translation = has_translation or bool(value)
                 runs = (
-                    value.get("runs") if isinstance(value, dict) else source_runs(block, value) if value else None
+                    value.get("runs")
+                    if isinstance(value, dict)
+                    else source_runs(block, value)
+                    if value
+                    else None
                 )
+                labels = translated_labels(block, cache, language, context.get("fingerprint", ""))
+                qa = value.get("qa") if isinstance(value, dict) else None
+                label_qa = [label["qa"] for label in labels if label.get("qa")]
+                if label_qa:
+                    qa = {
+                        "issues": sorted({issue for q in label_qa for issue in q.get("issues", [])}),
+                        "retried": any(q.get("retried") for q in label_qa),
+                    }
                 blocks.append(
                     {
                         **block,
                         "translation": rich_text(value),
                         "translation_runs": runs,
-                        "figure_text": translated_labels(block, cache, language, context.get("fingerprint", "")),
+                        "qa": qa,
+                        "figure_text": labels,
                     }
                 )
             document = {**document, "blocks": blocks}
@@ -89,12 +111,64 @@ class BlockService:
             "needs_extract": stale,
             "result": self.storage.result(entry),
             "renderer_ready": renderer,
+            "terms": paper_terms.load(root, language),
+            "qa": summary(
+                cache.get(cache_key(b, language, context.get("fingerprint", "")))
+                for b in translation_units(document["blocks"])
+                if document
+            )
+            if document
+            else {},
         }
 
+    def edit_terms(self, item, body):
+        language = body.get("language", "zh-CN")
+        if language not in ("zh-CN", "en", "ja", "de", "fr"):
+            raise StoreError("INVALID_LANGUAGE", "目标语言无效。")
+        rows = body.get("entries")
+        if not isinstance(rows, list) or len(rows) > 100 or len(json.dumps(rows)) > 50000:
+            raise StoreError("INVALID_TERMS", "术语表格式无效。")
+        entries = paper_terms.normalize(rows)
+        if len(entries) != len(rows):
+            raise StoreError("INVALID_TERMS", "术语不能为空、重复或过长。")
+        entry = self.storage.attachment(item, body.get("attachment_id"))
+        root = self.storage.directory(entry)
+        with self.lock:
+            prior = paper_terms.load(root, language)
+            if body.get("revision") != prior["revision"]:
+                raise StoreError("CONFLICT", "术语已在其他窗口修改，请刷新后重试。", 409)
+            old = {r["source"].casefold(): r["target"] for r in prior["entries"]}
+            new = {r["source"].casefold(): r["target"] for r in entries}
+            changed = {key for key in old.keys() | new.keys() if old.get(key) != new.get(key)}
+            document = self.storage.load(entry, accept_stale=True) or {"blocks": []}
+            affected = [
+                b["id"]
+                for b in translation_units(document["blocks"])
+                if b["type"] not in SKIP and any(paper_terms.occurs(t, b["text"]) for t in changed)
+            ]
+            value = {
+                "entries": [dict(r, keep=r["source"] == r["target"]) for r in entries],
+                "prepared": True,
+                "revision": prior["revision"] + 1,
+                "affected": affected,
+            }
+            paper_terms.save(root, language, value)
+            return value
+
     def start(self, item, body, *, extraction=False, render_only=False):
+        density = body.get("density", "balanced")
+        if density not in {"balanced", "compact"}:
+            raise StoreError("INVALID_DENSITY", "排版密度无效。")
         if self.closed:
             raise StoreError("service_closed", "文献服务正在关闭。", 503)
         entry = self.storage.attachment(item, body.get("attachment_id"))
+        ids = body.get("block_ids")
+        if ids is not None and (
+            not isinstance(ids, list)
+            or len(ids) > 5000
+            or any(not isinstance(i, str) or len(i) > 100 for i in ids)
+        ):
+            raise StoreError("INVALID_BLOCKS", "相关块列表无效。")
         config, terms, language, fingerprint = submission(self, entry, body, extraction, render_only)
         scope = "extract" if extraction else "block" if body.get("block_id") else "full"
         with self.lock:
@@ -153,180 +227,12 @@ class BlockService:
                 body.get("image_text") is not False,
                 body.get("current_page") if type(body.get("current_page")) is int else None,
                 render_only,
+                ids,
+                density,
             )
             return dict(job)
 
-    def run(
-        self,
-        identity,
-        entry,
-        config,
-        terms,
-        language,
-        fingerprint,
-        block_id,
-        force,
-        extraction,
-        image_text=True,
-        current_page=None,
-        render_only=False,
-    ):
-        token = self.controls[identity]
-        secret = config.get("api_key", "")
-
-        def check():
-            if token["cancel"].is_set():
-                raise StoreError("cancelled", "已取消。")
-
-        def update(**changes):
-            with self.lock:
-                self.jobs[identity].update(changes)
-
-        try:
-            update(status="running")
-            check()
-            with self.pdf_lock:
-                document = self.storage.extract(entry, check)
-            check()
-            root = self.storage.directory(entry)
-            if extraction:
-                update(status="done", phase="已提取", percent=100)
-                return
-            if render_only:
-                render_snapshot(
-                    self,
-                    entry,
-                    document,
-                    language,
-                    fingerprint,
-                    check,
-                    update,
-                    image_text,
-                    {"usage": token_usage({}), "notices": [], "translation_fallback": []},
-                )
-                update(status="done", phase="完成", percent=100)
-                return
-            blocks = document["blocks"]
-            title = next((b["text"] for b in blocks if b["type"] == "title"), "")
-            section = ""
-            contextual = []
-            for block in blocks:
-                if block["type"] == "heading":
-                    section = block["text"][:250]
-                contextual.append({**block, "section": section})
-            blocks = contextual
-            if not any(
-                b["type"] in ("text", "title", "abstract", "heading", "caption", "list", "figure_text")
-                and b["text"].strip()
-                for b in translation_units(blocks)
-            ):
-                raise StoreError("no_text", "未识别到可翻译文字，请检查扫描质量或本地 OCR 资源。", 409)
-            if block_id:
-                requested = next((b for b in blocks if b["id"] == block_id), None)
-                if requested is None:
-                    raise StoreError("NOT_FOUND", "找不到所选块。", 404)
-                selected = requested.get("caption_id") or block_id
-                blocks = [b for b in blocks if b["id"] in {selected, block_id}]
-            else:
-                runtime_paths()  # Fail before any paid request if packaged rendering resources are absent.
-            blocks = prioritize_pages(translation_units(blocks), current_page)
-            with self.lock:
-                cache = self.storage.cache(entry)
-
-            def select_context():
-                with self.lock:
-                    context = {"language": language, "fingerprint": fingerprint}
-                    contexts = (
-                        json.loads((root / "contexts.json").read_text())
-                        if (root / "contexts.json").exists()
-                        else {}
-                    )
-                    contexts[language] = context
-                    write_json(root / "contexts.json", contexts)
-                    write_json(root / "selection.json", context)
-
-            def call(messages):
-                control = RequestControl(180)
-                with self.lock:
-                    token["requests"].add(control)
-                try:
-                    check()
-                    with self.policy.limiter.slot(control, workers(config)) as permit:
-                        response = self.assistance.chat(
-                            config, messages, control=control, batch=True, policy=self.policy, permit=permit
-                        )
-                    update(notices=self.policy.notices(config))
-                    if isinstance(response, dict):
-                        usage = token_usage(response.get("usage"))
-                        with self.lock:
-                            for key, value in usage.items():
-                                self.jobs[identity]["usage"][key] += value
-                        return {**response, "content": response.get("content", "").replace(secret, "[已隐藏]")}
-                    return response.replace(secret, "[已隐藏]")
-                finally:
-                    control.finish()
-                    with self.lock:
-                        token["requests"].discard(control)
-
-            def save(patch):
-                check()
-                with self.lock:
-                    check()
-                    self.merge_cache(entry, patch)
-                    select_context()
-
-            update(phase="翻译", percent=10)
-            failed = translate_blocks(
-                blocks,
-                cache,
-                language,
-                fingerprint,
-                call,
-                terms,
-                check,
-                lambda done, total: update(
-                    percent=10 + round(75 * done / max(1, total)), completed_blocks=done, total_blocks=total
-                ),
-                save,
-                force,
-                clean=lambda text: text.replace(secret, "[已隐藏]"),
-                title=title,
-                concurrency=workers(config),
-            )
-            check()
-            if any(cache_key(block, language, fingerprint) in cache for block in blocks):
-                select_context()
-            if not block_id or self.storage.result(entry):
-                render_snapshot(
-                    self,
-                    entry,
-                    document,
-                    language,
-                    fingerprint,
-                    check,
-                    update,
-                    image_text,
-                    {
-                        "usage": dict(self.jobs[identity]["usage"]),
-                        "notices": self.policy.notices(config),
-                        "translation_fallback": failed,
-                    },
-                )
-            update(status="done", phase="完成", percent=100, translation_fallback=failed)
-        except Exception as error:
-            if token["cancel"].is_set():
-                update(status="cancelled", phase="已取消", error=None)
-            else:
-                update(status="failed", phase="失败", error=mapped_error(error, secret))
-        finally:
-            config.clear()
-            secret = ""
-            with self.lock:
-                self.controls.pop(identity, None)
-                # Keep only a bounded in-memory public history.
-                for key in list(self.jobs)[:-100]:
-                    if key not in self.controls:
-                        self.jobs.pop(key, None)
+    from .paper_blocks_worker import run
 
     def merge_cache(self, entry, patch):
         with self.lock:
@@ -354,7 +260,9 @@ class BlockService:
             document = self.storage.extract(entry)
             root = self.storage.directory(entry)
             context = (
-                json.loads((root / "selection.json").read_text()) if (root / "selection.json").exists() else {}
+                json.loads((root / "selection.json").read_text())
+                if (root / "selection.json").exists()
+                else {}
             )
             return latex_zip(
                 root,

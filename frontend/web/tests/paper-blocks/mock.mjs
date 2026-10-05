@@ -37,6 +37,18 @@ export async function blocksMock(query) {
   }
   const jobs = [],
     requests = [];
+  let terms = { entries: [], revision: 0, prepared: false };
+  let qa;
+  if (query.includes("x8")) {
+    terms = { entries: [{ source: "policy", target: "策略", keep: false }], revision: 1, prepared: true };
+    qa = { checked: 8, retried: 2, needs_review: 1 };
+    const review = document?.blocks.find((b) => b.type === "text");
+    if (review) {
+      review.qa = { issues: ["numbers"], retried: true };
+      review.translation_runs = [{ kind: "text", text: "任务。", bold: true }, ...(review.translation_runs || [])];
+      review.translation = review.translation_runs.map((r) => r.text).join("");
+    }
+  }
   const active = (job) => ["running", "queued", "cancelling"].includes(job.status);
   const state = (requestedLanguage) => {
     const current = jobs.filter(active);
@@ -55,6 +67,8 @@ export async function blocksMock(query) {
       job: current.find((j) => j.scope === "full") || current[0] || jobs.at(-1) || null,
       jobs,
       result,
+      terms,
+      qa,
       renderer_ready: true,
       language: requestedLanguage,
       has_translation: requestedLanguage === language && Boolean(document?.blocks.some((b) => b.translation)),
@@ -148,6 +162,11 @@ export async function blocksMock(query) {
         };
         jobs.push(job);
         await route.fulfill({ status: 202, json: job });
+      } else if (path.endsWith("/terms")) {
+        const body = route.request().postDataJSON();
+        terms = { entries: body.entries, revision: terms.revision + 1, prepared: true,
+          affected: [document.blocks.find((b) => b.type === "text").id] };
+        await route.fulfill({ json: terms });
       } else if (path.endsWith("/render")) {
         requests.push({ render_only: true, ...route.request().postDataJSON() });
         result = { revision: "local-render", language, layout_ready: true, reflow_ready: true };

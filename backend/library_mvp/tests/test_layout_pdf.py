@@ -95,6 +95,39 @@ class LayoutTextTests(unittest.TestCase):
 
 
 class LayoutPdfTests(unittest.TestCase):
+    def test_incremental_pages_preserve_original_annotations_links_and_crop_rotation(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source.pdf"
+            document, cache = sample(source)
+            with patch(
+                "backend.library_mvp.paper_blocks_layout.prepare_fonts", return_value=(None, "", root)
+            ):
+                first = render_layout(source, root, document, cache, "zh-CN", "fake")
+                self.assertEqual(first["rendered_pages"], [1, 2])
+                unchanged = render_layout(source, root, document, cache, "zh-CN", "fake")
+                self.assertEqual(unchanged["rendered_pages"], [])
+                selected = next(b for b in document["blocks"] if b["page"] == 2 and b["type"] == "text")
+                cache[cache_key(selected, "zh-CN", "fake")] = {"text": "A revised paragraph"}
+                result = render_layout(source, root, document, cache, "zh-CN", "fake")
+                self.assertEqual(result["rendered_pages"], [2])
+                self.assertEqual(result["reused_pages"], [1])
+                other = next(b for b in document["blocks"] if b["page"] == 1 and b["type"] == "text")
+                cache[cache_key(other, "zh-CN", "fake")] = {"text": "Another revision"}
+                result = render_layout(source, root, document, cache, "zh-CN", "fake")
+                self.assertEqual(result["reused_pages"], [2])
+            with fitz.open(source) as original, fitz.open(root / "translated-layout.pdf") as pdf:
+                self.assertEqual(pdf[1].rotation, 90)
+                self.assertEqual(pdf[1].cropbox, original[1].cropbox)
+                self.assertIn("A revised paragraph", pdf[1].get_text())
+                self.assertIn("Another revision", pdf[0].get_text())
+                for index in range(2):
+                    self.assertEqual(
+                        [a.type for a in pdf[index].annots()], [a.type for a in original[index].annots()]
+                    )
+                    self.assertEqual(len(pdf[index].get_links()), len(original[index].get_links()))
+                    self.assertIn("Keep original footer", pdf[index].get_text())
+
     def test_misclassified_ruled_table_cells_stay_original_while_caption_translates(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -129,7 +162,9 @@ class LayoutPdfTests(unittest.TestCase):
                     )
                 pdf.save(source)
             cache = {cache_key(b, "zh-CN", "fake"): {"text": "Translated " + b["id"]} for b in blocks}
-            with patch("backend.library_mvp.paper_blocks_layout.prepare_fonts", return_value=(None, "", root)):
+            with patch(
+                "backend.library_mvp.paper_blocks_layout.prepare_fonts", return_value=(None, "", root)
+            ):
                 outcome = render_layout(source, root, {"blocks": blocks}, cache, "zh-CN", "fake")
             with fitz.open(root / "translated-layout.pdf") as translated:
                 text = translated[0].get_text()
@@ -146,7 +181,9 @@ class LayoutPdfTests(unittest.TestCase):
             source = root / "source.pdf"
             document, cache = sample(source)
             # Geometry/erasures always run on CI without Typst; archived CJK fonts are tested separately.
-            with patch("backend.library_mvp.paper_blocks_layout.prepare_fonts", return_value=(None, "", root)):
+            with patch(
+                "backend.library_mvp.paper_blocks_layout.prepare_fonts", return_value=(None, "", root)
+            ):
                 result = render_layout(source, root, document, cache, "zh-CN", "fake")
             self.assertEqual(result["render_fallback"], [])
             with fitz.open(source) as before, fitz.open(root / "translated-layout.pdf") as after:
@@ -189,7 +226,9 @@ class LayoutPdfTests(unittest.TestCase):
                 "anchors": [{"page": 1, "bbox": box}],
             }
             cache = {cache_key(block, "zh-CN", "fake"): {"text": "Translated paragraph"}}
-            with patch("backend.library_mvp.paper_blocks_layout.prepare_fonts", return_value=(None, "", root)):
+            with patch(
+                "backend.library_mvp.paper_blocks_layout.prepare_fonts", return_value=(None, "", root)
+            ):
                 outcome = render_layout(source, root, {"blocks": [block]}, cache, "zh-CN", "fake")
             self.assertEqual(outcome["render_fallback"], [])
             with fitz.open(source) as before, fitz.open(root / "translated-layout.pdf") as after:

@@ -18,6 +18,10 @@ def register_paper_blocks(app, store, json_body):
     async def extract(item_id: str, request: Request):
         return service.start(item_id, await json_body(request), extraction=True)
 
+    @app.patch(root + "/terms")
+    async def terms(item_id: str, request: Request):
+        return service.edit_terms(item_id, await json_body(request))
+
     @app.post(root + "/translate", status_code=202)
     async def translate(item_id: str, request: Request):
         return service.start(item_id, await json_body(request))
@@ -25,7 +29,7 @@ def register_paper_blocks(app, store, json_body):
     @app.post(root + "/render", status_code=202)
     async def render_cached(item_id: str, request: Request):
         body = await json_body(request)
-        if set(body) - {"attachment_id", "language", "image_text"}:
+        if set(body) - {"attachment_id", "language", "image_text", "density"}:
             raise StoreError("INVALID_FIELD", "本地排版只接受附件、语言和图内文字选项。")
         return service.start(item_id, body, render_only=True)
 

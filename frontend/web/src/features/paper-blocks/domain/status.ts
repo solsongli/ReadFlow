@@ -10,6 +10,12 @@ export function usageText(usage?: BlockUsage) {
 
 export function fallbackMessages(result: BlockStatus["result"], job: BlockJob | null) {
   const messages: Array<{ kind: string; text: string }> = [];
+  const qa = job?.qa || result?.qa;
+  if (qa?.checked)
+    messages.push({
+      kind: "quality",
+      text: `质检：${qa.retried || 0} 块已自动重译，${qa.needs_review || 0} 块仍需核对。`,
+    });
   if ((job?.notices || result?.notices || []).includes("thinking_unsupported")) {
     messages.push({
       kind: "thinking",

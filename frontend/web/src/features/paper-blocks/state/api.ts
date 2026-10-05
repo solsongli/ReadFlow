@@ -24,6 +24,8 @@ export function blocksApi(item: string, attachment: string, language = "zh-CN") 
     start: async (body: unknown, extract = false) =>
       (await request(extract ? "/extract" : "/translate", "POST", body)).json(),
     render: async (body: unknown) => (await request("/render", "POST", body)).json(),
+    terms: async (body: unknown) =>
+      (await request("/terms", "PATCH", { ...(body as object), attachment_id: attachment, language })).json(),
     cancel: async (id: string) => request(`/jobs/${encodeURIComponent(id)}/cancel`, "POST", {}),
     latex: async () => (await request("/latex")).blob(),
     pdf: async (format: "layout" | "reflow" = "layout") =>

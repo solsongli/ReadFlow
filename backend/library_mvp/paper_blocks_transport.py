@@ -55,10 +55,12 @@ def run_batch(
     owned = control is None
     control = control or RequestControl(180)
     policy = policy or TranslationPolicy()
-    slot = nullcontext(permit) if permit else policy.limiter.slot(control, workers(config))
+    slot = nullcontext(permit) if permit else policy.slot(config, control)
     try:
         with slot as lease:
-            return asyncio.run(_request(config, messages, control, transport, backoff, json_mode, policy, lease))
+            return asyncio.run(
+                _request(config, messages, control, transport, backoff, json_mode, policy, lease)
+            )
     finally:
         if owned:
             control.finish()
@@ -69,6 +71,8 @@ async def _request(config, messages, control, transport, backoff, json_mode, pol
     payload = {"model": config["model"], "messages": messages, "stream": False, "max_tokens": 4096}
     use_json = json_mode and config.get("json_mode", True)
     retry = 0
+    metrics = getattr(control, "translation_metrics", None)
+    phase = getattr(control, "translation_phase", "main_batches")
     loop, task = asyncio.get_running_loop(), asyncio.current_task()
 
     # asyncio cancellation closes in-flight sockets even before response headers;
@@ -92,15 +96,21 @@ async def _request(config, messages, control, transport, backoff, json_mode, pol
                 if use_json:
                     body["response_format"] = {"type": "json_object"}
                 headers = {"Authorization": "Bearer " + config["api_key"]} if config.get("api_key") else {}
-                async with client.stream("POST", endpoint, json=body, headers=headers) as response:
-                    raw = bytearray()
-                    async for chunk in response.aiter_bytes():
-                        control.raise_if_stopped()
-                        raw.extend(chunk)
-                        if len(raw) > 2_000_000:
-                            raise ValueError("翻译服务响应过大。")
-                    status = response.status_code
-                    retry_after = response.headers.get("retry-after", "")
+                if metrics:
+                    metrics.network(1)
+                try:
+                    async with client.stream("POST", endpoint, json=body, headers=headers) as response:
+                        raw = bytearray()
+                        async for chunk in response.aiter_bytes():
+                            control.raise_if_stopped()
+                            raw.extend(chunk)
+                            if len(raw) > 2_000_000:
+                                raise ValueError("翻译服务响应过大。")
+                        status = response.status_code
+                        retry_after = response.headers.get("retry-after", "")
+                finally:
+                    if metrics:
+                        metrics.network(-1)
                 content = raw.decode("utf-8", errors="replace")
                 lowered = content.lower()
                 if (
@@ -137,13 +147,15 @@ async def _request(config, messages, control, transport, backoff, json_mode, pol
                     error.safe_error = {"code": failure["code"], "message": failure["message"]}
                     raise error
                 value = json.loads(content)
+                if metrics:
+                    metrics.tokens(phase, value.get("usage"))
                 choice = value["choices"][0]
                 answer = choice.get("message", {}).get("content", "")
                 if not isinstance(answer, str):
                     raise ValueError("翻译服务没有返回文本。")
                 if config.get("api_key"):
                     answer = answer.replace(config["api_key"], "[已隐藏]")
-                policy.limiter.succeeded(permit.epoch)
+                policy.limiter.succeeded(permit.epoch, permit.ramp)
                 return {
                     "content": answer,
                     "finish_reason": choice.get("finish_reason"),

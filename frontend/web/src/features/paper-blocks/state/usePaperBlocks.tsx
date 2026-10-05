@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/ui/wb/Button.js";
 import { BlockTools } from "../ui/BlockTools.js";
+import { PaperTerms } from "../ui/PaperTerms.js";
 import { pdfFormats, type TranslationFormat } from "../domain/formats.js";
 import type { AssistancePorts } from "@/features/reader-assistance/domain.js";
 import { blocksApi } from "./api.js";
@@ -26,6 +27,7 @@ export function usePaperBlocks(
     imageText: boolean;
     currentPage?: () => number;
     format?: TranslationFormat;
+    density?: "balanced" | "compact";
     setFormat?: (format: TranslationFormat) => void;
   } = { imageText: true },
 ) {
@@ -40,7 +42,13 @@ export function usePaperBlocks(
   const [error, setError] = useState("");
   const [dismissed, setDismissed] = useState("");
   const [sending, setSending] = useState(false);
-  const lastRequest = useRef<{ id?: string; force: boolean; extract: boolean; render?: boolean }>({
+  const lastRequest = useRef<{
+    id?: string;
+    ids?: string[];
+    force: boolean;
+    extract: boolean;
+    render?: boolean;
+  }>({
     force: false,
     extract: false,
   });
@@ -66,6 +74,17 @@ export function usePaperBlocks(
     },
     (id) => void start(id),
     sending,
+    <PaperTerms
+      key={`${item}:${language}`}
+      value={status?.terms}
+      busy={sending || busy(jobViews(status).full?.status)}
+      save={async (entries, revision) => {
+        const value = await api.terms({ entries, revision });
+        await refresh();
+        return value;
+      }}
+      retranslate={(ids) => void start(undefined, true, false, ids)}
+    />,
   );
   const { selected, setSelected } = reading;
   useEffect(() => {
@@ -124,12 +143,12 @@ export function usePaperBlocks(
       void start(undefined, false, true);
     }
   }, [active, enabled, status?.document, status?.needs_extract, jobs.extracting]);
-  async function start(id?: string, force = false, extract = false) {
+  async function start(id?: string, force = false, extract = false, ids?: string[]) {
     if (sending) return;
     setSending(true);
     setError("");
     setDismissed("");
-    lastRequest.current = { id, force, extract };
+    lastRequest.current = { id, ids, force, extract };
     try {
       const config = extract ? {} : await ports.translationConfig();
       const job = await api.start(
@@ -138,8 +157,10 @@ export function usePaperBlocks(
           attachment_id: attachment,
           language,
           block_id: id,
+          block_ids: ids,
           force,
           image_text: options.imageText,
+          density: options.density || "balanced",
           current_page: options.currentPage?.(),
         },
         extract,
@@ -169,7 +190,12 @@ export function usePaperBlocks(
     setError("");
     lastRequest.current = { force: false, extract: false, render: true };
     try {
-      const job = await api.render({ attachment_id: attachment, language, image_text: options.imageText });
+      const job = await api.render({
+        attachment_id: attachment,
+        language,
+        image_text: options.imageText,
+        density: options.density || "balanced",
+      });
       if (mounted.current) setStatus((old) => ({ ...old!, job, jobs: [...(old?.jobs || []), job] }));
       await refresh();
     } catch (failure) {
@@ -289,7 +315,7 @@ export function usePaperBlocks(
                 onClick={() => {
                   const request = lastRequest.current;
                   if (request.render) void renderCached();
-                  else void start(request.id, request.force, request.extract);
+                  else void start(request.id, request.force, request.extract, request.ids);
                 }}
               >
                 重试

@@ -104,7 +104,7 @@ def restore_rich(text, mapping):
         return None
     if any(text.count(marker) != 1 for marker in mapping):
         return None
-    runs, cursor = [], 0
+    runs, cursor, bold = [], 0, False
     for at, marker in sorted((text.index(marker), marker) for marker in mapping):
         span = mapping[marker]
         if isinstance(span, str):
@@ -115,11 +115,22 @@ def restore_rich(text, mapping):
             before += left
         elif left and not before and runs and not runs[-1]["text"][-1:].isspace():
             before = left
-        runs.append({"kind": "text", "text": before})
-        runs.extend(span.get("runs") or [{"kind": "text", "text": span["text"]}])
+        runs.append({"kind": "text", "text": before, **({"bold": True} if bold else {})})
+        if span.get("format"):
+            if span["format"] == "bold-start" and not bold:
+                bold = True
+            elif span["format"] == "bold-end" and bold:
+                bold = False
+            else:
+                return None
+        else:
+            runs.extend({**run, **({"bold": True} if bold else {})}
+                        for run in (span.get("runs") or [{"kind": "text", "text": span["text"]}]))
         cursor = at + len(marker)
         if right and text[cursor:] and not text[cursor].isspace():
             runs.append({"kind": "text", "text": right})
+    if bold:
+        return None
     runs.append({"kind": "text", "text": text[cursor:]})
     value = "".join(r["text"] for r in runs)
     if re.search(r"__RF_[A-Za-z0-9_]+__", value):

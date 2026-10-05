@@ -17,6 +17,7 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
   const language = useWb((state) => state.blockLanguage);
   const format = useWb((state) => state.translationFormat);
   const imageText = useWb((state) => state.blockImageText);
+  const density = useWb((state) => state.layoutDensity);
   const disabled = useWb((state) => state.blockModeDisabled);
   const hintDismissed = useWb((state) => state.blockModeHintDismissed);
   const row = tab.row;
@@ -32,7 +33,7 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
     row?.translation.status === "done",
     (message) => wb.notify(message, "success"),
     { disabled, hintDismissed, save: (prefs) => wb.setPrefs(prefs) },
-    { imageText, currentPage: () => currentPage.current, format, setFormat: (translationFormat) => wb.setPrefs({ translationFormat }) },
+    { imageText, density, currentPage: () => currentPage.current, format, setFormat: (translationFormat) => wb.setPrefs({ translationFormat }) },
   );
   if (!row || !tab.attachmentId) {
     return (

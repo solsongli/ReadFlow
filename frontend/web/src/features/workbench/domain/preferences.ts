@@ -12,6 +12,7 @@ export function parseWorkbenchPrefs(raw: string | null | undefined): Partial<Pre
       if (key in value && typeof value[key] === typeof DEFAULT_PREFS[key]) (prefs as Record<string, unknown>)[key] = value[key];
     }
     prefs.translationFormat = prefs.translationFormat === "reflow" ? "reflow" : "layout";
+    prefs.layoutDensity = prefs.layoutDensity === "compact" ? "compact" : "balanced";
     prefs.blockLanguage = ["zh-CN", "en", "ja", "de", "fr"].includes(prefs.blockLanguage || "") ? prefs.blockLanguage : "zh-CN";
     prefs.reviewNewLimit = Number.isFinite(prefs.reviewNewLimit)
       ? Math.max(0, Math.min(1000, Math.floor(prefs.reviewNewLimit!))) : 20;

@@ -56,6 +56,11 @@ function WorkbenchLayout() {
 
   useEffect(() => {
     void wb.refreshAll();
+    let lastInput = Date.now();
+    const activity = () => { lastInput = Date.now(); };
+    const auto = window.setInterval(() => void wb.autoTranslation.tick(Date.now() - lastInput > 2500), 2000);
+    window.addEventListener("pointerdown", activity);
+    window.addEventListener("keydown", activity);
     // Papers saved from the browser (Zotero Connector) appear when the user comes back to the window.
     const onFocus = () => {
       if (wb.store.getSnapshot().connection.unavailable) { void wb.retryService(); return; }
@@ -79,6 +84,9 @@ function WorkbenchLayout() {
     return () => {
       window.removeEventListener("focus", onFocus);
       window.clearInterval(jobs);
+      window.clearInterval(auto);
+      window.removeEventListener("pointerdown", activity);
+      window.removeEventListener("keydown", activity);
       wb.dispose();
     };
   }, [wb]);

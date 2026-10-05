@@ -51,6 +51,8 @@ export interface Prefs extends TypographyPrefs {
   reviewLimit: number;
   blockLanguage: string;
   blockImageText: boolean;
+  autoTranslateImports: boolean;
+  layoutDensity: "balanced" | "compact";
   translationFormat: "layout" | "reflow";
   translationDisableThinking: boolean;
   blockModeDisabled: boolean;
@@ -68,6 +70,7 @@ export interface Prefs extends TypographyPrefs {
 }
 
 export interface WorkbenchState extends Prefs {
+  autoTranslation?: { queued: number; running: boolean; message: string; itemId?: string };
   translationIssue?: { itemId: string; error: import("@/platform/contracts/workbench.js").TranslationError };
   translatingIds?: string[];
   main: MainView;
@@ -104,6 +107,8 @@ export const DEFAULT_PREFS: Prefs = {
   reviewLimit: 200,
   blockLanguage: "zh-CN",
   blockImageText: true,
+  autoTranslateImports: false,
+  layoutDensity: "balanced",
   translationFormat: "layout",
   translationDisableThinking: true,
   blockModeDisabled: false,
@@ -228,6 +233,6 @@ export function createWorkbenchStore(prefs: Partial<Prefs> = {}) {
 export type WorkbenchStore = ReturnType<typeof createWorkbenchStore>;
 
 export function prefsOf(state: S): Prefs {
-  const { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit, blockLanguage, blockImageText, translationFormat, translationDisableThinking, blockModeDisabled, blockModeHintDismissed } = state;
-  return { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit, blockLanguage, blockImageText, translationFormat, translationDisableThinking, blockModeDisabled, blockModeHintDismissed };
+  const { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit, blockLanguage, blockImageText, autoTranslateImports, layoutDensity, translationFormat, translationDisableThinking, blockModeDisabled, blockModeHintDismissed } = state;
+  return { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit, blockLanguage, blockImageText, autoTranslateImports, layoutDensity, translationFormat, translationDisableThinking, blockModeDisabled, blockModeHintDismissed };
 }

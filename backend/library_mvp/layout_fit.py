@@ -2,6 +2,7 @@
 import re
 import pymupdf as fitz
 from .layout_text import html_runs, plain, boundaries, truncated
+from .layout_density import balanced_leading
 
 
 def css_for(fonts, size, bold, color, leading):
@@ -13,11 +14,13 @@ div{{margin:0;padding:0;white-space:pre-wrap}}sup,sub{{font-size:65%;line-height
     )
 
 
-def attempt(rect, runs, css, archive):
+def attempt(rect, runs, css, archive, minimum=0.55):
     document = fitz.open()
     page = document.new_page(width=rect.width, height=rect.height)
     try:
-        spare, scale = page.insert_htmlbox(page.rect, html_runs(runs), css=css, archive=archive, scale_low=0.55)
+        spare, scale = page.insert_htmlbox(
+            page.rect, html_runs(runs), css=css, archive=archive, scale_low=minimum
+        )
         if spare < 0:
             document.close()
             return None
@@ -29,17 +32,40 @@ def attempt(rect, runs, css, archive):
         if any("\ufffd" in s["text"] or "\0" in s["text"] for s in spans):
             document.close()
             return None
-        return document, scale, [s["bbox"] for s in spans], sorted({s["font"] for s in spans})
+        count = sum(len(b.get("lines", [])) for b in text["blocks"])
+        return document, scale, [s["bbox"] for s in spans], sorted({s["font"] for s in spans}), count
     except Exception:
         document.close()
         raise
 
 
-def fit(rect, runs, fonts, archive, size, bold=False, color="rgb(0,0,0)", label=False, check=lambda: None):
+def fit(
+    rect,
+    runs,
+    fonts,
+    archive,
+    size,
+    bold=False,
+    color="rgb(0,0,0)",
+    label=False,
+    check=lambda: None,
+    density="balanced",
+):
     for leading in (1.05, 0.94):
         check()
         result = attempt(rect, runs, css_for(fonts, size, bold, color, leading), archive)
         if result:
+            if density == "balanced" and not label and not bold and result[1] >= 0.999:
+                desired = balanced_leading(rect.height, size, result[4])
+                for candidate in (desired, (desired + 1.05) / 2):
+                    if candidate <= 1.06:
+                        break
+                    check()
+                    grown = attempt(rect, runs, css_for(fonts, size, bold, color, candidate), archive, 1)
+                    if grown:
+                        result[0].close()
+                        result, leading = grown, candidate
+                        break
             return {
                 "doc": result[0],
                 "scale": result[1],
@@ -48,6 +74,7 @@ def fit(rect, runs, fonts, archive, size, bold=False, color="rgb(0,0,0)", label=
                 "overflow": leading < 1,
                 "truncated": False,
                 "text": plain(runs),
+                "leading": leading,
             }
         if label:
             return None

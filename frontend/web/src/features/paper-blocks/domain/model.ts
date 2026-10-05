@@ -1,6 +1,24 @@
 export interface InlineRun {
   kind: "text" | "super" | "sub";
   text: string;
+  bold?: boolean;
+}
+export interface PaperTerm {
+  source: string;
+  target: string;
+  keep?: boolean;
+  kind?: string;
+}
+export interface PaperTerms {
+  entries: PaperTerm[];
+  revision: number;
+  prepared: boolean;
+  affected?: string[];
+}
+export interface QualitySummary {
+  checked?: number;
+  retried?: number;
+  needs_review?: number;
 }
 export interface Anchor {
   page: number;
@@ -19,6 +37,7 @@ export interface Block {
   anchors: Anchor[];
   translation?: string;
   translation_runs?: InlineRun[];
+  qa?: { issues: string[]; retried: boolean };
   protected?: Array<{
     start: number;
     end: number;
@@ -37,6 +56,8 @@ export interface Block {
   }>;
 }
 export interface BlockStatus {
+  terms?: PaperTerms;
+  qa?: QualitySummary;
   document: {
     schema_version: number;
     pages?: PageGeometry[];
@@ -49,6 +70,7 @@ export interface BlockStatus {
   needs_extract?: boolean;
   language?: string;
   result: {
+    qa?: QualitySummary;
     revision: string;
     layout_ready?: boolean;
     reflow_ready?: boolean;
@@ -68,6 +90,7 @@ export interface BlockStatus {
   renderer_ready: boolean;
 }
 export interface BlockJob {
+  qa?: QualitySummary;
   id: string;
   status: string;
   scope?: "extract" | "block" | "full";

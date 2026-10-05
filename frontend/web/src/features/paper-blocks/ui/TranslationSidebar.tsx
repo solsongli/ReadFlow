@@ -10,6 +10,8 @@ import {
   translatedParts,
 } from "../domain/reading.js";
 import { InlineRuns } from "./InlineRuns.js";
+import type { ReactNode } from "react";
+import type { QualitySummary } from "../domain/model.js";
 export const TranslationSidebar = memo(function TranslationSidebar({
   blocks,
   page,
@@ -17,6 +19,8 @@ export const TranslationSidebar = memo(function TranslationSidebar({
   hover,
   translate,
   sending,
+  terms,
+  qa,
 }: {
   blocks: Block[];
   page: number;
@@ -24,13 +28,16 @@ export const TranslationSidebar = memo(function TranslationSidebar({
   hover: (id?: string) => void;
   translate: (id: string) => void;
   sending: boolean;
+  terms?: ReactNode;
+  qa?: QualitySummary;
 }) {
   const root = useRef<HTMLElement>(null);
   useEffect(() => {
     root.current?.parentElement?.scrollTo({ top: 0 });
   }, [page]);
   const [notice, setNotice] = useState("");
-  const rows = pageTranslations(blocks, page);
+  const [review, setReview] = useState(false);
+  const rows = review ? blocks.filter((b) => b.qa?.issues.length) : pageTranslations(blocks, page);
   const copy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -41,9 +48,18 @@ export const TranslationSidebar = memo(function TranslationSidebar({
   };
   return (
     <section ref={root} aria-label="本页译文" className="space-y-3 p-3">
+      {terms}
+      {qa?.checked ? (
+        <p role="status" className="text-xs text-wb-text-3">
+          质检：{qa.retried || 0} 块已自动重译，{qa.needs_review || 0} 块仍需核对
+        </p>
+      ) : null}
+      <Button size="sm" aria-pressed={review} onClick={() => setReview(!review)}>
+        需核对
+      </Button>
       <header className="flex items-center justify-between text-sm text-wb-text-3">
         <span>
-          第 {page} 页 · {rows.length} 块
+          {review ? "全文需核对" : `第 ${page} 页`} · {rows.length} 块
         </span>
         <Button
           size="sm"
@@ -62,9 +78,10 @@ export const TranslationSidebar = memo(function TranslationSidebar({
         <p className="text-sm text-wb-text-3">本页暂无可显示的块，打开块模式后会在本机分析。</p>
       ) : null}
       {rows.map((block) => {
-        const parts = translatedParts(block).filter((p) => p.anchor.page === page);
+        const currentPage = review ? block.page : page;
+        const parts = translatedParts(block).filter((p) => p.anchor.page === currentPage);
         const translated = parts.map((p) => p.text).join("\n");
-        const copied = blockCopyText(block, blocks, page);
+        const copied = blockCopyText(block, blocks, currentPage);
         return (
           <article
             key={block.id}
@@ -75,10 +92,12 @@ export const TranslationSidebar = memo(function TranslationSidebar({
           >
             <button
               type="button"
-              onClick={() => open(block, page)}
+              onClick={() => open(block, currentPage)}
               className="w-full border-0 bg-transparent p-0 text-left"
             >
-              <span className="text-xs text-wb-text-3">{BLOCK_LABELS[block.type] || "正文"}</span>
+              <span className="text-xs text-wb-text-3">
+                {BLOCK_LABELS[block.type] || "正文"} · 第 {currentPage} 页
+              </span>
               <div className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-wb-text">
                 {translated
                   ? parts.map((p, i) => (
@@ -104,6 +123,9 @@ export const TranslationSidebar = memo(function TranslationSidebar({
                 <Button size="sm" disabled={sending} onClick={() => translate(block.id)}>
                   翻译这一块
                 </Button>
+              ) : null}
+              {block.qa?.issues.length ? (
+                <span className="text-xs text-wb-text-3">需核对数字、引用或译法</span>
               ) : null}
             </div>
           </article>

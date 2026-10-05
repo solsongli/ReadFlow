@@ -5,6 +5,7 @@ import { BlockLayer } from "../ui/BlockLayer.js";
 import { InlineLayer } from "../ui/InlineLayer.js";
 import { TranslationSidebar } from "../ui/TranslationSidebar.js";
 import { FigureViewer } from "../ui/FigureViewer.js";
+import type { ReactNode } from "react";
 export function useBlockReading(
   status: BlockStatus | null,
   active: boolean,
@@ -14,6 +15,7 @@ export function useBlockReading(
   setEnabled: () => void,
   start: (id: string) => void,
   sending: boolean,
+  terms?: ReactNode,
 ) {
   const blocks = status?.document?.blocks || [];
   const [selected, setSelected] = useState<{ id: string; x: number; y: number } | null>(null);
@@ -70,6 +72,8 @@ export function useBlockReading(
         hover={setHovered}
         translate={start}
         sending={sending}
+        terms={terms}
+        qa={status?.qa}
       />
     ),
     overlay: (page: number, interactive: boolean, inline = false, peek = false) => (

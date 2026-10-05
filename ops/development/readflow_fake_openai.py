@@ -80,7 +80,16 @@ def completion_content(body):
         payload = {}
     if not isinstance(payload, dict):
         payload = {}
+    if "READFLOW_PAPER_TERMS" in system:
+        return json.dumps({"terms": [{"source": r["source"], "target": r["source"] if r.get("keep") else "示例术语"}
+                                     for r in payload.get("terms", [])]}, ensure_ascii=False)
     if isinstance(payload.get('blocks'), list):
+        if str(body.get('model', '')).startswith('readflow-qa-'):
+            if __package__:
+                from .quality_fixtures import quality_content
+            else:
+                from quality_fixtures import quality_content
+            return quality_content(payload, system, body['model'])
         return json.dumps({'blocks': [{'id': block['id'], 'text': translated(block.get('text'))}
                         for block in payload['blocks']]}, ensure_ascii=False)
     items = payload.get('items', [])

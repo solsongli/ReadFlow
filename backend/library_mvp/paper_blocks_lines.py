@@ -133,10 +133,19 @@ def lines(page):
             [s for s in normal if s["text"].strip() and not model.MATH_FONT.search(s["font"])],
             key=lambda s: s["bbox"][0],
         )
+        lead = ""
+        for span in edges:
+            if not span["flags"] & 16:
+                break
+            lead += span["text"]
+        lead = lead.strip()
+        if not lead or len(lead) > 90 or not text.startswith(lead) or lead == text:
+            lead = ""
         result.append(
             {
                 "bbox": list(cluster["bbox"]),
                 "text": text,
+                "lead": lead,
                 "size": cluster["size"],
                 "font": font.most_common(1)[0][0],
                 "baseline": statistics.median(s["origin"][1] for s in (prose or normal)),

@@ -35,7 +35,7 @@ class ConcurrentBlocks(unittest.TestCase):
         self.doc = {"blocks": self.blocks, "extractor_version": "heuristic-2", "schema_version": 1}
         self.patches = [
             patch.object(self.service.storage, "extract", return_value=self.doc),
-            patch("backend.library_mvp.paper_blocks_service.runtime_paths", return_value=("", "", "")),
+            patch("backend.library_mvp.paper_blocks_worker.runtime_paths", return_value=("", "", "")),
             patch(
                 "backend.library_mvp.paper_blocks_outputs.render",
                 return_value={"render_fallback": [], "label_fallback": []},
@@ -107,6 +107,12 @@ class ConcurrentBlocks(unittest.TestCase):
             original(entry, delta)
 
         self.service.merge_cache = save
+        reads = []
+        original_cache = self.service.storage.cache
+        def counted_cache(entry):
+            reads.append(1)
+            return original_cache(entry)
+        self.service.storage.cache = counted_cache
         job = self.service.start(self.item, {"translation": self.config})
         barrier.wait(timeout=4)
         self.assertEqual(peak, 2)
@@ -123,6 +129,9 @@ class ConcurrentBlocks(unittest.TestCase):
         self.assertEqual(len(writes), len(calls))
         self.assertEqual(sum(map(len, writes)), 26)
         self.assertEqual(len(self.service.storage.cache(self.entry)), 26)
+        self.assertLessEqual(len(reads), len(writes) * 2 + 3, "QA must read the cache once, not once per block")
+        self.assertIn("main_batches_wall", result["performance"]["timings_s"])
+        self.assertGreater(result["performance"]["batches"]["main_batches"]["count"], 0)
 
     def test_single_and_full_coexist_and_atomic_delta_commits_do_not_lose_other_language(self):
         self.doc["blocks"] = self.blocks[:2]
