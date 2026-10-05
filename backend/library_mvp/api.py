@@ -268,5 +268,7 @@ def create_app(data_root: Path, *, bridge: NativeBridge | None = None,
     register_reader_assistance(app, store, json_body, allowed=allow_external_models)
     from .paper_blocks_routes import register_paper_blocks
     register_paper_blocks(app, store, json_body)
+    from .workbench_pdf_metadata import register_pdf_metadata_routes
+    register_pdf_metadata_routes(app, store, json_body)
 
     return app

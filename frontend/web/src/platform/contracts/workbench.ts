@@ -175,3 +175,16 @@ export interface WorkbenchStatePatch {
   starred?: boolean;
   read_status?: ReadStatus;
 }
+export interface PdfMetadataChange {
+  field: "title" | "authors" | "doi" | "url" | "date" | "venue";
+  before: string | string[];
+  after: string | string[];
+}
+
+export interface PdfTitleSuggestion {
+  eligible: boolean;
+  current_title?: string;
+  changes: PdfMetadataChange[];
+  token: string | null;
+  title: { value: string; confidence: number; source: string } | null;
+}

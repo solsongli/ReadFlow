@@ -11,6 +11,7 @@ import { GroupPicker } from "./GroupPicker.js";
 import { InlineEdit } from "./InlineEdit.js";
 import { AbstractSection, GroupsSection, MetadataSection } from "./InspectorSections.js";
 import { InspectorNotes } from "./InspectorNotes.js";
+import { PdfTitleSuggestion } from "./PdfTitleSuggestion.js";
 
 const PANEL = "wb-scroll w-[360px] min-w-0 shrink-0 border-l border-wb-line-soft bg-wb-panel";
 
@@ -82,6 +83,7 @@ export function Inspector() {
         </div>
         {!trashView ? <GroupsSection row={row} groups={groups} /> : null}
         <MetadataSection row={row} />
+        {!trashView ? <PdfTitleSuggestion item={item} venue={row.venue} /> : null}
         {!trashView ? <InspectorNotes row={row} item={item} /> : null}
         <CitationBox row={row} />
         {detail.status === "error" ? <p role="status" className="m-0 text-[0.75rem] text-wb-text-3">详情加载失败。<button type="button" className="text-wb-link" onClick={() => wb.select(row.id)}>重试</button></p> : null}

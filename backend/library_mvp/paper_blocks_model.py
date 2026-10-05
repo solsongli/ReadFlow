@@ -5,11 +5,11 @@ import re
 from .paper_blocks_inline import restore_rich
 
 SCHEMA_VERSION = 1
-EXTRACTOR_VERSION = "hybrid-8"
+EXTRACTOR_VERSION = "hybrid-9"
 SKIP = frozenset({"figure", "table", "formula", "header", "footer", "reference", "author", "algorithm", "code"})
 MATH_FONT = re.compile(r"cmmi|cmsy|cmex|symbol|stix|math|msam|msbm", re.I)
 CAPTION = re.compile(
-    r"^\s*(?:(?:Extended Data|Supplementary|Supplemental)\s+)?(Figure|Fig\.?|Table|Scheme|图|表)\s*([A-Z]?\d+(?:\.\d+)*[A-Z]?|[IVX]+|[A-Z])\b\s*[:.：]?",
+    r"^\s*(?:(?:Extended Data|Supplementary|Supplemental)\s+)?(?!(?:Figs|Figures)\b)(Figure|Fig\.?|Table|Scheme|图|表)\s*([A-Z]?\d+(?:\.\d+)*[A-Z]?|[IVX]+|[A-Z])\b\s*[:.：]?",
     re.I,
 )
 REFERENCE = re.compile(

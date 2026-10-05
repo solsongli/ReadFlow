@@ -1,6 +1,17 @@
 # RetainPDF 科研阅读版本（ReadFlow）：私有交接快照
 
-## 最新状态（2026-10-05，ReadFlow 0.9.9 已打包：多论文鲁棒性）
+## 最新状态（2026-10-05 凌晨，ReadFlow 0.9.10 已打包：导入元数据补全）
+
+- **X5 / X5b（Astra，推理档位 xhigh）**：
+  - 元数据没有题名时，从首页识别题名；题名中的 TeX 会规范化（`$\pi_0$` 显示为 π₀）。
+  - 过滤占位作者，元数据缺作者时谨慎地从首页识别。
+  - arXiv 离线补全 DOI、URL、出处，年份取**首次提交年份**（由编号 YYMM 推出），不取水印上的版本日期。
+  - 已有条目提供「使用 PDF 中识别的信息」按钮：只在用户点击时补空缺或占位的字段，并有并发修改保护。
+  - 语料碎片继续减少：单行续句从 57 处降到 26 处，孤立图注从 23 处降到 15 处。
+- **安装包**：`readflow_0.9.10_amd64.deb`，SHA256 `29e77a869e98d86a4c1de865225526ebe46a13e0380a609ec908e03800d17e18`。
+- **Astra 运行**：本轮曾遇到「Selected model is at capacity」中断，resume 后完成。
+
+## 此前状态（2026-10-05，ReadFlow 0.9.9 已打包：多论文鲁棒性）
 
 - **X4（Astra，不开 Fast，推理档位 xhigh）**：
   - 新增语料评估工具 `ops/development/paper_blocks_corpus.py`；拼图生成在 `corpus_visuals.py`，需要系统已有 pdftoppm，仅开发时用。

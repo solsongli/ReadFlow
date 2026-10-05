@@ -1,6 +1,7 @@
 """PP-DocLayout-S's published tensor contract; independent preprocessing and fusion."""
 import hashlib
 import pymupdf as fitz
+from .document_caption_links import region_caption, bounded_evidence
 from PIL import Image
 from .document_cache import cached
 
@@ -115,12 +116,7 @@ def fuse_layout(rows, images, regions, page):
         if region["type"] not in ("figure", "table") or region["confidence"] < 0.7:
             continue
         box = fitz.Rect(region["bbox"])
-        captions = [
-            r for r in rows if r["type"] == "caption" and min(r["bbox"][2], box.x1) > max(r["bbox"][0], box.x0)
-        ]
-        caption = min(
-            captions, key=lambda c: min(abs(c["bbox"][1] - box.y1), abs(box.y0 - c["bbox"][3])), default=None
-        )
+        caption = region_caption(region, rows)
         attached = bool(caption and min(abs(caption["bbox"][1] - box.y1), abs(box.y0 - caption["bbox"][3])) < 35)
         caption_below = bool(caption and caption["bbox"][1] >= (box.y0 + box.y1) / 2)
         if caption and fraction(caption["bbox"], box) > 0.1:
@@ -133,7 +129,7 @@ def fuse_layout(rows, images, regions, page):
             target = hits[0]
             # Existing vector evidence can extend beyond the detector; keep it.
             for image in hits:
-                box |= fitz.Rect(image["bbox"])
+                box |= bounded_evidence(image, region, regions, rows, caption)
                 if image is not target:
                     images.remove(image)
             # PDF image/form bounds can include invisible padding beyond the actual figure.

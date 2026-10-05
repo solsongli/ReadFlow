@@ -1,4 +1,5 @@
 import { createTranslations } from "./translations.js";
+import { mergeReaderRow } from "../domain/reader-state.js";
 // 工作台副作用：所有网络请求、偏好持久化、通知都在这里。UI 只调用这些方法。
 import type { WorkbenchApi } from "@/platform/api/workbench.js";
 import type { ReadStatus, WorkbenchRow, WorkbenchStatePatch } from "@/platform/contracts/workbench.js";
@@ -220,6 +221,15 @@ export function createWorkbench(env: WorkbenchEnv) {
     if (ok) await loadDetail(id);
   }
 
+  async function applyPdfMetadata(id: string, token: string) {
+    const item = await mutate(() => api.applyPdfMetadata(id, token), "已采用 PDF 识别信息");
+    if (item) {
+      store.actions.patch(mergeReaderRow(get(), await api.row(id)));
+      if (get().selectedIds.includes(id)) await loadDetail(id);
+    }
+    return Boolean(item);
+  }
+
   const setMembership = (groupId: string, add: string[], remove: string[] = []) =>
     mutate(() => api.changeGroup(groupId, add, remove));
 
@@ -296,6 +306,7 @@ export function createWorkbench(env: WorkbenchEnv) {
     toggleStar,
     setReadStatus,
     updateMetadata,
+    applyPdfMetadata,
     setMembership,
     createGroup,
     renameGroup,

@@ -4,6 +4,7 @@ const rows = ["a", "b"].map((id) => ({ id, title: `Paper ${id}`, title_translate
 const calls = [];
 const notes = [];
 const api = {
+  async pdfMetadata() { return { eligible: false, title: null, changes: [], token: null }; },
   async createNote(id, value) {
     const paper=rows.find(row=>row.id===id);
     const note={id:`note-${notes.length}`,item_id:id,item_title:paper.title,item_title_translated:"",attachment_id:null,

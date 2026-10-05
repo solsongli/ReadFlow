@@ -31,6 +31,7 @@ function mutate(method: string, id: string, payload: { body?: string }) {
   existing.body = payload.body!; existing.updated_at = new Date().toISOString(); return structuredClone(existing);
 }
 const api = { ...workbenchApi,
+  async pdfMetadata() { return { eligible: false, title: null, changes: [], token: null }; },
   async list(query) { recount(); return { items: structuredClone(rows.filter((r) => (!query.query || [r.title, r.title_translated].some((v) => v.toLowerCase().includes(query.query.toLowerCase()))) && (query.view !== "notes" || r.notes_count > 0))), counts: counts(), groups: [], tags: [], total: rows.length }; },
   async row(id) { recount(); return structuredClone(rows.find((r) => r.id === id)); },
   async item(id) { const row = rows.find((r) => r.id === id)!; return { ...row, abstract: "Synthetic abstract", attachments: row.attachment_id ? [{ id: row.attachment_id }] : [], notes: structuredClone(data.notes.filter((n) => n.item_id === id)) }; },

@@ -129,6 +129,10 @@ def lines(page):
             if not model.MATH_FONT.search(s["font"]) and re.search(r"[A-Za-z]{2}|[\u4e00-\u9fff]", s["text"])
         ]
         text_span = max(prose, key=lambda s: len(s["text"]), default=None)
+        edges = sorted(
+            [s for s in normal if s["text"].strip() and not model.MATH_FONT.search(s["font"])],
+            key=lambda s: s["bbox"][0],
+        )
         result.append(
             {
                 "bbox": list(cluster["bbox"]),
@@ -138,6 +142,8 @@ def lines(page):
                 "baseline": statistics.median(s["origin"][1] for s in (prose or normal)),
                 "text_font": text_span["font"] if text_span else font.most_common(1)[0][0],
                 "text_size": text_span["size"] if text_span else cluster["size"],
+                "start_font": edges[0]["font"] if edges else font.most_common(1)[0][0],
+                "end_font": edges[-1]["font"] if edges else font.most_common(1)[0][0],
                 "bold": sum(len(s["text"]) for s in spans if s["flags"] & 16) > len(text) * 0.5,
                 "sideways": cluster["sideways"],
                 "math_parts": parts,

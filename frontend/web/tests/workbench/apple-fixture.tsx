@@ -58,6 +58,7 @@ function fixture() {
   const calls = [];
   const item = (id) => ({ ...rows.find((r) => r.id === id), attachments: [{ id: rows.find((r) => r.id === id)?.attachment_id }], notes: [], abstract: "Vision-language-action models (VLAs) show potential as generalist robot policies. However, these models pose extreme safety challenges during real-world deployment, including the risk of harm to the environment, the robot itself, and humans. How can safety constraints be explicitly integrated into VLAs without loss of performance? ".repeat(3) });
   const api = {
+  async pdfMetadata() { return { eligible: false, title: null, changes: [], token: null }; },
     async notes() { return { items: [], total: 0, counts: { total: 0, notes: 0, annotations: 0 } }; },
     async list(query) {
       calls.push({ method: "list", query });

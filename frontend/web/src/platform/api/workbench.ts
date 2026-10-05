@@ -12,6 +12,7 @@ import type {
   WorkbenchStatePatch,
   WorkbenchNotesQuery,
   WorkbenchNotesResult,
+  PdfTitleSuggestion,
 } from "@/platform/contracts/workbench.js";
 
 const ROOT = "/api/research";
@@ -61,6 +62,11 @@ export function notesQueryParams(query: WorkbenchNotesQuery): URLSearchParams {
 }
 
 export const workbenchApi = {
+  pdfMetadata: (itemId: string, signal?: AbortSignal) =>
+    request<PdfTitleSuggestion>("/workbench/items/" + id(itemId) + "/pdf-metadata", { signal }),
+  applyPdfMetadata: (itemId: string, token: string) =>
+    request<import("@/platform/contracts/research-library.js").PaperItem>(
+      "/workbench/items/" + id(itemId) + "/pdf-metadata", send({ token })),
   translate: (itemId: string, payload: unknown) => request<TranslationResult>("/workbench/items/" + id(itemId) + "/translate", send(payload)),
   translationStatus: (itemId: string) => request<TranslationResult>("/workbench/items/" + id(itemId) + "/translate"),
   cancelTranslation: (itemId: string) => request<TranslationResult>("/workbench/items/" + id(itemId) + "/translate/cancel", send({})),

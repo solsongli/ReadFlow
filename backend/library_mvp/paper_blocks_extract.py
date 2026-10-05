@@ -17,6 +17,7 @@ from .document_ocr_pages import scan_lines, image_labels
 from .paper_blocks_labels import identify_labels
 from .paper_blocks_programs import programs
 from .paper_blocks_regions import refine_regions
+from .paper_blocks_plates import consolidate_plate
 from .document_figure_labels import native_figure_labels
 from .paper_blocks_sections import tag_outline, classify_sections
 from .paper_blocks_special import (
@@ -132,6 +133,7 @@ def extract(path, directory, sha, check=lambda: None, *, models=None, enrich=Tru
                 i for i in images if not any(fitz.Rect(c["bbox"]).contains(fitz.Rect(i["bbox"])) for c in code)
             ]
             images = code + refine_regions(page, rows, images, regions)
+            images = consolidate_plate(page, rows, images)
             include_small_figure_labels(rows, images, body_size)
             rows = assign_figure_text(rows, images, words)
             if models:

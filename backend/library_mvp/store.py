@@ -398,9 +398,9 @@ class Store:
                 page_count = document.page_count
                 if page_count < 1 or page_count > MAX_PAGES:
                     raise StoreError("PDF_PAGE_LIMIT", "PDF must contain 1 to 2000 pages.")
-                from .pdf_metadata import pdf_metadata
-                suggested_metadata = pdf_metadata(document.metadata or {})
-                suggested_title = ((document.metadata or {}).get("title") or "").strip()[:1000]
+                from .pdf_metadata import suggest_pdf_metadata
+                suggested_metadata = suggest_pdf_metadata(document, filename)["fields"] if item_id is None else {}
+                suggested_title = suggested_metadata.pop("title", "")
         except StoreError:
             raise
         except Exception as exc:

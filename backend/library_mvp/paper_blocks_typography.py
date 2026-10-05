@@ -3,7 +3,7 @@ import re
 
 
 def family(font):
-    value = (font or "").casefold()
+    value = re.sub(r"^[a-z]{6}\+", "", (font or "").casefold())
     if re.match(r"^(?:times|nimbusroman|liberationserif)", value):
         return "times"
     if re.match(r"^(?:arial|helvetica|nimbussans|liberationsans)", value):
@@ -14,12 +14,19 @@ def family(font):
 
 
 def prose_font(a, b):
-    first, second = a.get("text_size", a["size"]), b.get("text_size", b["size"])
+    last = (a.get("source_lines") or [a])[-1]
+    next_line = (b.get("source_lines") or [b])[0]
+    first, second = last.get("text_size", last.get("size", a["size"])), next_line.get(
+        "text_size", next_line.get("size", b["size"])
+    )
+    tolerance = 0.2 if last.get("source") == next_line.get("source") == "ocr" else 0.12
     return (
         family(a.get("text_font", a.get("font"))) == family(b.get("text_font", b.get("font")))
+        or family(last.get("end_font", last.get("font")))
+        == family(next_line.get("start_font", next_line.get("font")))
         or a.get("inline_math")
         or b.get("inline_math")
-    ) and abs(first - second) <= max(first, second) * 0.12
+    ) and abs(first - second) <= max(first, second) * tolerance
 
 
 def continuous_lines(previous, current, normal_gap):
@@ -27,13 +34,15 @@ def continuous_lines(previous, current, normal_gap):
     last = (previous.get("source_lines") or [previous])[-1]
     before = last.get("baseline")
     after = current.get("baseline")
-    size = max(previous.get("text_size", previous["size"]), current.get("text_size", current["size"]))
+    size = max(
+        last.get("text_size", last.get("size", previous["size"])), current.get("text_size", current["size"])
+    )
     gap = current["bbox"][1] - last["bbox"][3]
     if -0.5 <= gap <= normal_gap + size * 0.25:
         return True
     if before is None or after is None:
         return False
-    return gap < 0 and size * 0.65 <= after - before <= size + normal_gap + size * 0.25
+    return size * 0.65 <= after - before <= size + normal_gap + size * 0.25
 
 
 def heading_evidence(row, rows, normal_gap):
