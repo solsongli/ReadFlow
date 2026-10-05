@@ -53,9 +53,12 @@ class SafeVlaStructureTests(unittest.TestCase):
         self.assertTrue(references)
         self.assertLess(max(b["page"] for b in references), 18)
         appendix = [b for b in self.blocks if b["page"] >= 18]
-        # X2b contained 294 physical prose lines; consolidation must retain them,
-        # rather than preserve the old (fragmented) count of 91 blocks.
-        self.assertGreaterEqual(sum(len(b.get("source_lines", [])) for b in appendix if b["type"] == "text"), 294)
+        # X2b's 294 lines included algorithm headers/Require lines. X4 preserves
+        # those in explicit vector crops; the coverage threshold must not drop.
+        self.assertGreaterEqual(
+            sum(len(b.get("source_lines", [])) for b in appendix if b["type"] in {"text", "algorithm", "code"}),
+            294,
+        )
         headings = {b.get("outline_title"): b for b in self.blocks if b.get("outline_title")}
         for level, title, page in self.outline:
             self.assertIn(title, headings)

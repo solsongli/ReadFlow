@@ -5,11 +5,17 @@ import re
 from .paper_blocks_inline import restore_rich
 
 SCHEMA_VERSION = 1
-EXTRACTOR_VERSION = "hybrid-7"
-SKIP = frozenset({"figure", "table", "formula", "header", "footer", "reference", "author"})
+EXTRACTOR_VERSION = "hybrid-8"
+SKIP = frozenset({"figure", "table", "formula", "header", "footer", "reference", "author", "algorithm", "code"})
 MATH_FONT = re.compile(r"cmmi|cmsy|cmex|symbol|stix|math|msam|msbm", re.I)
-CAPTION = re.compile(r"^\s*(Figure|Fig\.?|Table|Scheme|图|表)\s*([\dA-Z]+)\b\s*[:.：]?", re.I)
-REFERENCE = re.compile(r"^[\s■▪•]*(?:\d+[.\s]+)?(?:references|bibliography|参考文献)\s*$", re.I)
+CAPTION = re.compile(
+    r"^\s*(?:(?:Extended Data|Supplementary|Supplemental)\s+)?(Figure|Fig\.?|Table|Scheme|图|表)\s*([A-Z]?\d+(?:\.\d+)*[A-Z]?|[IVX]+|[A-Z])\b\s*[:.：]?",
+    re.I,
+)
+REFERENCE = re.compile(
+    r"^[\s■▪•]*(?:\d+[.\s]+)?(?:references(?:\s+(?:and|&)\s+notes)?|notes\s+(?:and|&)\s+references|bibliography|literature cited|参考文献)\s*$",
+    re.I,
+)
 APPENDIX = re.compile(r"^\s*(?:appendix\b|appendices\b|supplementary (?:information|material|figures)\b|附录)", re.I)
 
 

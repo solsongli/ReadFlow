@@ -7,7 +7,7 @@ import uuid
 from .store import StoreError
 from .ai_runtime import RequestControl
 from .paper_blocks_storage import BlockStorage, write_json
-from .paper_blocks_model import cache_key, service_fingerprint, EXTRACTOR_VERSION
+from .paper_blocks_model import cache_key, service_fingerprint, EXTRACTOR_VERSION, SKIP
 from .paper_blocks_translate import translate_blocks
 from .paper_blocks_inline import rich_text, source_runs
 from .paper_blocks_render import render, latex_zip, runtime_paths
@@ -56,7 +56,11 @@ class BlockService:
         if document:
             blocks = []
             for block in document["blocks"]:
-                value = cache.get(cache_key(block, language, context.get("fingerprint", "")))
+                value = (
+                    None
+                    if block["type"] in SKIP
+                    else cache.get(cache_key(block, language, context.get("fingerprint", "")))
+                )
                 has_translation = has_translation or bool(value)
                 runs = (
                     value.get("runs") if isinstance(value, dict) else source_runs(block, value) if value else None

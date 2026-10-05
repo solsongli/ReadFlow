@@ -99,6 +99,8 @@ def fuse_layout(rows, images, regions, page):
             or kind == "text"
             and row["type"] == "heading"
             and not row.get("heading_evidence")
+            or kind == "abstract"
+            and page.number == 0
             or scanned
             and kind in ("heading", "abstract", "caption", "formula", "reference", "footnote")
         )

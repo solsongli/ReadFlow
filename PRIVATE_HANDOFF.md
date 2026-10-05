@@ -1,6 +1,16 @@
 # RetainPDF 科研阅读版本（ReadFlow）：私有交接快照
 
-## 最新状态（2026-10-04 夜，ReadFlow 0.9.8 已打包待安装：翻译提速）
+## 最新状态（2026-10-05，ReadFlow 0.9.9 已打包：多论文鲁棒性）
+
+- **X4（Astra，不开 Fast，推理档位 xhigh）**：
+  - 新增语料评估工具 `ops/development/paper_blocks_corpus.py`；拼图生成在 `corpus_visuals.py`，需要系统已有 pdftoppm，仅开发时用。
+  - 语料共 18 篇：7 篇公开 arXiv 论文放在仓库外的 `Retainpdf/readflow-corpus/`，另有 SafeVLA 和仓库样例。
+  - 修复结果：整篇提取失败从 4 篇降到 0，参考文献误入翻译 52,816 字降到 0，程序代码误入翻译降到 0，单行续句从 112 处降到 57 处。
+- **0.9.8 的已知缺陷**：OpenVLA 和 Transformer 无法翻译（Python 异常），0.9.9 已修，建议用户安装。
+- **安装包**：`readflow_0.9.9_amd64.deb`，SHA256 `422fbd626d34f37e644e0fc9dd5e52897d014a3603e16162ad55d302d9a0e5ec`。
+- **DeepSeek 实测**：OpenVLA 用时 21 秒（99k tokens），Diffusion Policy 用时 16 秒（70k tokens），全部块翻译成功。
+
+## 此前状态（2026-10-04 夜，ReadFlow 0.9.8 已打包待安装：翻译提速）
 
 - **X3（Astra；中途按用户要求改为不开 Fast、推理档位 xhigh）**：
   - DeepSeek 翻译默认关闭思考（`thinking: {type: disabled}`）；服务不支持时自动去掉参数重试。

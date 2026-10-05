@@ -123,13 +123,16 @@ def text_blocks(rows, body_size, page_number, width, height, words=None):
             last_line=list(box),
         )
         proof = heading_evidence(source, eligible, gaps[col])
+        caption_match = model.CAPTION.match(value)
         if row["type"] not in ("header", "footer", "footnote"):
             if re.fullmatch(r"(?:https?://|www\.)\S+", value) and box[1] < height * 0.13:
                 row["type"] = "header"
             elif model.REFERENCE.match(value) or model.APPENDIX.match(value):
                 row["type"] = "heading"
-            elif model.CAPTION.match(value) and (
-                re.match(r"^\s*(?:Figure|Fig\.?|Table|Scheme|图|表)\s*\d+\s*[:.：]", value, re.I)
+            elif caption_match and (
+                caption_match.group().rstrip().endswith((":", ".", "："))
+                or not value[caption_match.end() :].strip()
+                or value[caption_match.end() :].lstrip().startswith("|")
                 or row["size"] < body_size * 0.97
             ):
                 row["type"] = "caption"
@@ -162,6 +165,7 @@ def text_blocks(rows, body_size, page_number, width, height, words=None):
             if (
                 prior["type"] == "text"
                 and row["type"] == "heading"
+                and row.get("heading_evidence")
                 and same_font(prior, row, 0.03)
                 and prior["bold"] == row["bold"]
                 and not sentence_end(prior["text"])
@@ -172,7 +176,7 @@ def text_blocks(rows, body_size, page_number, width, height, words=None):
             elif prior["type"] == row["type"] == "title":
                 match = (
                     horizontal
-                    and same_font(prior, row, 0.03)
+                    and same_font(prior, row, 0.055)
                     and prior["bold"] == row["bold"]
                     and -row["size"] * 0.55 <= gap < row["size"] * 0.6
                 )

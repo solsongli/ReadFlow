@@ -4,6 +4,10 @@ import re
 
 def family(font):
     value = (font or "").casefold()
+    if re.match(r"^(?:times|nimbusroman|liberationserif)", value):
+        return "times"
+    if re.match(r"^(?:arial|helvetica|nimbussans|liberationsans)", value):
+        return "sans"
     if re.match(r"^cm(?:r|bx|ti|sl|ss|tt|csc)\d", value):
         return "computer-modern-text"
     return re.sub(r"[-,](?:regu|medi|bold|semi|italic|it\b|roman|book|light).*$", "", value)

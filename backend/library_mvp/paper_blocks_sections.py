@@ -4,10 +4,11 @@ import unicodedata
 from .paper_blocks_model import REFERENCE, APPENDIX
 from .paper_blocks_text import merge
 from .paper_blocks_typography import family, prose_font
+from .paper_blocks_outline import prefix_heading
 
-IGNORED = frozenset({"header", "footer", "footnote", "figure", "table", "formula", "caption"})
+IGNORED = frozenset({"header", "footer", "footnote", "figure", "table", "formula", "caption", "algorithm", "code"})
 ALPHA = re.compile(r"^[A-Z](?:\.\d+)*(?:\.?\s+)(?=[A-Z\u4e00-\u9fff])")
-PREFIX = re.compile(r"^(?:\d+(?:\.\d+)*|[A-Z](?:\.\d+)*)\.?\s+")
+PREFIX = re.compile(r"^(?:[IVXLC]+[-.]?)?(?:[A-Z]|\d+)?(?:[.-]\d+|[.-][A-Z])*(?:[.)]\s*|\s+)")
 
 
 def canonical(value):
@@ -16,24 +17,40 @@ def canonical(value):
 
 
 def reference_entry(value):
-    if re.match(r"^\s*\[\s*\d+[a-z]?\s*\]", value):
+    if re.match(r"^\s*(?:\[\s*\d+[a-z]?\s*\]|\(\d+\))", value):
+        return True
+    if re.match(r"^\s*\d+\.?\s+(?:[A-Z]\.|[A-Z][\w’'-]+(?:\s+[A-Z][\w’'-]+){0,3},)", value):
+        return True
+    if re.match(r"^[A-ZÀ-ÖØ-Þ][\w’'-]+\s+[A-Z]{1,3}(?:[,.\s]|$)", value):
+        return True
+    if re.match(r"^(?:[A-Z]\.(?:-[A-Z]\.)?\s*)+[A-Z][a-zA-Z’'-]+", value) and (
+        "," in value or re.search(r"\band\s+[A-Z]\.", value)
+    ):
         return True
     year = re.search(r"\b(?:18|19|20)\d{2}[a-z]?\b", value)
     author = re.match(
         r"^(?:\d+\.\s*)?(?:[A-ZÀ-ÖØ-Þ][\w’'-]+(?:\s+[A-Z][\w’'-]+){0,3},\s*[A-Z]|[A-Z]\.\s*[A-Z][a-z]+)", value
     )
+    full_name = re.match(
+        r"^(?:(?:[A-ZÀ-ÖØ-Þ][\w’'-]+|[A-Z]\.)\s+){1,4}[A-ZÀ-ÖØ-Þ][\w’'-]+\.\s*(?:18|19|20)\d{2}", value
+    )
     chinese_author = re.match(r"^[\u4e00-\u9fff]{2,5}(?:[,，、][\u4e00-\u9fff]{2,5})*[.．，,]", value)
-    return bool(year and (author or chinese_author))
+    identifier = re.match(r"^[A-Za-z0-9_-]{3,}\.\s+(?:18|19|20)\d{2}", value)
+    return bool(
+        year
+        and (author or full_name or chinese_author or identifier or re.search(r"arxiv:|doi\.org/", value, re.I))
+    )
 
 
-def tag_outline(rows, page_number, outline, words):
+def tag_outline(rows, page_number, outline, words, page=None):
     """Match the actual heading text: some PDF named destinations report inverted Y values."""
-    for level, title, page, *_ in outline:
-        if page != page_number:
+    for level, title, outline_page, *_ in outline:
+        if outline_page != page_number:
             continue
         target = canonical(title)
         if not target:
             continue
+        matched = False
         for row in sorted(list(rows), key=lambda r: r["type"] != "heading"):
             if row not in rows or row["type"] in IGNORED:
                 continue
@@ -56,7 +73,14 @@ def tag_outline(rows, page_number, outline, words):
                 merge(row, other, words)
                 rows.remove(other)
             row.update(type="heading", heading_level=max(1, min(6, level)), outline_title=title)
+            matched = True
             break
+        if not matched and page is not None:
+            for row in list(rows):
+                head = prefix_heading(row, title, level, page, canonical, words)
+                if head:
+                    rows.insert(rows.index(row), head)
+                    break
     return rows
 
 
@@ -82,7 +106,7 @@ def classify_sections(rows):
     active, pending, styles = False, [], []
     originals = {id(row): row["type"] for row in rows}
     for row in rows:
-        if row["type"] in IGNORED:
+        if row["type"] in IGNORED and not (active and row["type"] == "footnote" and not row.get("footnote_area")):
             continue
         value = row["text"].strip()
         if REFERENCE.match(value):

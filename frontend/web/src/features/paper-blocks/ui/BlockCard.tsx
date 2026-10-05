@@ -16,6 +16,8 @@ const labels: Record<string, string> = {
   figure: "图片",
   table: "表格",
   formula: "公式",
+  algorithm: "算法",
+  code: "代码清单",
   reference: "参考文献",
   footnote: "脚注",
 };
@@ -46,10 +48,7 @@ export function BlockCard({
     const previous = document.activeElement as HTMLElement | null;
     root.current?.focus({ preventScroll: true });
     return () => {
-      if (
-        root.current?.contains(document.activeElement) &&
-        previous?.isConnected
-      ) {
+      if (root.current?.contains(document.activeElement) && previous?.isConnected) {
         previous.focus({ preventScroll: true });
       }
     };
@@ -59,9 +58,8 @@ export function BlockCard({
   const value = blocks.find((b) => b.id === block.caption_id) || block;
   const translated = value.translation;
   const readable =
-    !["figure", "table", "formula", "reference", "author"].includes(
-      value.type,
-    ) || Boolean(block.figure_text?.some((label) => label.translatable));
+    !["figure", "table", "formula", "reference", "author", "algorithm", "code"].includes(value.type) ||
+    Boolean(block.figure_text?.some((label) => label.translatable));
   async function act(work: () => Promise<unknown>) {
     try {
       await work();
@@ -105,19 +103,13 @@ export function BlockCard({
         )}
       </p>
       {block.figure_text?.length ? (
-        <section
-          aria-label="图内文字"
-          className="rounded-lg bg-wb-fill p-3 text-sm"
-        >
+        <section aria-label="图内文字" className="rounded-lg bg-wb-fill p-3 text-sm">
           <h3 className="mb-2 mt-0 text-sm font-medium">图内文字</h3>
           <dl className="m-0 space-y-2">
             {block.figure_text.map((label, index) => (
               <div key={label.id || index}>
                 <dt className="text-wb-text-3">{label.text}</dt>
-                <dd className="m-0">
-                  {label.translation ||
-                    (label.translatable ? "尚未翻译" : "保留原文")}
-                </dd>
+                <dd className="m-0">{label.translation || (label.translatable ? "尚未翻译" : "保留原文")}</dd>
               </div>
             ))}
           </dl>
@@ -125,20 +117,14 @@ export function BlockCard({
       ) : null}
       <div className="flex flex-wrap gap-1">
         {readable ? (
-          <Button
-            size="sm"
-            disabled={running}
-            onClick={() => translate(block.id, Boolean(translated))}
-          >
+          <Button size="sm" disabled={running} onClick={() => translate(block.id, Boolean(translated))}>
             {translated ? "重新翻译" : "翻译这一块"}
           </Button>
         ) : null}
         <Button
           size="sm"
           disabled={!translated}
-          onClick={() =>
-            void act(() => navigator.clipboard.writeText(translated!))
-          }
+          onClick={() => void act(() => navigator.clipboard.writeText(translated!))}
         >
           复制
         </Button>
@@ -146,11 +132,7 @@ export function BlockCard({
           size="sm"
           disabled={!translated}
           onClick={() =>
-            void act(() =>
-              ports.note(
-                `${translated}\n\n> ${value.text}\n\n第 ${block.page} 页`,
-              ),
-            )
+            void act(() => ports.note(`${translated}\n\n> ${value.text}\n\n第 ${block.page} 页`))
           }
         >
           加入笔记
@@ -159,9 +141,7 @@ export function BlockCard({
           size="sm"
           disabled={!translated}
           onClick={() => {
-            ports.canvas(
-              `${translated}\n\n> ${value.text}\n\n第 ${block.page} 页`,
-            );
+            ports.canvas(`${translated}\n\n> ${value.text}\n\n第 ${block.page} 页`);
             close();
           }}
         >
@@ -189,11 +169,7 @@ export function BlockCard({
       </div>
       {source ? (
         <blockquote className="m-0 whitespace-pre-wrap rounded-lg bg-wb-fill p-3 font-wb-serif">
-          {value.text ? (
-            <InlineRuns runs={sourceRuns(value)} text={value.text} />
-          ) : (
-            "图形内容请查看原页面。"
-          )}
+          {value.text ? <InlineRuns runs={sourceRuns(value)} text={value.text} /> : "图形内容请查看原页面。"}
         </blockquote>
       ) : null}
       {error ? (

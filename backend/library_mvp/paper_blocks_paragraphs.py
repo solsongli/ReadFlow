@@ -3,7 +3,7 @@ import re
 from .paper_blocks_model import joined
 from .paper_blocks_typography import prose_font
 
-FLOATS = frozenset({"figure", "table", "caption", "footnote"})
+FLOATS = frozenset({"figure", "table", "caption", "footnote", "algorithm", "code"})
 MARGINS = frozenset({"header", "footer"})
 
 

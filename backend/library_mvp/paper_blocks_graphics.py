@@ -28,6 +28,14 @@ def graphics(page, rows):
         if box.width > 18 and box.height > 18:
             rectangles.append(box)
     for drawing in page.get_drawings()[:12000]:
+        fill = drawing.get("fill")
+        if (
+            drawing.get("type") == "f"
+            and fill
+            and all(channel > 0.98 for channel in fill)
+            and drawing["rect"].width > page.rect.width * 0.8
+        ):
+            continue  # A page-wide white backing is not evidence of figure bounds.
         box = (drawing["rect"] + (-0.4, -0.4, 0.4, 0.4)) & page.rect
         if (
             box.is_empty
@@ -43,6 +51,8 @@ def graphics(page, rows):
     for caption in captions:
         box = fitz.Rect(caption["bbox"])
         match = model.CAPTION.match(caption["text"])
+        if not match:
+            continue  # A cross-column continuation belongs to its original caption.
         kind = "table" if match.group(1).lower() in ("table", "表") else "figure"
         middle = page.rect.width / 2
         left, right = (
@@ -136,6 +146,16 @@ def graphics(page, rows):
             }
         )
     for region in candidates:
+        for caption in captions:
+            box = fitz.Rect(caption["bbox"])
+            if (
+                model.CAPTION.match(caption["text"])
+                and region.intersects(box)
+                and region.y0 + 20 < box.y0 < region.y1
+                and min(region.x1, box.x1) - max(region.x0, box.x0) > min(region.width, box.width) * 0.6
+            ):
+                region = fitz.Rect(region.x0, region.y0, region.x1, box.y0 - 0.5)
+                break
         if (
             region.width > 45
             and region.height > 35

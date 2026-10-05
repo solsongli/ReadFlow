@@ -43,7 +43,7 @@ def translatable_label(text):
 def identify_labels(block):
     for label in block.get("figure_text", []):
         label["id"] = block_id([{"page": block["page"], "bbox": label["bbox"]}], label["text"])
-        label["translatable"] = translatable_label(label["text"])
+        label["translatable"] = block["type"] not in {"algorithm", "code"} and translatable_label(label["text"])
 
 
 def translation_units(blocks):

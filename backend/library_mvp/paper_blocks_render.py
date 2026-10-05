@@ -8,7 +8,7 @@ import subprocess
 import time
 import zipfile
 import pymupdf as fitz
-from .paper_blocks_model import cache_key, REFERENCE
+from .paper_blocks_model import cache_key, REFERENCE, SKIP
 from .paper_blocks_inline import rich_text, source_runs
 from .paper_blocks_storage import write_json
 from .store import StoreError
@@ -100,7 +100,11 @@ def render(root, document, cache, language, fingerprint, check=lambda: None, *, 
         if block["type"] in ("header", "footer") or block["id"] in used:
             continue
         check()
-        value = cache.get(cache_key(block, language, fingerprint), block["text"])
+        value = (
+            block["text"]
+            if block["type"] in SKIP
+            else cache.get(cache_key(block, language, fingerprint), block["text"])
+        )
         rich_block = block
         asset, display_width, display_height, labels = None, 120, 0, []
         if block.get("asset"):
@@ -243,7 +247,12 @@ def latex_zip(root, document, cache, language, fingerprint):
     for block in document["blocks"]:
         if block["type"] in ("header", "footer"):
             continue
-        value = latex_escape(rich_text(cache.get(cache_key(block, language, fingerprint), block["text"])))
+        stored = (
+            block["text"]
+            if block["type"] in SKIP
+            else cache.get(cache_key(block, language, fingerprint), block["text"])
+        )
+        value = latex_escape(rich_text(stored))
         if block.get("asset"):
             assets.add(block["asset"])
             lines.append(

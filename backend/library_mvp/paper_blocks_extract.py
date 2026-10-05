@@ -15,6 +15,8 @@ from .document_models import DocumentModels, available
 from .document_layout import page_layout, fuse_layout
 from .document_ocr_pages import scan_lines, image_labels
 from .paper_blocks_labels import identify_labels
+from .paper_blocks_programs import programs
+from .paper_blocks_regions import refine_regions
 from .document_figure_labels import native_figure_labels
 from .paper_blocks_sections import tag_outline, classify_sections
 from .paper_blocks_special import (
@@ -105,7 +107,7 @@ def extract(path, directory, sha, check=lambda: None, *, models=None, enrich=Tru
             page = doc[index]
             mark_footnotes(page, raw, body_size)
             rows = text_blocks(raw, body_size, index + 1, page.rect.width, page.rect.height, words)
-            rows = tag_outline(rows, index + 1, outline, words)
+            rows = tag_outline(rows, index + 1, outline, words, page)
             rows = equation_parts(rows, words)
             rows = mark_caption_continuations(model.reading_order(rows, page.rect.width), words)
             images = graphics(page, rows)
@@ -117,6 +119,7 @@ def extract(path, directory, sha, check=lambda: None, *, models=None, enrich=Tru
                     if fitz.Rect(i["bbox"]).width * fitz.Rect(i["bbox"]).height
                     < page.rect.width * page.rect.height * 0.8
                 ]
+            regions = []
             if models:
                 try:
                     regions = page_layout(page, models, directory)
@@ -124,6 +127,11 @@ def extract(path, directory, sha, check=lambda: None, *, models=None, enrich=Tru
                     meta["layout_regions"] = regions
                 except Exception:
                     warnings.append(f"第 {index + 1} 页版面分析失败，已使用启发式结果。")
+            code = programs(page, raw)
+            images = [
+                i for i in images if not any(fitz.Rect(c["bbox"]).contains(fitz.Rect(i["bbox"])) for c in code)
+            ]
+            images = code + refine_regions(page, rows, images, regions)
             include_small_figure_labels(rows, images, body_size)
             rows = assign_figure_text(rows, images, words)
             if models:
@@ -139,7 +147,7 @@ def extract(path, directory, sha, check=lambda: None, *, models=None, enrich=Tru
             for row in ordered:
                 if row["type"] == "title":
                     saw_title = True
-                if re.match(r"^(Abstract\b|摘要)", row["text"], re.I):
+                if row["type"] == "abstract" or re.match(r"^(Abstract\b|摘要)", row["text"], re.I):
                     saw_abstract = abstract_active = True
                     row["type"] = "abstract"
                 elif (
@@ -147,7 +155,7 @@ def extract(path, directory, sha, check=lambda: None, *, models=None, enrich=Tru
                     and saw_title
                     and not saw_abstract
                     and row["type"] in {"text", "heading"}
-                    and row["bbox"][1] < page.rect.height * 0.45
+                    and row["bbox"][3] < page.rect.height * 0.45
                 ):
                     row["type"] = "author"
                 elif row["type"] == "heading":
@@ -175,7 +183,7 @@ def extract(path, directory, sha, check=lambda: None, *, models=None, enrich=Tru
             row["extractor"] = model.EXTRACTOR_VERSION
             row.setdefault("source", "heuristic")
             row.setdefault("confidence", 0.5)
-            if row["type"] in {"figure", "table", "formula"}:
+            if row["type"] in {"figure", "table", "formula", "algorithm", "code"}:
                 clip = fitz.Rect(row["bbox"]) & doc[row["page"] - 1].rect
                 if clip.width > 1 and clip.height > 1:
                     name = row["id"]

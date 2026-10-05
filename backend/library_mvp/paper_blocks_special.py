@@ -58,7 +58,9 @@ def include_small_figure_labels(rows, images, body_size):
         padding = body_size * 2.5
         near = box + (-padding, -padding, padding, padding)
         for row in rows:
-            if row["type"] not in ("text", "heading") or row.get("size", body_size) > body_size * 0.75:
+            short_label = len(row["text"].split()) <= 5 and len(row["text"]) <= 40
+            threshold = 0.95 if short_label else 0.75
+            if row["type"] not in ("text", "heading") or row.get("size", body_size) > body_size * threshold:
                 continue
             label = fitz.Rect(row["bbox"])
             if not near.intersects(label):
