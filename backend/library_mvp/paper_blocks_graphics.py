@@ -91,7 +91,9 @@ def graphics(page, rows):
                 grid.append(rule)
             else:
                 break
-        enclosing = [r for r in candidates if kind == "table" and aligned(r) and r.contains(box) and box.y1 - r.y0 < 55]
+        enclosing = [
+            r for r in candidates if kind == "table" and aligned(r) and r.contains(box) and box.y1 - r.y0 < 55
+        ]
         if enclosing:
             regions = [fitz.Rect(r.x0, box.y1 + 1, r.x1, r.y1) for r in enclosing]
         elif len(grid) >= 2:
@@ -156,10 +158,18 @@ def assign_figure_text(rows, images, words=None):
         source = row.get("source_lines", [row])
         for line in source:
             box = fitz.Rect(line["bbox"])
-            target = next((image for image in images if area(fitz.Rect(image["bbox"]) & box) >= area(box) * 0.65), None)
+            target = next(
+                (image for image in images if area(fitz.Rect(image["bbox"]) & box) >= area(box) * 0.65), None
+            )
             if target:
                 target["figure_text"].append(
-                    {"text": line["text"], "bbox": line["bbox"], "font": line.get("font"), "size": line["size"]}
+                    {
+                        "text": line["text"],
+                        "bbox": line["bbox"],
+                        "font": line.get("font"),
+                        "size": line["size"],
+                        "source": line.get("source", row.get("source", "native_text")),
+                    }
                 )
                 if current:
                     groups.append(current)

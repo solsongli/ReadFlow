@@ -26,7 +26,11 @@ async def seed(resources, root):
     async with app.router.lifespan_context(app):
         store = app.state.store
         with pymupdf.open() as pdf:
-            pdf.new_page().insert_text((40, 40), 'Synthetic existing-data restart')
+            page = pdf.new_page()
+            page.insert_text((40, 40), 'Synthetic existing-data restart with local layout and OCR inference.')
+            bitmap = page.get_pixmap(matrix=pymupdf.Matrix(2, 2), alpha=False)
+            scanned = pdf.new_page()
+            scanned.insert_image(scanned.rect, pixmap=bitmap)
             imported = store.add_pdf(pdf.tobytes(), filename='restart.pdf')
         pixels = pymupdf.Pixmap(pymupdf.csRGB, (0, 0, 20, 20), False)
         annotation = store.annotations.save(imported['item']['id'], {
@@ -45,6 +49,8 @@ async def seed(resources, root):
         AgentConfig(root / 'agent-config.json').save({'base_url': 'http://127.0.0.1:9/v1', 'model': 'fixture', 'api_key': ''})
         app.state.paper_blocks.storage.extract(imported['attachment'])
         assert list((root / 'paper-blocks').glob('*/blocks.json'))
+        assert list((root / 'paper-blocks').glob('*/layout-*.json'))
+        assert list((root / 'paper-blocks').glob('*/ocr-page-*.json'))
 
 
 def check(unpacked, home):
@@ -56,6 +62,8 @@ def check(unpacked, home):
            'READFLOW_TYPST_BIN': str(resources / 'backend/typst/bin/typst'),
            'READFLOW_TYPST_PACKAGES': str(resources / 'backend/typst-packages'),
            'READFLOW_FONT_DIRS': str(resources / 'backend/fonts'),
+           'READFLOW_MODELS_DIR': str(resources / 'backend/models'),
+           'OPENBLAS_NUM_THREADS': '1', 'OMP_NUM_THREADS': '2',
            'PYTHONDONTWRITEBYTECODE': '1'}
     subprocess.run([str(python), '-I', '-B', str(Path(__file__).resolve()), str(unpacked),
                     '--seed', str(data)], env=env, check=True)
@@ -84,13 +92,15 @@ def check(unpacked, home):
             assert len(items) == 1
             blocks = get('/api/research/workbench/items/' + items[0]['id'] + '/blocks')
             assert blocks['document']['blocks']
+            assert blocks['document']['capabilities']['ocr']
+            assert blocks['document']['capabilities']['layout'] == 'PP-DocLayout-S'
             assert blocks['renderer_ready']
             assert len(get('/api/research/workbench/canvases')['items']) == 1
             assert len(get('/api/research/workbench/flashcards')['items']) == 1
             status = get('/api/research/connector/status')
             assert status['status'] == 'disabled' and status['client'] == 'ReadFlow'
             results.append({'run': number + 1, 'health': True, 'persistent_items': 1,
-                            'blocks_cache': True, 'connector': 'disabled'})
+                            'blocks_cache': True, 'layout_cache': True, 'ocr_cache': True, 'connector': 'disabled'})
         finally:
             child.terminate()
             try:

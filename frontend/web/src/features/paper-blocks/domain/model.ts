@@ -16,18 +16,41 @@ export interface Block {
   anchors: Anchor[];
   translation?: string;
   translation_runs?: InlineRun[];
-  protected?: Array<{ start: number; end: number; text: string; runs?: InlineRun[] }>;
+  protected?: Array<{
+    start: number;
+    end: number;
+    text: string;
+    runs?: InlineRun[];
+  }>;
   caption_id?: string;
   asset?: string;
+  figure_text?: Array<{
+    id: string;
+    text: string;
+    translation?: string;
+    translatable?: boolean;
+  }>;
 }
 export interface BlockStatus {
-  document: { schema_version: number; blocks: Block[]; warnings: string[] } | null;
+  document: {
+    schema_version: number;
+    blocks: Block[];
+    warnings: string[];
+  } | null;
   jobs?: BlockJob[];
   job: BlockJob | null;
   has_translation?: boolean;
   needs_extract?: boolean;
   language?: string;
-  result: { revision: string; language: string; fallback_blocks: string[] } | null;
+  result: {
+    revision: string;
+    language: string;
+    fallback_blocks?: string[];
+    render_fallback?: string[];
+    label_fallback?: string[];
+    translation_fallback?: string[];
+    usage?: BlockUsage;
+  } | null;
   renderer_ready: boolean;
 }
 export interface BlockJob {
@@ -38,14 +61,23 @@ export interface BlockJob {
   phase: string;
   percent: number;
   fallback_blocks?: string[];
+  translation_fallback?: string[];
   error?: { code: string; message: string };
+  usage?: BlockUsage;
+}
+export interface BlockUsage {
+  total_tokens: number;
+  reasoning_tokens?: number;
 }
 export function sourceRuns(block: Block): InlineRun[] {
   const runs: InlineRun[] = [];
   const points = Array.from(block.text);
   let cursor = 0;
   for (const part of block.protected || []) {
-    runs.push({ kind: "text", text: points.slice(cursor, part.start).join("") });
+    runs.push({
+      kind: "text",
+      text: points.slice(cursor, part.start).join(""),
+    });
     runs.push(...(part.runs || [{ kind: "text" as const, text: part.text }]));
     cursor = part.end;
   }

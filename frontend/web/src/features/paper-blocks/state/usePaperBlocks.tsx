@@ -8,6 +8,7 @@ import { useBlockMode, type BlockModePreferences } from "./useBlockMode.js";
 import { busy, jobViews, type Block, type BlockStatus } from "../domain/model.js";
 import { BlockLayer } from "../ui/BlockLayer.js";
 import { BlockCard } from "../ui/BlockCard.js";
+import { fallbackMessages, usageText } from "../domain/status.js";
 export function usePaperBlocks(
   item: string,
   attachment: string,
@@ -16,7 +17,12 @@ export function usePaperBlocks(
   language: string,
   legacyAvailable = false,
   notify?: (message: string) => void,
-  preferences: BlockModePreferences = { disabled: false, hintDismissed: true, save: () => {} },
+  preferences: BlockModePreferences = {
+    disabled: false,
+    hintDismissed: true,
+    save: () => {},
+  },
+  options: { imageText: boolean } = { imageText: true },
 ) {
   const api = useMemo(() => blocksApi(item, attachment, language), [item, attachment, language]);
   const [status, setStatus] = useState<BlockStatus | null>(null);
@@ -26,7 +32,11 @@ export function usePaperBlocks(
     language,
   );
   const enabled = mode.enabled;
-  const [selected, setSelected] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [selected, setSelected] = useState<{
+    id: string;
+    x: number;
+    y: number;
+  } | null>(null);
   const [error, setError] = useState("");
   const [dismissed, setDismissed] = useState("");
   const [sending, setSending] = useState(false);
@@ -105,10 +115,22 @@ export function usePaperBlocks(
     try {
       const config = extract ? {} : await ports.translationConfig();
       const job = await api.start(
-        { ...config, attachment_id: attachment, language, block_id: id, force },
+        {
+          ...config,
+          attachment_id: attachment,
+          language,
+          block_id: id,
+          force,
+          image_text: options.imageText,
+        },
         extract,
       );
-      if (mounted.current) setStatus((old) => ({ ...old!, job, jobs: [...(old?.jobs || []), job] }));
+      if (mounted.current)
+        setStatus((old) => ({
+          ...old!,
+          job,
+          jobs: [...(old?.jobs || []), job],
+        }));
       previousJob.current = job;
       await refresh();
     } catch (failure) {
@@ -125,8 +147,9 @@ export function usePaperBlocks(
   const open = useCallback((block: Block, x: number, y: number) => setSelected({ id: block.id, x, y }), []);
   const blocks = status?.document?.blocks || [];
   const block = blocks.find((b) => b.id === selected?.id);
+  const usage = usageText(jobs.full?.usage ?? status?.result?.usage);
   const issue = error || (dismissed === status?.job?.id ? "" : status?.job?.error?.message);
-  const fallback = status?.job?.fallback_blocks?.length || status?.result?.fallback_blocks.length || 0;
+  const fallbacks = fallbackMessages(status?.result || null, status?.job || null);
   return {
     translated: status?.result
       ? api.url(`/files/translated.pdf?revision=${encodeURIComponent(status.result.revision)}`)
@@ -149,6 +172,11 @@ export function usePaperBlocks(
     ),
     tools: (
       <>
+        {usage ? (
+          <span className="max-w-60 text-xs text-wb-text-3" role="status" title={usage}>
+            {usage}
+          </span>
+        ) : null}
         <Button
           size="sm"
           aria-pressed={enabled}
@@ -285,13 +313,17 @@ export function usePaperBlocks(
               {w}
             </p>
           ))}
-        {fallback ? (
-          <p
+        {fallbacks.length ? (
+          <div
             role="status"
-            className="absolute bottom-2 left-3 rounded-lg bg-wb-panel p-2 text-sm text-wb-text-3"
+            className="absolute bottom-2 left-3 max-w-lg space-y-1 rounded-lg bg-wb-panel p-2 text-sm text-wb-text-3"
           >
-            {fallback} 个块暂时保留原文，可补翻后重新排版。
-          </p>
+            {fallbacks.map((item) => (
+              <p className="m-0" key={item.kind} data-block-fallback={item.kind}>
+                {item.text}
+              </p>
+            ))}
+          </div>
         ) : null}
       </>
     ),

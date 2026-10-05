@@ -45,9 +45,11 @@ def lines(page):
                     )
                 )
                 and row["sideways"] == span["sideways"]
-                and abs((row["bbox"].y0 + row["bbox"].y1 - box.y0 - box.y1) / 2) < max(row["size"], span["size"]) * 0.7
+                and abs((row["bbox"].y0 + row["bbox"].y1 - box.y0 - box.y1) / 2)
+                < max(row["size"], span["size"]) * 0.7
                 and (
-                    max(row["bbox"].x0, box.x0) - min(row["bbox"].x1, box.x1) < max(row["size"], span["size"]) * 2.2
+                    max(row["bbox"].x0, box.x0) - min(row["bbox"].x1, box.x1)
+                    < max(row["size"], span["size"]) * 2.2
                     or any(
                         s["source_block"] == span["source_block"] and same_baseline(s, span, row["size"])
                         for s in row["spans"]
@@ -95,13 +97,23 @@ def lines(page):
                 for row in clusters
                 if row is not small
                 and row["sideways"] == small["sideways"]
-                and row["bbox"].contains(small["bbox"])
+                and (
+                    row["bbox"].contains(small["bbox"])
+                    or (
+                        small["size"] < row["size"] * 0.86
+                        and (
+                            row["bbox"]
+                            + (-row["size"] * 0.2, -row["size"] * 0.45, row["size"] * 0.2, row["size"] * 0.35)
+                        ).contains(small["bbox"])
+                    )
+                )
                 and sum(len(span["text"]) for span in row["spans"]) > 4
             ),
             None,
         )
         if parent:
             parent["spans"].extend(small["spans"])
+            parent["bbox"] |= small["bbox"]
             clusters.remove(small)
     result = []
     for cluster in clusters:
@@ -111,13 +123,21 @@ def lines(page):
         for span in spans:
             font[re.sub(r"^[A-Z]{6}\+", "", span["font"])] += len(span["text"])
         normal = [s for s in spans if s["size"] >= cluster["size"] * 0.88]
+        prose = [
+            s
+            for s in normal
+            if not model.MATH_FONT.search(s["font"]) and re.search(r"[A-Za-z]{2}|[\u4e00-\u9fff]", s["text"])
+        ]
+        text_span = max(prose, key=lambda s: len(s["text"]), default=None)
         result.append(
             {
                 "bbox": list(cluster["bbox"]),
                 "text": text,
                 "size": cluster["size"],
                 "font": font.most_common(1)[0][0],
-                "baseline": statistics.median(s["origin"][1] for s in normal),
+                "baseline": statistics.median(s["origin"][1] for s in (prose or normal)),
+                "text_font": text_span["font"] if text_span else font.most_common(1)[0][0],
+                "text_size": text_span["size"] if text_span else cluster["size"],
                 "bold": sum(len(s["text"]) for s in spans if s["flags"] & 16) > len(text) * 0.5,
                 "sideways": cluster["sideways"],
                 "math_parts": parts,

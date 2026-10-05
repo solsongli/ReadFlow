@@ -21,8 +21,10 @@ class ExtensionTests(unittest.IsolatedAsyncioTestCase):
                 async with app.router.lifespan_context(app):
                     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
                         modules = (await client.get('/api/research/ocr/modules')).json()['modules']
-                        self.assertEqual(len(modules), 1)
-                        module = modules[0]
+                        self.assertEqual(len(modules), 2)
+                        self.assertTrue(modules[0]['builtin'])
+                        self.assertFalse(modules[0]['download_enabled'])
+                        module = modules[1]
                         self.assertEqual(module['status'], 'not_installed')
                         self.assertEqual(module['total_bytes'], 151802982)
                         preview = (await client.get('/api/research/ocr/modules/rapidocr-mobile-cpu/preview')).json()

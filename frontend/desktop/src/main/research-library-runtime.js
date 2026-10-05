@@ -133,6 +133,11 @@ function createResearchLibraryRuntime(options = {}) {
       READFLOW_TYPST_PACKAGES: settings.env?.TYPST_PACKAGE_PATH || "",
       READFLOW_FONT_DIRS: settings.env?.RETAIN_PDF_TYPST_FONT_DIRS || "",
       READFLOW_APP_VERSION: settings.appVersion || "",
+      READFLOW_MODELS_DIR: settings.env?.READFLOW_MODELS_DIR || (settings.codeRoot
+        ? path.join(settings.codeRoot, ".model-cache/runtime/models")
+        : path.join(settings.backendRoot || "", "models")),
+      OPENBLAS_NUM_THREADS: "1",
+      OMP_NUM_THREADS: "2",
       PYTHONUNBUFFERED: "1",
       PYTHONUTF8: "1",
       PYTHONDONTWRITEBYTECODE: "1",

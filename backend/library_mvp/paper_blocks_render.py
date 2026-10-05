@@ -12,6 +12,7 @@ from .paper_blocks_model import cache_key, REFERENCE
 from .paper_blocks_inline import rich_text, source_runs
 from .paper_blocks_storage import write_json
 from .store import StoreError
+from .paper_blocks_image_render import label_layout
 
 TEMPLATE = r"""
 #set page(paper: "a4", margin: (x: 22mm, y: 20mm), numbering: "1")
@@ -32,10 +33,28 @@ TEMPLATE = r"""
   } else if b.kind == "author" {
     align(center, text(size: 10pt, content)); v(0.5em)
   } else if b.kind == "heading" {
-    heading(level: 1, numbering: none, text(size: 12pt, weight: "bold", content))
+    if b.outlined {
+      heading(level: b.level, numbering: none, text(size: 12pt, weight: "bold", content))
+    } else {
+      block(text(size: 12pt, weight: "bold", content)); v(0.4em)
+    }
   } else if b.asset != none {
     block(width: 100%, breakable: false, {
-      align(center, image(b.asset, width: b.width * 1mm))
+      align(center, box(width: b.width * 1mm, height: b.height * 1mm, {
+        image(b.asset, width: b.width * 1mm)
+        for l in b.labels {
+          place(top + left, dx: l.x * 1mm, dy: l.y * 1mm,
+            rect(width: l.width * 1mm, height: l.height * 1mm, inset: 0.3pt,
+              fill: white.transparentize(12%), stroke: none, {
+                set text(size: l.size * 1pt, fill: rgb(20, 20, 20))
+                set par(leading: 0pt, justify: false)
+                for (i, line) in l.text.split("\n").enumerate() {
+                  if i > 0 { linebreak() }
+                  text(line)
+                }
+              }))
+        }
+      }))
       if b.text != "" { v(0.25em); block(text(size: 9pt, content)) }
     })
     v(0.6em)
@@ -71,17 +90,19 @@ def runtime_paths():
     return binary, fonts, packages
 
 
-def render(root, document, cache, language, fingerprint, check=lambda: None):
+def render(root, document, cache, language, fingerprint, check=lambda: None, *, image_text=True):
     binary, fonts, packages = runtime_paths()
-    blocks, captions, warnings = [], {b["id"]: b for b in document["blocks"]}, []
+    blocks, captions = [], {b["id"]: b for b in document["blocks"]}
+    render_fallback, label_fallback = [], []
     used = {b.get("caption_id") for b in document["blocks"] if b.get("asset")}
+    has_outline = any(b.get("outline_title") for b in document["blocks"])
     for block in document["blocks"]:
         if block["type"] in ("header", "footer") or block["id"] in used:
             continue
         check()
         value = cache.get(cache_key(block, language, fingerprint), block["text"])
         rich_block = block
-        asset, display_width = None, 120
+        asset, display_width, display_height, labels = None, 120, 0, []
         if block.get("asset"):
             try:
                 # The bundled Typst 0.15.1 accepts single-page PDF images directly.
@@ -92,7 +113,18 @@ def render(root, document, cache, language, fingerprint, check=lambda: None):
                         145 * size.width / max(1, size.height),
                         size.width * 25.4 / 72 * (1.05 if block["type"] == "formula" else 1.4),
                     )
+                    display_height = display_width * size.height / size.width
                 asset = block["asset"]
+                if image_text and block.get("figure_text"):
+                    try:
+                        labels, skipped = label_layout(
+                            root, block, cache, language, fingerprint, fonts, display_width
+                        )
+                        if skipped:
+                            label_fallback.append(block["id"])
+                    except Exception:
+                        label_fallback.append(block["id"])
+                        labels = []
                 caption = captions.get(block.get("caption_id"))
                 if caption:
                     rich_block = caption
@@ -100,16 +132,24 @@ def render(root, document, cache, language, fingerprint, check=lambda: None):
                 else:
                     value = ""  # Formula text and figure labels are already present in the vector crop.
             except Exception:
-                warnings.append(block["id"])
+                render_fallback.append(block["id"])
+                asset, labels = None, []
                 value = block["text"] or block.get("caption_text") or "图形未能渲染，请查看原文。"
         blocks.append(
             {
                 "id": block["id"],
                 "kind": "heading" if REFERENCE.match(block["text"]) else block["type"],
+                "level": max(1, min(6, block.get("heading_level", 1))),
+                "outlined": not has_outline
+                or bool(block.get("outline_title"))
+                or bool(REFERENCE.match(block["text"]))
+                or block.get("reference_end_reason") in ("appendix", "heading_style"),
                 "text": rich_text(value),
                 "runs": value.get("runs", []) if isinstance(value, dict) else source_runs(rich_block, value),
                 "asset": asset,
                 "width": display_width,
+                "height": display_height,
+                "labels": labels,
                 "original": block["text"] or block.get("caption_text", ""),
             }
         )
@@ -157,8 +197,10 @@ def render(root, document, cache, language, fingerprint, check=lambda: None):
                 except Exception:
                     pass
             if not converted:
-                warnings.append(failed["id"])
-                failed.update(text=failed["original"], runs=[{"kind": "text", "text": failed["original"]}], asset=None)
+                render_fallback.append(failed["id"])
+                failed.update(
+                    text=failed["original"], runs=[{"kind": "text", "text": failed["original"]}], asset=None
+                )
             write_json(root / "render-data.json", {"blocks": blocks, "language": language})
         finally:
             if process.poll() is None:
@@ -166,7 +208,10 @@ def render(root, document, cache, language, fingerprint, check=lambda: None):
                 process.communicate()
     check()
     (root / "render-pending.pdf").replace(root / "translated.pdf")
-    return warnings
+    return {
+        "render_fallback": list(dict.fromkeys(render_fallback)),
+        "label_fallback": [v for v in dict.fromkeys(label_fallback) if v not in render_fallback],
+    }
 
 
 def latex_escape(value):

@@ -64,7 +64,15 @@ jobs:
       - run: npm ci
       - run: npm --prefix frontend/web run prepare:workspace
       - run: python -m pip install -r backend/library_mvp/requirements-ci.txt
+      - uses: actions/cache@v4
+        with:
+          path: .model-cache
+          key: readflow-cpu-${{ runner.os }}-${{ hashFiles('ops/models/manifest.json', 'ops/models/fetch.py') }}
+      - run: python ops/models/fetch.py --stage .model-cache/runtime
       - run: python -m unittest discover -s backend/library_mvp/tests
         env:
           PYTHONPATH: .
           READFLOW_BENCHMARK: '0'
+          READFLOW_REQUIRE_MODELS: '1'
+          OPENBLAS_NUM_THREADS: '1'
+          OMP_NUM_THREADS: '2'

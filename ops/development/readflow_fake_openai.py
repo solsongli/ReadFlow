@@ -5,6 +5,51 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import re
 import time
+import threading
+
+
+def completion_response(body, attempt=0):
+    """Deterministic adverse responses, selected by fake model name; never a real upstream."""
+    model = body.get('model', 'readflow-test')
+    content = completion_content(body)
+    try:
+        rows = json.loads(content).get('blocks', [])
+    except (ValueError, AttributeError):
+        rows = []
+    if model == 'readflow-rate-limit' and attempt == 0:
+        return 429, {'error': {'message': 'fixture rate limit'}}
+    if model == 'readflow-no-json' and body.get('response_format'):
+        return 400, {'error': {'message': 'response_format json_object unsupported'}}
+    reason = 'stop'
+    if model == 'readflow-fenced':
+        content = '```json\n' + content + '\n```'
+    elif model == 'readflow-length' and len(rows) > 2:
+        content, reason = content[:len(content) // 2], 'length'
+    elif model in ('readflow-missing', 'readflow-tampered') and len(rows) > 1:
+        if model == 'readflow-missing':
+            rows.pop()
+        else:
+            rows[-1]['id'] = 'unrequested-fixture-id'
+        content = json.dumps({'blocks': rows}, ensure_ascii=False)
+    usage = {'prompt_tokens': 11, 'completion_tokens': 7, 'total_tokens': 18}
+    if model == 'readflow-reasoning':
+        usage.update(completion_tokens=17, total_tokens=28, completion_tokens_details={'reasoning_tokens': 10})
+    return 200, {'object': 'chat.completion', 'model': model,
+                 'choices': [{'index': 0, 'message': {'role': 'assistant', 'content': content}, 'finish_reason': reason}],
+                 'usage': usage}
+
+
+class FixtureServer(ThreadingHTTPServer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.counts = {}
+        self.counts_lock = threading.Lock()
+
+    def attempt(self, model):
+        with self.counts_lock:
+            attempt = self.counts.get(model, 0)
+            self.counts[model] = attempt + 1
+            return attempt
 
 
 def translated(value):
@@ -140,7 +185,9 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.flush()
             self.close_connection = True
         else:
-            self.send_json({**metadata, 'object': 'chat.completion', 'choices': [{'index': 0, 'message': {'role': 'assistant', 'content': content}, 'finish_reason': 'stop'}], 'usage': {'prompt_tokens': 1, 'completion_tokens': 1, 'total_tokens': 2}})
+            attempt = self.server.attempt(body.get('model', 'readflow-test')) if hasattr(self.server, 'attempt') else 0
+            status, response = completion_response(body, attempt)
+            self.send_json({**metadata, **response}, status)
 
 
 def main():
@@ -155,7 +202,7 @@ def main():
         if not 1024 <= options.ai_runtime_port <= 65535 or options.ai_runtime_port in (23119, options.port):
             parser.error('Use a distinct free loopback AI fixture port, excluding 23119.')
         import threading
-        runtime = ThreadingHTTPServer(('127.0.0.1', options.ai_runtime_port), Handler)
+        runtime = FixtureServer(('127.0.0.1', options.ai_runtime_port), Handler)
         runtime.model_base = f'http://127.0.0.1:{options.port}/v1'
         runtime.runtime_config = {
             'configured_runtime': 'python', 'active_runtime': 'python', 'agent_confirmation_mode': 'explicit',
@@ -165,7 +212,7 @@ def main():
         }
         threading.Thread(target=runtime.serve_forever, daemon=True).start()
         print(f'Offline runtime fixture ready: http://127.0.0.1:{options.ai_runtime_port}/v1/runtime-config', flush=True)
-    with ThreadingHTTPServer(('127.0.0.1', options.port), Handler) as server:
+    with FixtureServer(('127.0.0.1', options.port), Handler) as server:
         print(f'Offline fixture ready: http://127.0.0.1:{server.server_port}/v1', flush=True)
         server.serve_forever()
 

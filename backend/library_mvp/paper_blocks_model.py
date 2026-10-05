@@ -5,7 +5,7 @@ import re
 from .paper_blocks_inline import restore_rich
 
 SCHEMA_VERSION = 1
-EXTRACTOR_VERSION = "heuristic-3"
+EXTRACTOR_VERSION = "hybrid-7"
 SKIP = frozenset({"figure", "table", "formula", "header", "footer", "reference", "author"})
 MATH_FONT = re.compile(r"cmmi|cmsy|cmex|symbol|stix|math|msam|msbm", re.I)
 CAPTION = re.compile(r"^\s*(Figure|Fig\.?|Table|Scheme|图|表)\s*([\dA-Z]+)\b\s*[:.：]?", re.I)
@@ -41,7 +41,9 @@ def protected_ranges(text, math_parts=()):
     for part in math_parts:
         part = {"text": part} if isinstance(part, str) else part
         value = part["text"]
-        start = text.find(value, cursor)
+        start = part.get("start", -1)
+        if start < cursor or text[start : start + len(value)] != value:
+            start = text.find(value, cursor)
         if start >= 0 and value.strip():
             spans = [s for s in spans if not (s["start"] < start + len(value) and s["end"] > start)]
             spans.append({**part, "start": start, "end": start + len(value)})

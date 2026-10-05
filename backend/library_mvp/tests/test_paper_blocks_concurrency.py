@@ -21,12 +21,17 @@ class ConcurrentBlocks(unittest.TestCase):
             item = self.app.state.store.add_pdf(pdf.tobytes(), filename="batch.pdf")
         self.item, self.entry = item["item"]["id"], item["attachment"]
         self.config = {"base_url": "http://127.0.0.1:9/v1", "model": "synthetic", "api_key": "synthetic-private"}
-        self.blocks = [{"id": str(i), "type": "text", "text": f"Paragraph {i}.", "protected": []} for i in range(26)]
+        self.blocks = [
+            {"id": str(i), "type": "text", "text": f"Paragraph {i}.", "protected": []} for i in range(26)
+        ]
         self.doc = {"blocks": self.blocks, "extractor_version": "heuristic-2", "schema_version": 1}
         self.patches = [
             patch.object(self.service.storage, "extract", return_value=self.doc),
             patch("backend.library_mvp.paper_blocks_service.runtime_paths", return_value=("", "", "")),
-            patch("backend.library_mvp.paper_blocks_service.render", return_value=[]),
+            patch(
+                "backend.library_mvp.paper_blocks_service.render",
+                return_value={"render_fallback": [], "label_fallback": []},
+            ),
         ]
         for p in self.patches:
             p.start()
@@ -51,7 +56,7 @@ class ConcurrentBlocks(unittest.TestCase):
         barrier, lock = threading.Barrier(3), threading.Lock()
         calls, running, peak = [], 0, 0
 
-        def fake(config, messages, control=None):
+        def fake(config, messages, control=None, **options):
             nonlocal running, peak
             rows = json.loads(messages[-1]["content"])["blocks"]
             self.assertIn("Simplified Chinese", messages[0]["content"])
@@ -65,7 +70,15 @@ class ConcurrentBlocks(unittest.TestCase):
                 self.release.wait(timeout=4)
             with lock:
                 running -= 1
-            return json.dumps({"blocks": [{"id": r["id"], "text": r["text"]} for r in rows]})
+            return {
+                "content": json.dumps({"blocks": [{"id": r["id"], "text": r["text"]} for r in rows]}),
+                "usage": {
+                    "prompt_tokens": 5,
+                    "completion_tokens": 20,
+                    "total_tokens": 25,
+                    "completion_tokens_details": {"reasoning_tokens": 12},
+                },
+            }
 
         self.service.assistance.chat = fake
         writes = []
@@ -81,6 +94,13 @@ class ConcurrentBlocks(unittest.TestCase):
         self.assertEqual(peak, 2)
         self.release.set()
         self.assertEqual(self.wait_done(job)["percent"], 100)
+        self.assertEqual(self.service.jobs[job["id"]]["usage"]["reasoning_tokens"], 36)
+        self.assertEqual(self.service.jobs[job["id"]]["usage"]["total_tokens"], 75)
+        result = self.service.storage.result(self.entry)
+        self.assertEqual(result["usage"]["reasoning_tokens"], 36)
+        self.assertEqual(result["render_fallback"], [])
+        self.assertEqual(result["label_fallback"], [])
+        self.assertNotIn("fallback_blocks", result)
         self.assertEqual(len(calls), 3)
         self.assertEqual(sorted(map(len, writes)), [2, 12, 12])
         self.assertEqual(len(self.service.storage.cache(self.entry)), 26)
@@ -89,7 +109,7 @@ class ConcurrentBlocks(unittest.TestCase):
         self.doc["blocks"] = self.blocks[:2]
         barrier = threading.Barrier(3)
 
-        def fake(config, messages, control=None):
+        def fake(config, messages, control=None, **options):
             barrier.wait(timeout=4)
             self.release.wait(timeout=4)
             rows = json.loads(messages[-1]["content"])["blocks"]
@@ -115,7 +135,7 @@ class ConcurrentBlocks(unittest.TestCase):
         barrier = threading.Barrier(3)
         controls = []
 
-        def fake(config, messages, control=None):
+        def fake(config, messages, control=None, **options):
             controls.append(control)
             control.add_cancel_callback(self.release.set)
             barrier.wait(timeout=4)

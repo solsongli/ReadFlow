@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { stageDocumentModels } from "./stage-document-models.mjs";
 
 const require = createRequire(import.meta.url);
 const desktopRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -52,6 +53,7 @@ export function buildCopyright(mitLicense) {
     "  app/frontend/src/assets/fonts/inter/ (LICENSE.txt)",
     "",
     "Electron and Chromium license files remain in /opt/ReadFlow.",
+    "CPU document models and inference component notices: /usr/share/doc/readflow/ReadFlow-components.md",
     "",
   ].join("\n");
 }
@@ -100,7 +102,7 @@ export function debMetadata(pkg, installedSize) {
       `Installed-Size: ${installedSize}`, `Depends: ${dependencies.join(", ")}`,
       `Homepage: ${pkg.homepage}`,
       `Description: ${productName} research library, bilingual reading and PDF translation.`,
-      " ReadFlow 提供独立本地文献库、双语阅读与 PDF 翻译，OCR 按需安装，模型由用户配置并主动调用。",
+      " ReadFlow 提供本地文献库、双语阅读与块级翻译；内置 CPU 版面和 OCR，翻译服务由用户配置并主动调用。",
       "",
     ].join("\n"),
     desktop: [
@@ -188,6 +190,7 @@ export async function packageReadFlow(args = process.argv.slice(2)) {
   if (!args.includes("--skip-web-build")) run("npm", ["--prefix", "../web", "run", "build"], { env });
   console.log("[2/6] Assemble app/ with prepare-app.mjs (reuse existing retainpdf2doc dist; no Rust rebuild)");
   run(process.execPath, ["scripts/prepare-app.mjs"], { env });
+  stageDocumentModels(repoRoot, path.join(desktopRoot, "app/backend"));
   for (const relative of [
     "backend/research-library/library_mvp/api.py",
     "backend/research-library/native_library_service.py",
@@ -239,6 +242,7 @@ export async function packageReadFlow(args = process.argv.slice(2)) {
     const documentation = path.join(stage, "usr/share/doc/readflow");
     fs.mkdirSync(documentation, { recursive: true });
     fs.writeFileSync(path.join(documentation, "copyright"), buildCopyright(fs.readFileSync(path.join(repoRoot, "LICENSE"), "utf8")));
+    fs.copyFileSync(path.join(repoRoot, "LICENSE.third-party.md"), path.join(documentation, "ReadFlow-components.md"));
     fs.copyFileSync(path.join(desktopRoot, "app/frontend/src/assets/fonts/inter/LICENSE.txt"),
       path.join(documentation, "Inter-OFL.txt"));
     const installedSize = Number(run("du", ["-sk", stage], { capture: true }).split(/\s/)[0]);

@@ -144,3 +144,24 @@ test("registry-managed shutdown cancels startup without killing the child before
   await assert.rejects(starting, /startup cancelled/);
   assert.equal(child.killed, false);
 });
+
+test("CPU models resolve from packaged resources or the explicit preview checkout", async (t) => {
+  const { entry, root } = fixture(t);
+  for (const codeRoot of [undefined, path.join(root, "source")]) {
+    let invocation;
+    const child = fakeChild();
+    const runtime = createResearchLibraryRuntime({
+      spawnChild: (...args) => { invocation = args; return child; },
+      logger: { warn() {} }, healthProbe: async () => true,
+    });
+    const backendRoot = path.join(root, "resources/backend");
+    const started = runtime.start({ ...settings(entry, root), backendRoot, codeRoot });
+    child.stdout.write(`${READY_PREFIX}{"base_url":"http://127.0.0.1:49300"}\n`);
+    await started;
+    assert.equal(invocation[2].env.READFLOW_MODELS_DIR,
+      codeRoot ? path.join(codeRoot, ".model-cache/runtime/models") : path.join(backendRoot, "models"));
+    assert.equal(invocation[2].env.OPENBLAS_NUM_THREADS, "1");
+    assert.equal(invocation[2].env.OMP_NUM_THREADS, "2");
+    runtime.stop();
+  }
+});

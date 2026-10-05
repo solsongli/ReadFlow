@@ -12,7 +12,10 @@ class ReaderModelClient(httpx.Client):
         return super().build_request(method, url, **kwargs)
 
 
-def run_chat(config, messages, delta=None, *, transport=None, control=None):
+def run_chat(config, messages, delta=None, *, transport=None, control=None, batch=False):
+    if batch:
+        from .paper_blocks_transport import run_batch
+        return run_batch(config, messages, transport=transport, control=control)
     endpoint = httpx.URL(config['base_url'].rstrip('/') + '/chat/completions')
     control = control or RequestControl(60)
 

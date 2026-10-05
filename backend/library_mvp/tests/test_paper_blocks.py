@@ -260,7 +260,7 @@ class BlockTests(unittest.TestCase):
             {"id": "f" * 24, "type": "text", "text": "Preserved paragraph"},
         ]
         warnings = render(self.root, {"blocks": blocks}, {}, "zh-CN", "")
-        self.assertEqual(warnings, ["e" * 24])
+        self.assertEqual(warnings, {"render_fallback": ["e" * 24], "label_fallback": []})
         with fitz.open(self.root / "translated.pdf") as pdf:
             text = "".join(page.get_text() for page in pdf)
         self.assertIn("Original figure description", text)

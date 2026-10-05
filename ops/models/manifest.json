@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "revision": "readflow-cpu-1",
+  "python": "3.11",
+  "platform": "linux-x86_64",
+  "files": [
+    {
+      "path": "packages/onnxruntime-1.25.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "kind": "wheel",
+      "license": "MIT",
+      "version": "1.25.1",
+      "url": "https://files.pythonhosted.org/packages/b4/18/e3966c6035789a0b5b494ca0a9a5f331d57b5c15ae7795b9fffae2e277c5/onnxruntime-1.25.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "bytes": 18007288,
+      "sha256": "79162f873cdfa38cfc8d53d59a8dc7a71a14074df3d565b2f8ce24289545ddc0"
+    },
+    {
+      "path": "packages/flatbuffers-25.12.19-py2.py3-none-any.whl",
+      "kind": "wheel",
+      "url": "https://files.pythonhosted.org/packages/e8/2d/d2a548598be01649e2d46231d151a6c56d10b964d94043a335ae56ea2d92/flatbuffers-25.12.19-py2.py3-none-any.whl",
+      "sha256": "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4",
+      "bytes": 26661,
+      "license": "Apache-2.0",
+      "version": "25.12.19"
+    },
+    {
+      "path": "packages/protobuf-6.33.5-py3-none-any.whl",
+      "kind": "wheel",
+      "url": "https://files.pythonhosted.org/packages/57/bf/2086963c69bdac3d7cff1cc7ff79b8ce5ea0bec6797a017e1be338a46248/protobuf-6.33.5-py3-none-any.whl",
+      "sha256": "69915a973dd0f60f31a08b8318b73eab2bd6a392c79184b3612226b0a3f8ec02",
+      "bytes": 170687,
+      "license": "BSD-3-Clause",
+      "version": "6.33.5"
+    },
+    {
+      "path": "packages/packaging-25.0-py3-none-any.whl",
+      "kind": "wheel",
+      "url": "https://files.pythonhosted.org/packages/20/12/38679034af332785aac8774540895e234f4d07f7545804097de4b666afd8/packaging-25.0-py3-none-any.whl",
+      "sha256": "29572ef2b1f17581046b3a2227d5c611fb25ec70ca1ba8554b24b0e69331a484",
+      "bytes": 66469,
+      "license": "Apache-2.0 OR BSD-2-Clause",
+      "version": "25.0"
+    },
+    {
+      "path": "packages/numpy-2.3.5-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "kind": "wheel",
+      "url": "https://files.pythonhosted.org/packages/65/fb/2b23769462b34398d9326081fad5655198fcf18966fcb1f1e49db44fbf31/numpy-2.3.5-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "8cba086a43d54ca804ce711b2a940b16e452807acebe7852ff327f1ecd49b0d4",
+      "bytes": 16897903,
+      "license": "BSD-3-Clause",
+      "version": "2.3.5"
+    },
+    {
+      "path": "models/ocr-det.onnx",
+      "kind": "model",
+      "bytes": 4819576,
+      "sha256": "4d97c44a20d30a81aad087d6a396b08f786c4635742afc391f6621f5c6ae78ae",
+      "url": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv5/det/ch_PP-OCRv5_det_mobile.onnx",
+      "license": "Apache-2.0",
+      "version": "RapidAI-v3.9.2/PP-OCRv5-mobile"
+    },
+    {
+      "path": "models/ocr-rec.onnx",
+      "kind": "model",
+      "bytes": 16631306,
+      "sha256": "5825fc7ebf84ae7a412be049820b4d86d77620f204a041697b0494669b1742c5",
+      "url": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile.onnx",
+      "license": "Apache-2.0",
+      "version": "RapidAI-v3.9.2/PP-OCRv5-mobile"
+    },
+    {
+      "path": "models/ocr-dict.txt",
+      "kind": "dictionary",
+      "version": "RapidAI-v3.9.2/PP-OCRv5",
+      "license": "Apache-2.0",
+      "url": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/paddle/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile/ppocrv5_dict.txt",
+      "bytes": 74012,
+      "sha256": "d1979e9f794c464c0d2e0b70a7fe14dd978e9dc644c0e71f14158cdf8342af1b"
+    },
+    {
+      "path": "models/layout.onnx",
+      "kind": "model",
+      "version": "PP-DocLayout-S/oar-ocr-v0.3.0",
+      "license": "Apache-2.0",
+      "url": "https://github.com/GreatV/oar-ocr/releases/download/v0.3.0/pp-doclayout-s.onnx",
+      "bytes": 4914918,
+      "sha256": "c2336493a0a13cd9b9b457ca68aea370b327c362a4a7da4917c2bba96029bceb",
+      "upstream": "https://huggingface.co/PaddlePaddle/PP-DocLayout-S/tree/8ac289e66575bb9bba6e15c53719d8b15cc9b3b2",
+      "provenance": "PaddlePaddle checkpoint, ONNX conversion published by the oar-ocr project; no oar-ocr implementation is included."
+    },
+    {
+      "path": "models/licenses/PaddleOCR-APACHE.txt",
+      "kind": "license",
+      "version": "v3.0.0",
+      "license": "Apache-2.0",
+      "url": "https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/v3.0.0/LICENSE",
+      "bytes": 11376,
+      "sha256": "3840c5c0c61c294264d2dd77b8777be6ddd90121ef4e0e64abcd22edea581d6e"
+    },
+    {
+      "path": "models/licenses/ONNXRuntime-MIT.txt",
+      "kind": "license",
+      "version": "v1.25.1",
+      "license": "MIT",
+      "url": "https://raw.githubusercontent.com/microsoft/onnxruntime/v1.25.1/LICENSE",
+      "bytes": 1073,
+      "sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c"
+    },
+    {
+      "path": "models/layout-inference.yml",
+      "kind": "config",
+      "version": "8ac289e66575bb9bba6e15c53719d8b15cc9b3b2",
+      "license": "Apache-2.0",
+      "url": "https://huggingface.co/PaddlePaddle/PP-DocLayout-S/resolve/8ac289e66575bb9bba6e15c53719d8b15cc9b3b2/inference.yml",
+      "bytes": 1579,
+      "sha256": "6f690098c438214c67822239a568f0bc2bbe97a8f02fba93e492d4f2c47523c3"
+    }
+  ]
+}

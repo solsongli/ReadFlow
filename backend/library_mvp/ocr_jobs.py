@@ -22,6 +22,9 @@ class OcrCancelled(Exception):
 
 def run_page(page, runtime, cancelled):
     """Render a bounded raster locally, then OCR in the isolated CPU runtime."""
+    if runtime.get('builtin'):
+        from .ocr_builtin import run_builtin
+        return run_builtin(page, runtime, cancelled)
     import fitz
     scale = min(2.0, 3000 / max(page.rect.width, page.rect.height))
     pixmap = page.get_pixmap(matrix=fitz.Matrix(scale, scale), alpha=False)
@@ -240,7 +243,8 @@ class OcrJobs:
 
 def register_ocr_routes(app, store, *, allow_download=False, manifest_path=None):
     from .api import json_body
-    modules = OcrModules(store.data_root / OCR_MODULES, manifest_path, allow_download=allow_download)
+    from .ocr_builtin import BuiltinOcrModules
+    modules = BuiltinOcrModules(OcrModules(store.data_root / OCR_MODULES, manifest_path, allow_download=allow_download))
     jobs = OcrJobs(store, modules)
     app.state.ocr_modules, app.state.ocr_jobs = modules, jobs
     base = '/api/research/ocr'

@@ -29,7 +29,10 @@ assert pathlib.Path(retainpdf_ai.__file__).resolve().is_relative_to(ai.resolve()
 app = create_app(data)
 async def check():
     async with app.router.lifespan_context(app):
-        assert app.state.ocr_modules.list()[0]['status'] == 'not_installed'
+        modules = app.state.ocr_modules.list()
+        assert modules[0]['builtin'] is True
+        assert modules[0]['download_enabled'] is False
+        assert modules[1]['status'] == 'not_installed'
         assert app.state.ocr_modules.allow_download is False
 asyncio.run(check())
 print('packaged_sidecar_import_and_lifecycle=ok')

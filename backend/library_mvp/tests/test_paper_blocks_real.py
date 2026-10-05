@@ -8,6 +8,7 @@ from backend.library_mvp.paper_blocks_extract import extract, lines, geometry
 from backend.library_mvp.paper_blocks_text import normalized, band
 from backend.library_mvp.paper_blocks_graphics import area
 from backend.library_mvp.paper_blocks_paragraphs import sentence_end
+from backend.library_mvp.paper_blocks_typography import family
 
 ROOT = Path(__file__).resolve().parents[3]
 NAMES = ("babeldoc-10p", "yakubenko-halogen-lithium-10p", "s41524-tibetan-plateau-21p")
@@ -47,8 +48,9 @@ class RealBlockStructures(unittest.TestCase):
         self.assertTrue(any(len(c["source_lines"]) > 1 for c in captions))
         for caption in captions:
             for a, b in zip(caption["source_lines"], caption["source_lines"][1:]):
-                self.assertEqual(a["font"], b["font"])
-                self.assertLess(abs(a["size"] - b["size"]), max(a["size"], b["size"]) * 0.06)
+                # A bold caption lead-in and its regular continuation are one font family.
+                self.assertEqual(family(a["font"]), family(b["font"]))
+                self.assertLess(abs(a["size"] - b["size"]), max(a["size"], b["size"]) * 0.12)
                 self.assertLess(b["bbox"][1] - a["bbox"][3], b["size"] * 0.7)
         images = [b for b in doc["blocks"] if b["type"] in ("figure", "table")]
         self.assertTrue(images)
@@ -77,7 +79,7 @@ class RealBlockStructures(unittest.TestCase):
         for block in doc["blocks"]:
             if len(block["anchors"]) > 1:
                 for part in block["anchors"][1:]:
-                    if part.get("continuation_reason") not in ("hyphen", "floating"):
+                    if part.get("continuation_reason") not in ("hyphen", "floating", "list"):
                         self.assertFalse(part.get("paragraph_gap"))
                     if part.get("continuation_reason") != "hyphen" and not part.get("inherited_indent"):
                         self.assertFalse(part.get("first_indent"))

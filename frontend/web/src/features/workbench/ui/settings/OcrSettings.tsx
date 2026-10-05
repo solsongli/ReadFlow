@@ -53,14 +53,14 @@ export function OcrSettings() {
   }
   return <>
     <div className="flex justify-end"><Button disabled={busy || loading} onClick={() => setVersion(version + 1)}>刷新状态</Button></div>
-    {modules.map((module) => <SettingsCard key={module.id} title="RapidOCR">
+    {modules.map((module) => <SettingsCard key={module.id} title={module.builtin ? "内置 OCR" : "兼容可选 OCR"}>
       <div className="flex items-start justify-between gap-4 px-3.5 py-3"><span className="min-w-0"><span className="block font-medium">{module.id}</span><span className="mt-1 block text-[0.75rem] text-wb-text-3">版本 {module.engine_version} · 模型 {module.model_version}</span></span><span className="shrink-0 text-[0.75rem] text-wb-text-3">{STATE[module.status]}</span></div>
       <div className="wb-info-row relative flex flex-wrap items-center justify-between gap-3 px-3.5 py-3">
         <span className="text-[0.75rem] text-wb-text-3">{module.status === "downloading" ? `${formatStorageBytes(module.downloaded_bytes ?? 0)} / ` : ""}{formatStorageBytes(module.total_bytes)}</span>
         <span className="flex gap-2">
           {module.status === "downloading" ? <Button size="sm" disabled={busy} onClick={() => void cancelDownload(module)}>取消下载</Button> : null}
-          {["ready", "error"].includes(module.status) ? <Button size="sm" disabled={busy} onClick={() => setConfirm({ type: "remove", module })}>移除模块</Button> : null}
-          {["not_installed", "error"].includes(module.status) ? <Button size="sm" disabled={busy || !module.download_enabled} onClick={() => void preview(module)}>下载并安装…</Button> : null}
+          {!module.builtin && ["ready", "error"].includes(module.status) ? <Button size="sm" disabled={busy} onClick={() => setConfirm({ type: "remove", module })}>移除模块</Button> : null}
+          {!module.builtin && ["not_installed", "error"].includes(module.status) ? <Button size="sm" disabled={busy || !module.download_enabled} onClick={() => void preview(module)}>下载并安装…</Button> : null}
         </span>
       </div>
       {module.error || (!module.download_enabled && module.status !== "ready") ? <p className="m-0 px-3.5 pb-3 text-[0.75rem] text-wb-text-3">{module.error || "当前服务未允许下载。请由服务管理方开启后再安装。"}</p> : null}
@@ -71,6 +71,6 @@ export function OcrSettings() {
     </SettingsCard>)}
     {!modules.length ? <SettingsStatus message={loading ? "正在读取模块状态…" : "未检测到本地 OCR 模块。"} /> : null}
     <SettingsStatus message={error} tone="error" />
-    <p className="m-0 text-[0.75rem] leading-relaxed text-wb-text-3">优先使用 PDF 文字层，只识别缺字页面。模型安装后，OCR 在本机运行。</p>
+    <p className="m-0 text-[0.75rem] leading-relaxed text-wb-text-3">优先使用 PDF 文字层，只识别缺字页面。内置 OCR 随应用提供，在本机 CPU 运行；无需下载。</p>
   </>;
 }

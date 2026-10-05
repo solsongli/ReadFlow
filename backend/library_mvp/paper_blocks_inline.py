@@ -17,12 +17,12 @@ def span_content(spans, size, math_font):
         return "text"
 
     ordered = sorted(spans, key=lambda s: (round(s["bbox"][0], 1), {"sub": 0, "text": 1, "super": 2}[kind(s)]))
-    text, parts, current, previous = "", [], [], None
+    text, parts, current, previous, start = "", [], [], None, 0
 
     def finish():
         if current:
             value = "".join(r["text"] for r in current)
-            parts.append({"text": value, "runs": list(current)})
+            parts.append({"text": value, "runs": list(current), "start": start, "end": start + len(value)})
             current.clear()
 
     for span in ordered:
@@ -41,12 +41,40 @@ def span_content(spans, size, math_font):
                 current.append({"kind": "text", "text": " "})
         if not protected:
             finish()
+        elif not current:
+            start = len(text)
         text += value
         if protected:
             current.append({"kind": script, "text": value})
         previous = span
     finish()
-    return text.strip(), parts
+    leading = len(text) - len(text.lstrip())
+    trimmed = text.strip()
+    for part in parts:
+        left, right = max(leading, part["start"]), min(leading + len(trimmed), part["end"])
+        offset, runs = part["start"], []
+        for run in part["runs"]:
+            fragment = run["text"][max(0, left - offset) : max(0, min(len(run["text"]), right - offset))]
+            if fragment:
+                runs.append({**run, "text": fragment})
+            offset += len(run["text"])
+        part.update(start=left - leading, end=right - leading, text=text[left:right], runs=runs)
+    return trimmed, [part for part in parts if part["text"]]
+
+
+def line_math_parts(lines, expected, join):
+    """Rebase exact source offsets after paragraph, caption and cross-page joins."""
+    if not lines or any("math_parts" not in line for line in lines):
+        return None
+    text, parts = "", []
+    for line in lines:
+        text = join(text, line["text"])
+        offset = len(text) - len(line["text"])
+        for part in line["math_parts"]:
+            if not isinstance(part, dict) or "start" not in part:
+                return None
+            parts.append({**part, "start": part["start"] + offset, "end": part["end"] + offset})
+    return parts if text == expected else None
 
 
 def rich_text(value):
@@ -57,8 +85,11 @@ def source_runs(block, text=None):
     """Reapply local script spans to unchanged source/fake-prefix text; never parse markup."""
     text = block["text"] if text is None else text
     runs, cursor = [], 0
+    source_offset = text.find(block["text"])
     for span in block.get("protected", []):
-        at = text.find(span["text"], cursor)
+        at = source_offset + span.get("start", -1) if source_offset >= 0 else -1
+        if at < cursor or text[at : at + len(span["text"])] != span["text"]:
+            at = text.find(span["text"], cursor)
         if at < 0:
             continue
         runs.append({"kind": "text", "text": text[cursor:at]})

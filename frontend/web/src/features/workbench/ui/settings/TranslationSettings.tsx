@@ -10,6 +10,7 @@ import { RenderFontSettings } from "./RenderFontSettings.js";
 export function TranslationSettings() {
   const wb = useWorkbench();
   const language = useWb((state) => state.blockLanguage);
+  const imageText = useWb((state) => state.blockImageText);
   return <><TranslationServiceSettings />
     <SettingsCard title="块级翻译" description="阅读器块级译文采用内置思源宋体；下方排版字体用于兼容任务。">
       <SettingsRow label="目标语言">
@@ -17,7 +18,11 @@ export function TranslationSettings() {
         onChange={(event) => wb.setPrefs({ blockLanguage: event.target.value })}>
         <option value="zh-CN">中文</option><option value="en">English</option><option value="ja">日本語</option>
         <option value="de">Deutsch</option><option value="fr">Français</option>
-      </select></SettingsRow></SettingsCard><RenderFontSettings /></>;
+      </select></SettingsRow>
+      <SettingsRow label="译文 PDF 中翻译图内文字">
+        <input type="checkbox" aria-label="译文 PDF 中翻译图内文字" checked={imageText}
+          onChange={(event) => wb.setPrefs({ blockImageText: event.target.checked })} />
+      </SettingsRow></SettingsCard><RenderFontSettings /></>;
 }
 
 function TranslationServiceSettings() {

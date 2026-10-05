@@ -8,6 +8,7 @@ from .data_layout import PAPER_BLOCKS
 from .store import StoreError
 from .paper_blocks_extract import extract
 from .paper_blocks_model import SCHEMA_VERSION, EXTRACTOR_VERSION
+from .document_models import revision
 
 
 def write_json(path, value):
@@ -57,7 +58,9 @@ class BlockStorage:
         try:
             value = json.loads(path.read_text())
             if value["schema_version"] == SCHEMA_VERSION and (
-                accept_stale or value["extractor_version"] == EXTRACTOR_VERSION
+                accept_stale
+                or value["extractor_version"] == EXTRACTOR_VERSION
+                and (not revision() or value.get("model_revision") == revision())
             ):
                 return value
         except (ValueError, KeyError):

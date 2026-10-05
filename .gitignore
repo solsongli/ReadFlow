@@ -94,3 +94,6 @@ research/
 /.retain-native-preview/
 /.research-library-preview/
 /connector-test-*/
+
+# Pinned CPU model/runtime downloads (ops/models/manifest.json)
+.model-cache/

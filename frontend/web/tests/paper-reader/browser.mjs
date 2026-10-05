@@ -116,6 +116,11 @@ export async function readerBrowser(query = "", fixture = "tests/paper-reader/fi
       if (await blocks.route(route)) return;
       if (await assistance.route(route)) return;
       if (await canvases.route(route)) return;
+      if (query.includes("x2") && p === "/api/research/ocr/modules") return route.fulfill({ json: {
+        modules: [{ id: "readflow-ocr-mobile-cpu", builtin: true, engine_version: "ReadFlow CPU 1",
+          model_version: "PP-OCRv5 mobile", status: "ready", total_bytes: 21524900,
+          download_enabled: false, files: [], error: null }],
+      } });
       if (p === "/api/v1/fonts") return route.fulfill({ json: { fonts: [
         { family: "Source Han Serif SC", available: true },
       ] } });

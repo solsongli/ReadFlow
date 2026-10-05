@@ -3,6 +3,13 @@ import { sourceRuns } from "../../src/features/paper-blocks/domain/model.js";
 export async function blocksMock(query) {
   const fixture = query.includes("blocks");
   const manifest = fixture ? JSON.parse(await readFile("tests/fixtures/blocks/manifest.json", "utf8")) : null;
+  if (manifest && query.includes("x2")) {
+    const figure = manifest.blocks.find((block) => block.type === "figure");
+    figure.figure_text = [
+      { id: "label", text: "Training input", translatable: true },
+      { id: "tick", text: "100%", translatable: false },
+    ];
+  }
   let document = null,
     result = null,
     language = "zh-CN",
@@ -64,11 +71,21 @@ export async function blocksMock(query) {
                 ...block,
                 translation: "【译】" + block.text,
                 translation_runs: [{ kind: "text", text: "【译】" }, ...sourceRuns(block)],
+                figure_text: block.figure_text?.map((label) => ({
+                  ...label, translation: label.translatable ? "训练输入" : "",
+                })),
               }
             : old || block;
         }),
       };
-      if (!request.block_id) result = { revision: String(ticks), language, fallback_blocks: [] };
+      if (!request.block_id) result = {
+        revision: String(ticks), language, fallback_blocks: [], usage: { total_tokens: 842 },
+      };
+      if (!request.block_id && query.includes("x2c")) result = {
+        revision: String(ticks), language, translation_fallback: [],
+        render_fallback: ["missing-asset"], label_fallback: ["figure"],
+        usage: { total_tokens: 842, reasoning_tokens: 512 },
+      };
       Object.assign(job, { phase: "完成", status: "done", percent: 100 });
     },
     async route(route) {

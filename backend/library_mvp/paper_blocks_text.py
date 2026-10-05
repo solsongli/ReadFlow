@@ -7,7 +7,8 @@ import unicodedata
 import pymupdf as fitz
 from . import paper_blocks_model as model
 from .paper_blocks_paragraphs import continuation, sentence_end, split_word  # compatible pure-logic export
-from .paper_blocks_typography import prose_font, heading_evidence
+from .paper_blocks_typography import prose_font, heading_evidence, continuous_lines
+from .paper_blocks_math import classify_display_math
 
 
 def normalized(text):
@@ -68,6 +69,7 @@ def merge(prior, row, words):
 
 
 def text_blocks(rows, body_size, page_number, width, height, words=None):
+    classify_display_math(rows, body_size, width)
     output = []
     eligible = [r for r in rows if r["type"] not in ("header", "footer")]
     title_size = max((r["size"] for r in eligible if r["bbox"][1] < height * 0.3 and not r["sideways"]), default=0)
@@ -108,6 +110,8 @@ def text_blocks(rows, body_size, page_number, width, height, words=None):
             source_lines=[
                 {
                     "text": value,
+                    "math_parts": list(row["math_parts"]),
+                    "source": row.get("source", "native_text"),
                     "bbox": list(box),
                     "size": row["size"],
                     "font": row.get("font"),
@@ -119,7 +123,7 @@ def text_blocks(rows, body_size, page_number, width, height, words=None):
             last_line=list(box),
         )
         proof = heading_evidence(source, eligible, gaps[col])
-        if row["type"] not in ("header", "footer"):
+        if row["type"] not in ("header", "footer", "footnote"):
             if re.fullmatch(r"(?:https?://|www\.)\S+", value) and box[1] < height * 0.13:
                 row["type"] = "header"
             elif model.REFERENCE.match(value) or model.APPENDIX.match(value):
@@ -129,9 +133,15 @@ def text_blocks(rows, body_size, page_number, width, height, words=None):
                 or row["size"] < body_size * 0.97
             ):
                 row["type"] = "caption"
-            elif row["math_ratio"] > 0.45:
+            elif row.get("display_group") is not None:
                 row["type"] = "formula"
-            elif page_number == 1 and row["size"] >= max(body_size * 1.2, title_size * 0.93) and box[1] < height * 0.3:
+            elif re.match(r"^\s*[•●▪]", value):
+                row["type"] = "list"
+            elif (
+                page_number == 1
+                and row["size"] >= max(body_size * 1.2, title_size * 0.93)
+                and box[1] < height * 0.3
+            ):
                 row["type"] = "title"
             elif proof and (row["size"] >= body_size * 1.08 or row["bold"]):
                 row["type"] = "heading"
@@ -167,16 +177,33 @@ def text_blocks(rows, body_size, page_number, width, height, words=None):
                     and -row["size"] * 0.55 <= gap < row["size"] * 0.6
                 )
             elif prior["type"] in ("caption", "abstract") and row["type"] in ("text", "caption", "formula"):
-                match = horizontal and same_font(prior, row) and -0.5 <= gap < row["size"] * 0.65
+                compatible = prose_font(prior, row) if prior["type"] == "caption" else same_font(prior, row)
+                match = horizontal and compatible and -row["size"] * 0.2 <= gap < row["size"] * 0.65
                 match = match and not model.CAPTION.match(value) and abs(box[0] - prior["bbox"][0]) < body_size * 2
+            elif prior["type"] == "list" and row["type"] == "text":
+                match = (
+                    horizontal
+                    and prose_font(prior, row)
+                    and body_size * 0.3 <= box[0] - prior["bbox"][0] <= body_size * 3
+                    and -body_size * 0.2 <= gap <= gaps[col] + body_size * 0.35
+                )
+            elif prior["type"] == row["type"] == "footnote":
+                match = (
+                    horizontal
+                    and prose_font(prior, row)
+                    and prior.get("footnote_area") == row.get("footnote_area")
+                    and -row["size"] * 0.25 <= gap <= row["size"] * 0.65
+                )
+            elif prior["type"] == row["type"] == "formula":
+                match = prior.get("display_group") == row.get("display_group")
             else:
                 match = (
                     prior["type"] == row["type"]
-                    and row["type"] in ("text", "abstract", "formula")
+                    and row["type"] in ("text", "abstract")
                     and prose_font(prior, row)
                     and horizontal
                     and (not indented or abs(box[0] - last[0]) < body_size * 0.25)
-                    and -0.5 <= gap <= gaps[col] + body_size * 0.25
+                    and continuous_lines(prior, row, gaps[col])
                 )
             intervening = any(
                 other is not prior
@@ -195,17 +222,4 @@ def text_blocks(rows, body_size, page_number, width, height, words=None):
             merge(prior, row, words)
         else:
             output.append(row)
-    for label in list(output):
-        if re.fullmatch(r"\(\d+[a-z]?\)", label["text"]):
-            formula = next(
-                (
-                    r
-                    for r in output
-                    if r is not label and r["type"] == "formula" and abs(r["bbox"][1] - label["bbox"][1]) < body_size
-                ),
-                None,
-            )
-            if formula:
-                merge(formula, label, words)
-                output.remove(label)
     return output

@@ -1,6 +1,20 @@
 # RetainPDF 科研阅读版本（ReadFlow）：私有交接快照
 
-## 最新状态（2026-10-04 下午，ReadFlow 0.9.6 已打包待安装：块级翻译）
+## 最新状态（2026-10-04 晚，ReadFlow 0.9.7 已打包待安装：内置版面模型 + OCR + 图片翻译）
+
+- **X2 / X2b / X2c**：Astra 实现（用户授权 Fast 模式），Claude 验收。
+  - **内置组件**：ORT 1.25.1、NumPy 2.3.5、PP-DocLayout-S、PP-OCRv5 mobile。清单在 `ops/models/manifest.json`，所有文件固定版本与 sha256；缓存不进 git，CI 按清单下载。安装后新增约 100MB，deb 新增约 38MB。
+  - **拆块与 OCR**：版面融合；扫描页和位图文字走 OCR。
+  - **图片翻译**：图内文字的译文叠加到译文 PDF 上（可在设置中关闭）。
+  - **真实模型适配**：JSON 模式、按截断拆批、退避重试；用量拆成 prompt / completion / reasoning。
+  - **真实论文修复**：参考文献后的附录不再误判；列表、图注、脚注续行合并；含行内数学的段落不再逐行拆开。
+- **安装包**：`readflow_0.9.7_amd64.deb`，SHA256 `8a62374790ddc687129930177b4bc9e322e120b22db6e4611608b68ff51c4ee6`。**未安装**，安装需要输入密码。
+- **测试**：web 331、桌面 100、后端 376；`--headed` 二次启动通过。
+- **DeepSeek 实测**（用户已授权）：SafeVLA 最后一轮 272/272 块，114 秒，80k tokens，其中推理约 88%。数据见 `docs/readflow/版本说明-0.9.7.md`。
+- **测试资料副本**：`/home/lsy/Documents/LeoProjetcs/Retainpdf/readflow-ds-test/` 是预览资料的副本，**内含 DeepSeek 凭据**。仅用于实测，不再需要时删除。
+- **版面模型来源**：PP-DocLayout-S 的 ONNX 来自 oar-ocr v0.3.0 的转换发布（Apache-2.0），不是 Paddle 官方直接发布。
+
+## 此前状态（2026-10-04 下午，ReadFlow 0.9.6 已打包待安装：块级翻译）
 
 - **翻译重构第一阶段（X1 / X1b / X1c，Astra 实现，Claude 验收）**：
   - **拆块**：PyMuPDF 把 PDF 拆成带类型和坐标的块。图、表、公式裁成矢量 PDF。

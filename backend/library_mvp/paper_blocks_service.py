@@ -12,6 +12,9 @@ from .paper_blocks_translate import translate_blocks
 from .paper_blocks_inline import rich_text, source_runs
 from .paper_blocks_render import render, latex_zip, runtime_paths
 from .reader_assistance_model import translation_config, mapped_error
+from .paper_blocks_labels import translation_units, translated_labels
+from .paper_blocks_transport import token_usage
+from .document_models import revision
 
 
 class BlockService:
@@ -30,22 +33,40 @@ class BlockService:
         root = self.storage.directory(entry)
         document = self.storage.load(entry, accept_stale=True)
         with self.lock:
-            contexts = json.loads((root / "contexts.json").read_text()) if (root / "contexts.json").exists() else {}
+            contexts = (
+                json.loads((root / "contexts.json").read_text()) if (root / "contexts.json").exists() else {}
+            )
             old = json.loads((root / "selection.json").read_text()) if (root / "selection.json").exists() else {}
             context = contexts.get(language, old if old.get("language") == language else {})
             cache = self.storage.cache(entry)
             jobs = [dict(j) for j in self.jobs.values() if j["sha256"] == entry["sha256"]]
         active = [j for j in jobs if j["status"] in ("queued", "running", "cancelling")]
         job = next((j for j in active if j["scope"] == "full"), next(iter(active), jobs[-1] if jobs else None))
-        stale = bool(document and document["extractor_version"] != EXTRACTOR_VERSION)
+        stale = bool(
+            document
+            and (
+                document["extractor_version"] != EXTRACTOR_VERSION
+                or revision()
+                and document.get("model_revision") != revision()
+            )
+        )
         has_translation = False
         if document:
             blocks = []
             for block in document["blocks"]:
                 value = cache.get(cache_key(block, language, context.get("fingerprint", "")))
                 has_translation = has_translation or bool(value)
-                runs = value.get("runs") if isinstance(value, dict) else source_runs(block, value) if value else None
-                blocks.append({**block, "translation": rich_text(value), "translation_runs": runs})
+                runs = (
+                    value.get("runs") if isinstance(value, dict) else source_runs(block, value) if value else None
+                )
+                blocks.append(
+                    {
+                        **block,
+                        "translation": rich_text(value),
+                        "translation_runs": runs,
+                        "figure_text": translated_labels(block, cache, language, context.get("fingerprint", "")),
+                    }
+                )
             document = {**document, "blocks": blocks}
         try:
             runtime_paths()
@@ -123,6 +144,7 @@ class BlockService:
                 "scope": scope,
                 "block_id": body.get("block_id"),
                 "fingerprint": fingerprint,
+                "usage": token_usage({}),
             }
             self.jobs[job_id] = job
             self.controls[job_id] = {"cancel": threading.Event(), "requests": set(), "credentials": config}
@@ -138,10 +160,13 @@ class BlockService:
                 body.get("block_id"),
                 body.get("force") is True,
                 extraction,
+                body.get("image_text") is not False,
             )
             return dict(job)
 
-    def run(self, identity, entry, config, terms, language, fingerprint, block_id, force, extraction):
+    def run(
+        self, identity, entry, config, terms, language, fingerprint, block_id, force, extraction, image_text=True
+    ):
         token = self.controls[identity]
         secret = config.get("api_key", "")
 
@@ -164,19 +189,29 @@ class BlockService:
                 update(status="done", phase="已提取", percent=100)
                 return
             blocks = document["blocks"]
+            title = next((b["text"] for b in blocks if b["type"] == "title"), "")
+            section = ""
+            contextual = []
+            for block in blocks:
+                if block["type"] == "heading":
+                    section = block["text"][:250]
+                contextual.append({**block, "section": section})
+            blocks = contextual
             if not any(
-                b["type"] in ("text", "title", "abstract", "heading", "caption", "list") and b["text"].strip()
-                for b in blocks
+                b["type"] in ("text", "title", "abstract", "heading", "caption", "list", "figure_text")
+                and b["text"].strip()
+                for b in translation_units(blocks)
             ):
-                raise StoreError("no_text", "未提取到可翻译文字；本阶段尚未接入 OCR。", 409)
+                raise StoreError("no_text", "未识别到可翻译文字，请检查扫描质量或本地 OCR 资源。", 409)
             if block_id:
                 requested = next((b for b in blocks if b["id"] == block_id), None)
                 if requested is None:
                     raise StoreError("NOT_FOUND", "找不到所选块。", 404)
                 selected = requested.get("caption_id") or block_id
-                blocks = [b for b in blocks if b["id"] == selected]
+                blocks = [b for b in blocks if b["id"] in {selected, block_id}]
             else:
                 runtime_paths()  # Fail before any paid request if packaged rendering resources are absent.
+            blocks = translation_units(blocks)
             with self.lock:
                 cache = self.storage.cache(entry)
 
@@ -184,7 +219,9 @@ class BlockService:
                 with self.lock:
                     context = {"language": language, "fingerprint": fingerprint}
                     contexts = (
-                        json.loads((root / "contexts.json").read_text()) if (root / "contexts.json").exists() else {}
+                        json.loads((root / "contexts.json").read_text())
+                        if (root / "contexts.json").exists()
+                        else {}
                     )
                     contexts[language] = context
                     write_json(root / "contexts.json", contexts)
@@ -193,12 +230,19 @@ class BlockService:
             def call(messages):
                 while not self.requests.acquire(timeout=0.1):
                     check()
-                control = RequestControl(60)
+                control = RequestControl(180)
                 with self.lock:
                     token["requests"].add(control)
                 try:
                     check()
-                    return self.assistance.chat(config, messages, control=control).replace(secret, "[已隐藏]")
+                    response = self.assistance.chat(config, messages, control=control, batch=True)
+                    if isinstance(response, dict):
+                        usage = token_usage(response.get("usage"))
+                        with self.lock:
+                            for key, value in usage.items():
+                                self.jobs[identity]["usage"][key] += value
+                        return {**response, "content": response.get("content", "").replace(secret, "[已隐藏]")}
+                    return response.replace(secret, "[已隐藏]")
                 finally:
                     control.finish()
                     with self.lock:
@@ -224,6 +268,7 @@ class BlockService:
                 save,
                 force,
                 clean=lambda text: text.replace(secret, "[已隐藏]"),
+                title=title,
             )
             check()
             if any(cache_key(block, language, fingerprint) in cache for block in blocks):
@@ -233,16 +278,19 @@ class BlockService:
                 with self.pdf_lock:
                     with self.lock:
                         cache = self.storage.cache(entry)
-                    warnings = render(root, document, cache, language, fingerprint, check)
+                    warnings = render(root, document, cache, language, fingerprint, check, image_text=image_text)
                 check()
                 result = {
+                    "usage": dict(self.jobs[identity]["usage"]),
+                    "image_text": image_text,
                     "language": language,
                     "fingerprint": fingerprint,
                     "revision": datetime.now(timezone.utc).isoformat(),
-                    "fallback_blocks": failed + warnings,
+                    "translation_fallback": failed,
+                    **warnings,
                 }
                 write_json(root / "result.json", result)
-            update(status="done", phase="完成", percent=100, fallback_blocks=failed)
+            update(status="done", phase="完成", percent=100, translation_fallback=failed)
         except Exception as error:
             if token["cancel"].is_set():
                 update(status="cancelled", phase="已取消", error=None)
@@ -283,7 +331,9 @@ class BlockService:
         with self.pdf_lock:
             document = self.storage.extract(entry)
             root = self.storage.directory(entry)
-            context = json.loads((root / "selection.json").read_text()) if (root / "selection.json").exists() else {}
+            context = (
+                json.loads((root / "selection.json").read_text()) if (root / "selection.json").exists() else {}
+            )
             return latex_zip(
                 root,
                 document,

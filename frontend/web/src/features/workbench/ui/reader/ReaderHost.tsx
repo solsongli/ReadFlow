@@ -9,16 +9,27 @@ import { cn } from "@/ui/lib/utils.js";
 import type { ReaderTab } from "../../domain/workbench-store.js";
 import { formatGbt7714 } from "../../domain/citation.js";
 import { useWb, useWorkbench } from "../context.js";
-export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean }) {
+export function ReaderHost({
+  tab,
+  active,
+}: {
+  tab: ReaderTab;
+  active: boolean;
+}) {
   const wb = useWorkbench();
   const annotationSemantics = useWb((state) => state.annotationSemantics);
   const tone = useWb((state) => state.paperTone);
   const language = useWb((state) => state.blockLanguage);
+  const imageText = useWb((state) => state.blockImageText);
   const disabled = useWb((state) => state.blockModeDisabled);
   const hintDismissed = useWb((state) => state.blockModeHintDismissed);
   const row = tab.row;
   const canvas = useReaderCanvas(tab.itemId, active, row?.notes_count ?? 0);
-  const assistance = useReaderAssistance(tab.itemId, row?.title || "", canvas.addText);
+  const assistance = useReaderAssistance(
+    tab.itemId,
+    row?.title || "",
+    canvas.addText,
+  );
   const blocks = usePaperBlocks(
     tab.itemId,
     tab.attachmentId || "",
@@ -28,10 +39,14 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
     row?.translation.status === "done",
     (message) => wb.notify(message, "success"),
     { disabled, hintDismissed, save: (prefs) => wb.setPrefs(prefs) },
+    { imageText },
   );
   if (!row || !tab.attachmentId) {
     return (
-      <div role="status" className={cn("p-6 text-wb-text-3", !active && "hidden")}>
+      <div
+        role="status"
+        className={cn("p-6 text-wb-text-3", !active && "hidden")}
+      >
         论文信息尚未就绪，请重新打开文献。
       </div>
     );
@@ -39,7 +54,10 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
   const headers = buildApiHeaders();
   const job = row.translation.status === "done" ? row.translation.job_id : null;
   return (
-    <div data-wb-reader-active={active} className={cn("absolute inset-0", !active && "hidden")}>
+    <div
+      data-wb-reader-active={active}
+      className={cn("absolute inset-0", !active && "hidden")}
+    >
       <PaperReader
         assistance={assistance}
         blockOverlay={blocks.overlay}
@@ -57,12 +75,18 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
         toolbarTools={
           <>
             {blocks.tools}
-            <IconButton label="工作台设置" title="工作台设置（Ctrl ,）" onClick={() => wb.openSettings()}>
+            <IconButton
+              label="工作台设置"
+              title="工作台设置（Ctrl ,）"
+              onClick={() => wb.openSettings()}
+            >
               <Settings size={16} />
             </IconButton>
           </>
         }
-        onFocusChange={(focused) => wb.store.actions.updateTab(tab.id, { focused })}
+        onFocusChange={(focused) =>
+          wb.store.actions.updateTab(tab.id, { focused })
+        }
         metadata={row}
         active={active}
         tone={tone}
@@ -71,24 +95,46 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
         resumePage={tab.resumePage}
         navigationKey={tab.navigationKey}
         source={{
-          url: buildApiUrl("/api/research", `/attachments/${encodeURIComponent(tab.attachmentId)}/pdf`),
+          url: buildApiUrl(
+            "/api/research",
+            `/attachments/${encodeURIComponent(tab.attachmentId)}/pdf`,
+          ),
           headers,
         }}
         translated={
           blocks.translated
             ? { url: blocks.translated, headers }
             : job
-              ? { url: buildApiUrl("/api/v1", `/jobs/${encodeURIComponent(job)}/pdf`), headers }
+              ? {
+                  url: buildApiUrl(
+                    "/api/v1",
+                    `/jobs/${encodeURIComponent(job)}/pdf`,
+                  ),
+                  headers,
+                }
               : undefined
         }
-        progress={(page, pages) => void wb.readerProgress({ itemId: tab.itemId, page, pages })}
+        progress={(page, pages) =>
+          void wb.readerProgress({ itemId: tab.itemId, page, pages })
+        }
         quote={(text, page, format) =>
-          quoteReference(text, row.authors, row.year, page, format === "gbt" ? formatGbt7714(row) : undefined)
+          quoteReference(
+            text,
+            row.authors,
+            row.year,
+            page,
+            format === "gbt" ? formatGbt7714(row) : undefined,
+          )
         }
         lookup={async (query) =>
-          (await wb.api.list({ view: "all", query, sort: "title", order: "asc" })).items.map(
-            ({ id, title }) => ({ id, title }),
-          )
+          (
+            await wb.api.list({
+              view: "all",
+              query,
+              sort: "title",
+              order: "asc",
+            })
+          ).items.map(({ id, title }) => ({ id, title }))
         }
         reveal={(id) => void wb.revealNotePaper(id)}
         translation={blocks.translation}

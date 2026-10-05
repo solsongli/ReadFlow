@@ -1,6 +1,7 @@
 """Text-flow continuity with floating figures kept after the complete paragraph."""
 import re
 from .paper_blocks_model import joined
+from .paper_blocks_typography import prose_font
 
 FLOATS = frozenset({"figure", "table", "caption", "footnote"})
 MARGINS = frozenset({"header", "footer"})
@@ -18,6 +19,10 @@ def sentence_end(text):
 def inherited_indent(previous, row):
     last = (previous.get("source_lines") or [{}])[-1].get("indent_offset")
     current = row.get("indent_offset")
+    if previous["type"] == "list" and current is not None:
+        start = previous.get("indent_offset", 0)
+        if row.get("size", 10) * 0.3 <= current - start <= row.get("size", 10) * 3:
+            return True
     return (
         last is not None
         and current is not None
@@ -35,6 +40,16 @@ def continuation(previous, row, floating=False):
     box = row["bbox"]
     columns = box[0] >= last[2] or box[2] <= last[0]
     boundary = previous["anchors"][-1]["page"] != row["anchors"][0]["page"] or columns or box[1] + 30 < last[1]
+    if previous["type"] == "list" and boundary and inherited_indent(previous, row):
+        if previous.get("font") and row.get("font") and not prose_font(previous, row):
+            return False
+        lines = row.get("source_lines", [])
+        consistent = len(lines) >= 2 and all(
+            r.get("indent_offset") is not None
+            and abs(r["indent_offset"] - row["indent_offset"]) <= row.get("size", 10) * 0.25
+            for r in lines
+        )
+        return not sentence_end(previous["text"]) or consistent
     return (
         bool(boundary or floating)
         and not sentence_end(previous["text"])
@@ -53,7 +68,15 @@ def join_paragraphs(rows, words):
         floating = previous is not None and any(r["type"] in FLOATS for r in output[previous + 1 :])
         prior = output[previous] if previous is not None else None
         if prior is not None and continuation(prior, row, floating):
-            reason = "hyphen" if split_word(prior["text"]) else "floating" if floating else "column_or_page"
+            reason = (
+                "hyphen"
+                if split_word(prior["text"])
+                else "floating"
+                if floating
+                else "list"
+                if prior["type"] == "list"
+                else "column_or_page"
+            )
             # Metadata records the original boundary flags rather than erasing evidence of the join.
             row["anchors"][0]["continuation_reason"] = reason
             row["anchors"][0]["inherited_indent"] = inherited_indent(prior, row)

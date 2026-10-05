@@ -1,4 +1,4 @@
-"""CPU-only extraction. No layout model, OCR or upstream translation code is used."""
+"""Owned block extraction; optional built-in CPU analysis enriches the native text geometry."""
 import collections
 import math
 import re
@@ -10,6 +10,19 @@ from .paper_blocks_lines import lines
 from .paper_blocks_text import text_blocks, mark_margins, word_frequencies
 from .paper_blocks_paragraphs import join_paragraphs
 from .paper_blocks_equations import equation_parts
+from .paper_blocks_inline import line_math_parts
+from .document_models import DocumentModels, available
+from .document_layout import page_layout, fuse_layout
+from .document_ocr_pages import scan_lines, image_labels
+from .paper_blocks_labels import identify_labels
+from .document_figure_labels import native_figure_labels
+from .paper_blocks_sections import tag_outline, classify_sections
+from .paper_blocks_special import (
+    mark_footnotes,
+    mark_caption_continuations,
+    join_captions,
+    include_small_figure_labels,
+)
 
 
 def geometry(page):
@@ -47,14 +60,30 @@ def anchor(box, meta):
     }
 
 
-def extract(path, directory, sha, check=lambda: None):
+def extract(path, directory, sha, check=lambda: None, *, models=None, enrich=True):
     pages, all_rows, stats = [], [], []
+    warnings = []
+    if models is None and enrich and available():
+        try:
+            models = DocumentModels()
+        except (ValueError, OSError, ImportError):
+            warnings.append("内置版面组件不可用，已使用文字层启发式提取。")
     with fitz.open(path) as doc:
+        outline = doc.get_toc()
         for page in doc:
             check()
             meta = geometry(page)
             rows = lines(page)
             meta["text_status"] = "native_text" if rows else "needs_ocr"
+            if models and sum(len(r["text"]) for r in rows) < 50:
+                try:
+                    recognized = scan_lines(page, models, directory, check)
+                    if sum(len(r["text"]) for r in recognized) > sum(len(r["text"]) for r in rows):
+                        rows = recognized
+                        meta["text_status"] = "ocr"
+                except Exception:
+                    check()
+                    warnings.append(f"第 {page.number + 1} 页 OCR 未完成，保留已有文字。")
             sizes = [round(r["size"], 1) for r in rows for _ in range(min(80, len(r["text"])))]
             body = collections.Counter(sizes).most_common(1)[0][0] if sizes else 10
             stats.append((meta, rows, body))
@@ -71,14 +100,40 @@ def extract(path, directory, sha, check=lambda: None):
         body_size = body_sizes.most_common(1)[0][0] if body_sizes else 10
         mark_margins(stats)
         words = word_frequencies([r for _, rows, _ in stats for r in rows])
-        in_references = False
         for index, (meta, raw, body) in enumerate(stats):
             check()
             page = doc[index]
+            mark_footnotes(page, raw, body_size)
             rows = text_blocks(raw, body_size, index + 1, page.rect.width, page.rect.height, words)
+            rows = tag_outline(rows, index + 1, outline, words)
             rows = equation_parts(rows, words)
+            rows = mark_caption_continuations(model.reading_order(rows, page.rect.width), words)
             images = graphics(page, rows)
+            if meta["text_status"] == "ocr":
+                # A scan's page-sized bitmap is the paper, not one giant illustration.
+                images = [
+                    i
+                    for i in images
+                    if fitz.Rect(i["bbox"]).width * fitz.Rect(i["bbox"]).height
+                    < page.rect.width * page.rect.height * 0.8
+                ]
+            if models:
+                try:
+                    regions = page_layout(page, models, directory)
+                    rows, images = fuse_layout(rows, images, regions, page)
+                    meta["layout_regions"] = regions
+                except Exception:
+                    warnings.append(f"第 {index + 1} 页版面分析失败，已使用启发式结果。")
+            include_small_figure_labels(rows, images, body_size)
             rows = assign_figure_text(rows, images, words)
+            if models:
+                native_figure_labels(page, images)
+            if models and meta["text_status"] != "ocr":
+                try:
+                    image_labels(page, images, models, directory, check)
+                except Exception:
+                    check()
+                    warnings.append(f"第 {index + 1} 页部分图内文字未能识别。")
             ordered = model.reading_order(rows + images, page.rect.width)
             saw_title, saw_abstract, abstract_active = False, False, False
             for row in ordered:
@@ -99,21 +154,6 @@ def extract(path, directory, sha, check=lambda: None):
                     abstract_active = False
                 elif abstract_active and row["type"] == "text":
                     row["type"] = "abstract"
-                if model.REFERENCE.match(row["text"]):
-                    in_references = True
-                elif model.APPENDIX.match(row["text"]):
-                    in_references = False
-                    row["type"] = "heading"
-                if in_references and row["type"] not in {
-                    "header",
-                    "footer",
-                    "footnote",
-                    "figure",
-                    "table",
-                    "formula",
-                    "caption",
-                }:
-                    row["type"] = "reference"
                 row["anchors"] = [
                     {
                         **anchor(row["bbox"], meta),
@@ -122,15 +162,19 @@ def extract(path, directory, sha, check=lambda: None):
                     }
                 ]
                 all_rows.append(row)
-        merged = join_paragraphs(all_rows, words)
+        merged = join_paragraphs(join_captions(classify_sections(all_rows), words), words)
         blocks = []
         for row in merged:
             check()
             row["id"] = model.block_id(row["anchors"], row["text"])
             row["page"] = row["anchors"][0]["page"]
-            row["protected"] = model.protected_ranges(row["text"], row.pop("math_parts", []))
+            identify_labels(row)
+            parts = line_math_parts(row.get("source_lines"), row["text"], lambda a, b: model.joined(a, b, words))
+            legacy = row.pop("math_parts", [])
+            row["protected"] = model.protected_ranges(row["text"], legacy if parts is None else parts)
             row["extractor"] = model.EXTRACTOR_VERSION
-            row["confidence"] = "heuristic"
+            row.setdefault("source", "heuristic")
+            row.setdefault("confidence", 0.5)
             if row["type"] in {"figure", "table", "formula"}:
                 clip = fitz.Rect(row["bbox"]) & doc[row["page"] - 1].rect
                 if clip.width > 1 and clip.height > 1:
@@ -150,7 +194,12 @@ def extract(path, directory, sha, check=lambda: None):
                     (
                         c
                         for c in blocks
-                        if c["type"] == "caption" and c["page"] == block["page"] and c["text"] == block["caption_text"]
+                        if c["type"] == "caption"
+                        and c["page"] == block["page"]
+                        and (
+                            c["text"] == block["caption_text"]
+                            or c["anchors"][0]["bbox"] == block.get("caption_bbox")
+                        )
                     ),
                     None,
                 )
@@ -158,11 +207,11 @@ def extract(path, directory, sha, check=lambda: None):
         return {
             "schema_version": model.SCHEMA_VERSION,
             "extractor_version": model.EXTRACTOR_VERSION,
+            "model_revision": models.revision if models else None,
             "sha256": sha,
             "pages": pages,
             "blocks": blocks,
-            "capabilities": {"layout": "heuristic", "ocr": False},
-            "warnings": ["本阶段依赖 PDF 文字层；部分页面没有可提取文字，尚未接入 OCR。"]
-            if any(p["text_status"] == "needs_ocr" for p in pages)
-            else [],
+            "capabilities": {"layout": "PP-DocLayout-S" if models else "heuristic", "ocr": bool(models)},
+            "warnings": warnings
+            + (["部分页面没有可提取文字层。"] if any(p["text_status"] == "needs_ocr" for p in pages) else []),
         }

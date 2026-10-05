@@ -91,7 +91,7 @@ class BlockJobTests(unittest.IsolatedAsyncioTestCase):
         active, peak = 0, 0
         lock = threading.Lock()
 
-        def waiting(config, messages, control=None):
+        def waiting(config, messages, control=None, **options):
             nonlocal active, peak
             with lock:
                 active += 1
