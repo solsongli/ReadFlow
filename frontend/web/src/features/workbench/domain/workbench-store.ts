@@ -51,6 +51,7 @@ export interface Prefs extends TypographyPrefs {
   reviewLimit: number;
   blockLanguage: string;
   blockImageText: boolean;
+  translationDisableThinking: boolean;
   blockModeDisabled: boolean;
   blockModeHintDismissed: boolean;
   annotationSemantics: Semantics;
@@ -102,6 +103,7 @@ export const DEFAULT_PREFS: Prefs = {
   reviewLimit: 200,
   blockLanguage: "zh-CN",
   blockImageText: true,
+  translationDisableThinking: true,
   blockModeDisabled: false,
   blockModeHintDismissed: false,
   paperTone: "auto",
@@ -224,6 +226,6 @@ export function createWorkbenchStore(prefs: Partial<Prefs> = {}) {
 export type WorkbenchStore = ReturnType<typeof createWorkbenchStore>;
 
 export function prefsOf(state: S): Prefs {
-  const { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit, blockLanguage, blockImageText, blockModeDisabled, blockModeHintDismissed } = state;
-  return { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit, blockLanguage, blockImageText, blockModeDisabled, blockModeHintDismissed };
+  const { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit, blockLanguage, blockImageText, translationDisableThinking, blockModeDisabled, blockModeHintDismissed } = state;
+  return { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit, blockLanguage, blockImageText, translationDisableThinking, blockModeDisabled, blockModeHintDismissed };
 }

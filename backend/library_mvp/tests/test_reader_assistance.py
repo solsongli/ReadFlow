@@ -46,7 +46,7 @@ class ReaderAssistanceTests(unittest.IsolatedAsyncioTestCase):
         self.client = httpx.AsyncClient(transport=httpx.ASGITransport(app=self.app), base_url='http://localhost')
         self.calls = []
         def chat(config, messages, delta=None, **kwargs):
-            self.calls.append((config, messages))
+            self.calls.append((dict(config), messages))
             if delta:
                 delta('这是假回答 ')
                 delta('(p. 2)')

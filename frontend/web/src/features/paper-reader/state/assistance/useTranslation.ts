@@ -12,13 +12,16 @@ export function useSelectionTranslation(
   ports: AssistancePorts,
   selected: () => SelectionAnchor[],
 ) {
-  const [card, setCard] = useState<{ selection: SelectionAnchor[]; text: string; service: string } | null>(
-    null,
-  );
+  const [card, setCard] = useState<{
+    selection: SelectionAnchor[];
+    text: string;
+    service: string;
+    notices?: string[];
+  } | null>(null);
   const [error, setError] = useState<AssistanceError | null>(null);
   const [busy, setBusy] = useState(false);
   const last = useRef<{ quote: string; text: string } | null>(null);
-  const cache = useRef(new Map<string, Promise<{ text: string; service: string }>>());
+  const cache = useRef(new Map<string, Promise<{ text: string; service: string; notices?: string[] }>>());
   const epoch = useRef(0);
   async function translate(anchors = selected()) {
     const text = anchors.map((anchor) => anchor.quote).join("\n");
@@ -55,7 +58,7 @@ export function useSelectionTranslation(
   }
   return {
     card,
-    existing: (quote: string) => last.current?.quote === quote ? last.current.text : undefined,
+    existing: (quote: string) => (last.current?.quote === quote ? last.current.text : undefined),
     error,
     busy,
     translate,

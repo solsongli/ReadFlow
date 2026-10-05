@@ -15,6 +15,8 @@ from .reader_assistance_model import translation_config, mapped_error
 from .paper_blocks_labels import translation_units, translated_labels
 from .paper_blocks_transport import token_usage
 from .document_models import revision
+from .translation_speed import workers
+from .paper_blocks_batches import prioritize_pages
 
 
 class BlockService:
@@ -24,7 +26,7 @@ class BlockService:
         self.pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="readflow-blocks")
         self.lock = threading.RLock()
         self.pdf_lock = threading.Lock()
-        self.requests = threading.BoundedSemaphore(2)
+        self.policy = assistance.translation_policy
         self.jobs, self.controls = {}, {}
         self.closed = False
 
@@ -145,6 +147,8 @@ class BlockService:
                 "block_id": body.get("block_id"),
                 "fingerprint": fingerprint,
                 "usage": token_usage({}),
+                "notices": [],
+                "concurrency": workers(config),
             }
             self.jobs[job_id] = job
             self.controls[job_id] = {"cancel": threading.Event(), "requests": set(), "credentials": config}
@@ -161,11 +165,23 @@ class BlockService:
                 body.get("force") is True,
                 extraction,
                 body.get("image_text") is not False,
+                body.get("current_page") if type(body.get("current_page")) is int else None,
             )
             return dict(job)
 
     def run(
-        self, identity, entry, config, terms, language, fingerprint, block_id, force, extraction, image_text=True
+        self,
+        identity,
+        entry,
+        config,
+        terms,
+        language,
+        fingerprint,
+        block_id,
+        force,
+        extraction,
+        image_text=True,
+        current_page=None,
     ):
         token = self.controls[identity]
         secret = config.get("api_key", "")
@@ -211,7 +227,7 @@ class BlockService:
                 blocks = [b for b in blocks if b["id"] in {selected, block_id}]
             else:
                 runtime_paths()  # Fail before any paid request if packaged rendering resources are absent.
-            blocks = translation_units(blocks)
+            blocks = prioritize_pages(translation_units(blocks), current_page)
             with self.lock:
                 cache = self.storage.cache(entry)
 
@@ -228,14 +244,16 @@ class BlockService:
                     write_json(root / "selection.json", context)
 
             def call(messages):
-                while not self.requests.acquire(timeout=0.1):
-                    check()
                 control = RequestControl(180)
                 with self.lock:
                     token["requests"].add(control)
                 try:
                     check()
-                    response = self.assistance.chat(config, messages, control=control, batch=True)
+                    with self.policy.limiter.slot(control, workers(config)) as permit:
+                        response = self.assistance.chat(
+                            config, messages, control=control, batch=True, policy=self.policy, permit=permit
+                        )
+                    update(notices=self.policy.notices(config))
                     if isinstance(response, dict):
                         usage = token_usage(response.get("usage"))
                         with self.lock:
@@ -247,11 +265,11 @@ class BlockService:
                     control.finish()
                     with self.lock:
                         token["requests"].discard(control)
-                    self.requests.release()
 
             def save(patch):
                 check()
                 with self.lock:
+                    check()
                     self.merge_cache(entry, patch)
                     select_context()
 
@@ -264,17 +282,20 @@ class BlockService:
                 call,
                 terms,
                 check,
-                lambda done, total: update(percent=10 + round(75 * done / max(1, total))),
+                lambda done, total: update(
+                    percent=10 + round(75 * done / max(1, total)), completed_blocks=done, total_blocks=total
+                ),
                 save,
                 force,
                 clean=lambda text: text.replace(secret, "[已隐藏]"),
                 title=title,
+                concurrency=workers(config),
             )
             check()
             if any(cache_key(block, language, fingerprint) in cache for block in blocks):
                 select_context()
             if not block_id:
-                update(phase="排版", percent=90)
+                update(phase="正在排版译文 PDF", percent=90)
                 with self.pdf_lock:
                     with self.lock:
                         cache = self.storage.cache(entry)
@@ -283,6 +304,7 @@ class BlockService:
                 result = {
                     "usage": dict(self.jobs[identity]["usage"]),
                     "image_text": image_text,
+                    "notices": self.policy.notices(config),
                     "language": language,
                     "fingerprint": fingerprint,
                     "revision": datetime.now(timezone.utc).isoformat(),

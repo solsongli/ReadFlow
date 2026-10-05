@@ -3,6 +3,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 from .paper_blocks_inline import restore_rich
 from .paper_blocks_model import protect, cache_key, SKIP
+from .paper_blocks_batches import batches, estimate_tokens, planned_batches
 
 
 def parse_response(raw):
@@ -23,23 +24,6 @@ def parse_response(raw):
         return {}
 
 
-def estimate_tokens(text):
-    return int(sum(1 if ord(char) > 127 else 0.3 for char in text)) + 40
-
-
-def batches(blocks, budget=2400):
-    group, size = [], 0
-    for block in blocks:
-        tokens = estimate_tokens(block["text"])
-        if group and (size + tokens > budget or len(group) >= 12):
-            yield group
-            group, size = [], 0
-        group.append(block)
-        size += tokens
-    if group:
-        yield group
-
-
 def translate_blocks(
     blocks,
     cache,
@@ -53,6 +37,8 @@ def translate_blocks(
     force=False,
     clean=lambda value: value,
     title="",
+    concurrency=4,
+    plan=planned_batches,
 ):
     selected = [b for b in blocks if b["type"] not in SKIP and b["text"].strip()]
     missing = [b for b in selected if force or cache_key(b, language, fingerprint) not in cache]
@@ -124,9 +110,11 @@ def translate_blocks(
         return patch, failed, len(group)
 
     progress(completed, len(selected))
-    groups = iter(batches(missing))
-    with ThreadPoolExecutor(max_workers=2, thread_name_prefix="readflow-block-batch") as pool:
-        pending = {pool.submit(batch, group) for group in [next(groups, None), next(groups, None)] if group}
+    concurrency = max(1, min(16, concurrency))
+    groups = iter(plan(missing, concurrency, title, terms))
+    with ThreadPoolExecutor(max_workers=concurrency, thread_name_prefix="readflow-block-batch") as pool:
+        initial = [next(groups, None) for _ in range(concurrency)]
+        pending = {pool.submit(batch, group) for group in initial if group}
         while pending:
             check()
             finished, pending = wait(pending, timeout=0.1, return_when=FIRST_COMPLETED)

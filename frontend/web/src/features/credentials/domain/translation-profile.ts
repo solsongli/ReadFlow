@@ -63,8 +63,8 @@ export function normalizeTranslationProfile(
       ? `${candidate.baseUrl || defaults.baseUrl}`.trim()
       : defaults.baseUrl,
     model: `${candidate.model || defaults.model}`.trim(),
-    workers: Number.isInteger(workers) && workers > 0 && workers <= maxWorkers
-      ? workers
+    workers: Number.isInteger(workers) && workers > 0
+      ? Math.min(maxWorkers, workers)
       : defaults.workers,
   };
 }

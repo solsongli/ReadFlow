@@ -7,7 +7,7 @@ export async function settingsBrowser({ runtimeOnly = false, output = "/tmp/read
   const root = process.cwd();
   await mkdir(output, { recursive: true });
   const built = await build({ entryPoints: ["tests/workbench/settings-fixture.tsx"], bundle: true, write: false, format: "esm", jsx: "automatic", alias: { "@": resolve(root, "src") }, logLevel: "silent" });
-  const browser = await chromium.launch({ executablePath: process.env.READFLOW_CHROME_PATH || "/usr/bin/google-chrome", headless: true, args: ["--no-sandbox", "--disable-background-networking", "--disable-component-update", "--disable-sync", "--no-first-run"] });
+  const browser = await chromium.launch({ executablePath: process.env.READFLOW_CHROME_PATH || "/usr/bin/google-chrome", headless: true, args: ["--no-sandbox", "--disable-gpu", "--disable-background-networking", "--disable-component-update", "--disable-sync", "--no-first-run"] });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: "light" });
   await context.addInitScript(({ runtimeOnly }) => {
     window.__FRONT_RUNTIME_CONFIG__ = { apiBase: "http://settings.test" };
@@ -37,6 +37,9 @@ export async function settingsBrowser({ runtimeOnly = false, output = "/tmp/read
   await context.route("**/*", async (route) => {
     const url = new URL(route.request().url()), path = url.pathname;
     if (url.origin !== "http://settings.test") { unexpected.push(url.origin); return route.abort(); }
+    if (route.request().method() === "GET" && ["/api/research/workbench/flashcards", "/api/research/workbench/decks", "/api/research/workbench/card-reviews", "/api/research/workbench/canvases"].includes(path)) {
+      return route.fulfill({ json: { items: [] } });
+    }
     if (path === "/workbench.html") return route.fulfill({ contentType: "text/html; charset=utf-8", body: '<!doctype html><html lang="zh-CN"><link rel="stylesheet" href="/dist/css/workbench.css"><body><div id="workbench-root"></div><script type="module" src="/fixture.js"></script></body></html>' });
     if (path === "/fixture.js") return route.fulfill({ contentType: "text/javascript", body: built.outputFiles[0].text });
     if (path === "/api/research/connector/status") return route.fulfill({ contentType: "application/json", body: JSON.stringify(await page.evaluate(() => window.testConnector.connection)) });

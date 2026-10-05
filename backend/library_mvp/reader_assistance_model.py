@@ -24,7 +24,15 @@ def translation_config(value):
     if not isinstance(value, dict) or not all(value.get(key) for key in ('base_url', 'model', 'api_key')):
         raise StoreError('unconfigured', '还没有配置翻译服务', 409)
     try:
-        return AgentConfig._validate({key: value[key] for key in ('base_url', 'model', 'api_key')})
+        config = AgentConfig._validate({key: value[key] for key in ('base_url', 'model', 'api_key')})
+        config['disable_thinking'] = value.get('disable_thinking') is not False
+        candidate = value.get('workers')
+        if isinstance(candidate, (int, str)) and not isinstance(candidate, bool):
+            try:
+                config['workers'] = max(1, min(16, int(candidate)))
+            except ValueError:
+                pass
+        return config
     except Exception:
         raise StoreError('unconfigured', '翻译服务配置无效，请前往设置检查。', 409) from None
 

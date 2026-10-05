@@ -46,6 +46,7 @@ class ModelAdaptationTests(unittest.TestCase):
             lambda *_: None,
             cache.update,
             title="Synthetic paper",
+            plan=lambda rows, *_: list(batches(rows)),
         )
         self.assertEqual(errors, [])
         self.assertEqual(len(cache), 5)

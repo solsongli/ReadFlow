@@ -10,6 +10,12 @@ export function usageText(usage?: BlockUsage) {
 
 export function fallbackMessages(result: BlockStatus["result"], job: BlockJob | null) {
   const messages: Array<{ kind: string; text: string }> = [];
+  if ((job?.notices || result?.notices || []).includes("thinking_unsupported")) {
+    messages.push({
+      kind: "thinking",
+      text: "服务不支持关闭思考参数，已自动兼容重试；本次运行后续请求将省略此参数。",
+    });
+  }
   const translation = new Set([
     ...(result?.translation_fallback || []),
     ...(job?.translation_fallback || job?.fallback_blocks || []),

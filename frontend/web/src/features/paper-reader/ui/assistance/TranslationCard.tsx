@@ -61,6 +61,11 @@ export function TranslationCard({
           关闭
         </Button>
       </div>
+      {t.card.notices?.includes("thinking_unsupported") ? (
+        <p role="status" className="text-xs text-wb-text-3">
+          服务不支持关闭思考参数，已自动兼容重试。
+        </p>
+      ) : null}
       {t.busy ? (
         <p role="status" className="text-[0.8125rem] text-wb-text-3">
           正在翻译…

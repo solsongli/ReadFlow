@@ -26,7 +26,7 @@ export function assistanceApi(item: string) {
       if (value.error) {
         throw value.error;
       }
-      return value as { text: string; service: string };
+      return value as { text: string; service: string; notices?: string[] };
     },
     ask: async (
       body: unknown,

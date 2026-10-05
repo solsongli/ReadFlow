@@ -8,8 +8,13 @@ export function useReaderAssistance(item: string, title: string, canvas: (body: 
     translationConfig: async () => {
       const draft = await createHeadlessTranslationSettings().load();
       if (!translationReady(draft)) throw { code: "unconfigured" };
-      return { translation: { ...translationPayload(draft, loadDeveloperStoredConfig()).translation },
-        service: draft.provider };
+      return {
+        translation: {
+          ...translationPayload(draft, loadDeveloperStoredConfig()).translation,
+          disable_thinking: wb.store.getSnapshot().translationDisableThinking,
+        },
+        service: draft.provider,
+      };
     },
     settings: (section: "translation" | "ai") => wb.openSettings(section),
     note: async (body: string) => {

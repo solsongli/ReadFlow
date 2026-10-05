@@ -28,7 +28,7 @@ export function assistanceMock(query) {
     if (!sessions.has(item)) sessions.set(item, { messages: [], consent_target: "", generation: 0 });
     const session = sessions.get(item);
     if (action === "translate") {
-      calls.push({ action, text: value.text });
+      calls.push({ action, text: value.text, translation: value.translation });
       await route.fulfill({ json: { text: "【译】" + value.text, service: status.service } });
       return true;
     }

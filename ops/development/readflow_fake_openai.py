@@ -16,6 +16,8 @@ def completion_response(body, attempt=0):
         rows = json.loads(content).get('blocks', [])
     except (ValueError, AttributeError):
         rows = []
+    if model == 'readflow-no-thinking' and body.get('thinking'):
+        return 400, {'error': {'message': 'unknown parameter thinking'}}
     if model == 'readflow-rate-limit' and attempt == 0:
         return 429, {'error': {'message': 'fixture rate limit'}}
     if model == 'readflow-no-json' and body.get('response_format'):
@@ -39,9 +41,16 @@ def completion_response(body, attempt=0):
                  'usage': usage}
 
 
+def response_delay(response, fixed=0, per_kchar=0):
+    content = response.get('choices', [{}])[0].get('message', {}).get('content', '')
+    return max(0, fixed) + max(0, per_kchar) * len(content) / 1000
+
+
 class FixtureServer(ThreadingHTTPServer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.delay_seconds = 0
+        self.delay_per_kchar = 0
         self.counts = {}
         self.counts_lock = threading.Lock()
 
@@ -187,16 +196,22 @@ class Handler(BaseHTTPRequestHandler):
         else:
             attempt = self.server.attempt(body.get('model', 'readflow-test')) if hasattr(self.server, 'attempt') else 0
             status, response = completion_response(body, attempt)
+            if status == 200:
+                time.sleep(response_delay(response, self.server.delay_seconds, self.server.delay_per_kchar))
             self.send_json({**metadata, **response}, status)
 
 
 def main():
     parser = ArgumentParser(description=__doc__)
+    parser.add_argument('--delay-seconds', type=float, default=0, help='Fixed latency per successful request')
+    parser.add_argument('--delay-per-kchar', type=float, default=0, help='Seconds per 1000 output characters')
     parser.add_argument('--port', type=int, default=48991)
     parser.add_argument('--ai-runtime-port', type=int, help='Optional loopback fake runtime-config service for offline preview')
     options = parser.parse_args()
     if not 1024 <= options.port <= 65535 or options.port == 23119:
         parser.error('Use a free local port between 1024 and 65535 other than 23119.')
+    if not 0 <= options.delay_seconds <= 60 or not 0 <= options.delay_per_kchar <= 60:
+        parser.error('Delays must be between 0 and 60 seconds.')
     runtime = None
     if options.ai_runtime_port is not None:
         if not 1024 <= options.ai_runtime_port <= 65535 or options.ai_runtime_port in (23119, options.port):
@@ -213,6 +228,8 @@ def main():
         threading.Thread(target=runtime.serve_forever, daemon=True).start()
         print(f'Offline runtime fixture ready: http://127.0.0.1:{options.ai_runtime_port}/v1/runtime-config', flush=True)
     with FixtureServer(('127.0.0.1', options.port), Handler) as server:
+        server.delay_seconds = options.delay_seconds
+        server.delay_per_kchar = options.delay_per_kchar
         print(f'Offline fixture ready: http://127.0.0.1:{server.server_port}/v1', flush=True)
         server.serve_forever()
 

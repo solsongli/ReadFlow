@@ -50,6 +50,7 @@ export interface BlockStatus {
     label_fallback?: string[];
     translation_fallback?: string[];
     usage?: BlockUsage;
+    notices?: string[];
   } | null;
   renderer_ready: boolean;
 }
@@ -64,6 +65,7 @@ export interface BlockJob {
   translation_fallback?: string[];
   error?: { code: string; message: string };
   usage?: BlockUsage;
+  notices?: string[];
 }
 export interface BlockUsage {
   total_tokens: number;

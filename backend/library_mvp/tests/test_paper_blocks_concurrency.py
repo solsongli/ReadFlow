@@ -7,8 +7,11 @@ import time
 import unittest
 from unittest.mock import patch
 import pymupdf
+import httpx
 from backend.library_mvp.api import create_app
 from backend.library_mvp.paper_blocks_model import cache_key
+from backend.library_mvp.reader_assistance_transport import run_chat
+from ops.development.readflow_fake_openai import completion_response
 
 
 class ConcurrentBlocks(unittest.TestCase):
@@ -20,7 +23,12 @@ class ConcurrentBlocks(unittest.TestCase):
             pdf.new_page().insert_text((40, 100), "Synthetic batch fixture")
             item = self.app.state.store.add_pdf(pdf.tobytes(), filename="batch.pdf")
         self.item, self.entry = item["item"]["id"], item["attachment"]
-        self.config = {"base_url": "http://127.0.0.1:9/v1", "model": "synthetic", "api_key": "synthetic-private"}
+        self.config = {
+            "base_url": "http://127.0.0.1:9/v1",
+            "model": "synthetic",
+            "workers": 2,
+            "api_key": "synthetic-private",
+        }
         self.blocks = [
             {"id": str(i), "type": "text", "text": f"Paragraph {i}.", "protected": []} for i in range(26)
         ]
@@ -94,24 +102,29 @@ class ConcurrentBlocks(unittest.TestCase):
         self.assertEqual(peak, 2)
         self.release.set()
         self.assertEqual(self.wait_done(job)["percent"], 100)
-        self.assertEqual(self.service.jobs[job["id"]]["usage"]["reasoning_tokens"], 36)
-        self.assertEqual(self.service.jobs[job["id"]]["usage"]["total_tokens"], 75)
+        self.assertEqual(self.service.jobs[job["id"]]["usage"]["reasoning_tokens"], 12 * len(calls))
+        self.assertEqual(self.service.jobs[job["id"]]["usage"]["total_tokens"], 25 * len(calls))
         result = self.service.storage.result(self.entry)
-        self.assertEqual(result["usage"]["reasoning_tokens"], 36)
+        self.assertEqual(result["usage"]["reasoning_tokens"], 12 * len(calls))
         self.assertEqual(result["render_fallback"], [])
         self.assertEqual(result["label_fallback"], [])
         self.assertNotIn("fallback_blocks", result)
-        self.assertEqual(len(calls), 3)
-        self.assertEqual(sorted(map(len, writes)), [2, 12, 12])
+        self.assertGreaterEqual(len(calls), 4)
+        self.assertEqual(len(writes), len(calls))
+        self.assertEqual(sum(map(len, writes)), 26)
         self.assertEqual(len(self.service.storage.cache(self.entry)), 26)
 
     def test_single_and_full_coexist_and_atomic_delta_commits_do_not_lose_other_language(self):
         self.doc["blocks"] = self.blocks[:2]
         barrier = threading.Barrier(3)
 
+        calls = []
+
         def fake(config, messages, control=None, **options):
-            barrier.wait(timeout=4)
-            self.release.wait(timeout=4)
+            calls.append(1)
+            if len(calls) <= 2:
+                barrier.wait(timeout=4)
+                self.release.wait(timeout=4)
             rows = json.loads(messages[-1]["content"])["blocks"]
             return json.dumps({"blocks": [{"id": r["id"], "text": r["text"]} for r in rows]})
 
@@ -154,3 +167,30 @@ class ConcurrentBlocks(unittest.TestCase):
         self.assertLess(done["percent"], 100)
         self.assertEqual(len(controls), 2)
         self.assertEqual(self.service.storage.cache(self.entry), {})
+
+    def test_compatibility_notice_is_published_and_changing_speed_reuses_cache(self):
+        calls = []
+
+        def handler(request):
+            value = json.loads(request.content)
+            calls.append(value)
+            status, response = completion_response(value)
+            return httpx.Response(status, json=response)
+
+        def chat(config, messages, **options):
+            return run_chat(config, messages, transport=httpx.MockTransport(handler), **options)
+
+        self.service.assistance.chat = chat
+        config = {**self.config, "base_url": "https://api.deepseek.com/v1", "model": "readflow-no-thinking"}
+        first = self.service.start(self.item, {"translation": config})
+        done = self.wait_done(first)
+        self.assertEqual(done["status"], "done")
+        self.assertEqual(done["notices"], ["thinking_unsupported"])
+        self.assertEqual(self.service.storage.result(self.entry)["notices"], ["thinking_unsupported"])
+        count = len(calls)
+        second = self.service.start(
+            self.item, {"translation": {**config, "disable_thinking": False, "workers": 8}}
+        )
+        self.assertEqual(self.wait_done(second)["status"], "done")
+        self.assertEqual(first["fingerprint"], second["fingerprint"])
+        self.assertEqual(len(calls), count)

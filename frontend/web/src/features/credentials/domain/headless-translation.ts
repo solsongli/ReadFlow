@@ -3,7 +3,7 @@ import { validateDeepSeekToken } from "@/platform/api/index.js";
 import { API_PREFIX } from "@/platform/config/api-constants.js";
 import { loadPersistedConfig } from "@/platform/config/desktop-persistence.js";
 import { loadBrowserStoredConfig, loadDeveloperStoredConfig, savePersistedDeveloperStoredConfig } from "@/platform/config/persisted-config.js";
-import { TRANSLATION_PROVIDER_OPTIONS } from "@/platform/config/providers.js";
+import { TRANSLATION_PROVIDER_OPTIONS, isOfficialDeepSeekBaseUrl } from "@/platform/config/providers.js";
 import { defaultModelApiKey, defaultModelBaseUrl, defaultModelName } from "@/platform/config/runtime.js";
 import { createDeveloperConfigResolver, resolveWorkflowDefaults, normalizeWorkflow, normalizeMathMode, workflowConstants } from "@/features/ingest/domain.js";
 import { defaultCredentialsStatePort } from "./default-state-port.js";
@@ -74,6 +74,12 @@ export function createHeadlessTranslationSettings(env: HeadlessTranslationEnv = 
       task = config.developer;
       // Same defaults -> profile hydration -> field synchronization as the legacy dialog.
       dialog.syncBrowserDialogFromCredentialState();
+      const stored = task.translationProfiles as Record<string, { workers?: unknown }> | undefined;
+      // Workflow defaults are not a saved preference. Only explicit values override service defaults.
+      if (stored?.[profiles.getCurrentProvider()]?.workers == null && task.workers == null) {
+        const url = elements.modelBaseUrlInput.value.trim();
+        elements.translationWorkersInput.value = url && isOfficialDeepSeekBaseUrl(url) ? "8" : "4";
+      }
       initialized = true;
     }
     return read();

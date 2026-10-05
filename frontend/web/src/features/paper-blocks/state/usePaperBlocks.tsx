@@ -22,7 +22,7 @@ export function usePaperBlocks(
     hintDismissed: true,
     save: () => {},
   },
-  options: { imageText: boolean } = { imageText: true },
+  options: { imageText: boolean; currentPage?: () => number } = { imageText: true },
 ) {
   const api = useMemo(() => blocksApi(item, attachment, language), [item, attachment, language]);
   const [status, setStatus] = useState<BlockStatus | null>(null);
@@ -45,6 +45,7 @@ export function usePaperBlocks(
     extract: false,
   });
   const mounted = useRef(true);
+  const refreshing = useRef(false);
   const previousJob = useRef<BlockStatus["job"]>(null);
   const announce = useRef(notify);
   announce.current = notify;
@@ -64,6 +65,8 @@ export function usePaperBlocks(
     return () => document.removeEventListener("selectionchange", selectionChanged);
   }, []);
   const refresh = useCallback(async () => {
+    if (refreshing.current) return;
+    refreshing.current = true;
     try {
       const value = await api.status();
       if (mounted.current) {
@@ -80,6 +83,8 @@ export function usePaperBlocks(
       }
     } catch (failure) {
       if (mounted.current) setError((failure as Error).message);
+    } finally {
+      refreshing.current = false;
     }
   }, [api]);
   useEffect(() => {
@@ -122,6 +127,7 @@ export function usePaperBlocks(
           block_id: id,
           force,
           image_text: options.imageText,
+          current_page: options.currentPage?.(),
         },
         extract,
       );

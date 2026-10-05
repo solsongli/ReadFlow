@@ -99,8 +99,12 @@ class BlockTests(unittest.TestCase):
     def test_cross_page_continuation_retains_both_spatial_anchors(self):
         source = self.root / "continuation.pdf"
         with fitz.open() as pdf:
-            pdf.new_page(width=600, height=800).insert_text((40, 680), "This paragraph ends in trans-", fontsize=10)
-            pdf.new_page(width=600, height=800).insert_text((40, 100), "lation with preserved evidence.", fontsize=10)
+            pdf.new_page(width=600, height=800).insert_text(
+                (40, 680), "This paragraph ends in trans-", fontsize=10
+            )
+            pdf.new_page(width=600, height=800).insert_text(
+                (40, 100), "lation with preserved evidence.", fontsize=10
+            )
             pdf.save(source)
         doc = extract(source, self.root, "test")
         row = next(b for b in doc["blocks"] if b["type"] == "text")
@@ -196,12 +200,30 @@ class BlockTests(unittest.TestCase):
 
         cache = {}
         errors = translate_blocks(
-            [block, second], cache, "zh-CN", fingerprint, call, [], lambda: None, lambda *a: None, lambda *a: None
+            [block, second],
+            cache,
+            "zh-CN",
+            fingerprint,
+            call,
+            [],
+            lambda: None,
+            lambda *a: None,
+            lambda *a: None,
+            plan=lambda rows, *_: [rows] if rows else [],
         )
         self.assertFalse(errors)
         self.assertEqual(calls, [["a" * 24, "b" * 24], ["b" * 24]])
         translate_blocks(
-            [block, second], cache, "zh-CN", fingerprint, call, [], lambda: None, lambda *a: None, lambda *a: None
+            [block, second],
+            cache,
+            "zh-CN",
+            fingerprint,
+            call,
+            [],
+            lambda: None,
+            lambda *a: None,
+            lambda *a: None,
+            plan=lambda rows, *_: [rows] if rows else [],
         )
         self.assertEqual(len(calls), 2)
 
@@ -221,7 +243,16 @@ class BlockTests(unittest.TestCase):
 
         cache = {}
         failed = translate_blocks(
-            blocks, cache, "zh-CN", "fixture", request, [], lambda: None, lambda *a: None, lambda *a: None
+            blocks,
+            cache,
+            "zh-CN",
+            "fixture",
+            request,
+            [],
+            lambda: None,
+            lambda *a: None,
+            lambda *a: None,
+            plan=lambda rows, *_: [rows] if rows else [],
         )
         self.assertEqual(calls, [["valid", "bad"], ["bad"]])
         self.assertEqual(failed, ["bad"])

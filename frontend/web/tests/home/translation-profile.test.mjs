@@ -24,7 +24,7 @@ test("translation profile：URL / 模型名 / 并发数校验文案", () => {
   assert.equal(translationWorkersError(4), "");
 });
 
-test("translation profile：默认值与归一化（越界回退默认）", () => {
+test("translation profile：默认值与归一化（已保存并发数限制到上限）", () => {
   const defaults = translationProfileDefaults("custom");
   assert.equal(typeof defaults.baseUrl, "string");
   assert.ok(defaults.workers >= 1);
@@ -39,7 +39,7 @@ test("translation profile：默认值与归一化（越界回退默认）", () =
   assert.equal(normalized.workers, 3);
 
   const bad = normalizeTranslationProfile("custom", { workers: 99999 });
-  assert.equal(bad.workers, defaults.workers, "越界 workers 回退默认");
+  assert.equal(bad.workers, 16, "保留旧设置并限制到全局上限");
 });
 
 test("dialogDataset：只在对象带 dataset 时返回", () => {

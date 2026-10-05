@@ -42,6 +42,21 @@ export async function blocksMock(query) {
   };
   return {
     requests: () => requests,
+    publishBatch(text = "【首批译文】") {
+      const job = jobs.find((j) => active(j) && j.scope === "full");
+      if (!job) return;
+      document = {
+        ...manifest,
+        blocks: manifest.blocks.map((block) => block.type === "text"
+          ? { ...block, translation: text + block.text, translation_runs: [{ kind: "text", text }, ...sourceRuns(block)] }
+          : block),
+      };
+      Object.assign(job, { phase: "翻译", percent: 55, notices: ["thinking_unsupported"] });
+    },
+    rendering() {
+      const job = jobs.find((j) => active(j) && j.scope === "full");
+      if (job) Object.assign(job, { phase: "正在排版译文 PDF", percent: 90 });
+    },
     fail: () => {
       fail = true;
     },

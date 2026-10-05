@@ -1,6 +1,16 @@
 # RetainPDF 科研阅读版本（ReadFlow）：私有交接快照
 
-## 最新状态（2026-10-04 晚，ReadFlow 0.9.7 已打包待安装：内置版面模型 + OCR + 图片翻译）
+## 最新状态（2026-10-04 夜，ReadFlow 0.9.8 已打包待安装：翻译提速）
+
+- **X3（Astra；中途按用户要求改为不开 Fast、推理档位 xhigh）**：
+  - DeepSeek 翻译默认关闭思考（`thinking: {type: disabled}`）；服务不支持时自动去掉参数重试。
+  - 并发：DeepSeek 默认 8 路，其他服务 4 路，上限 16，全局限流，遇到 429 自适应降速。
+  - 按 token 拆批；从当前页和后两页开始翻；每批完成就更新块卡片，全部翻完后再排版 PDF。
+- **DeepSeek 实测**（SafeVLA 全文，清空缓存后重翻）：**466 秒 → 13 秒**；completion 从 215k 降到 34k tokens，推理 token 为 0；译文质量相当。
+- **安装包**：`readflow_0.9.8_amd64.deb`，SHA256 `55bbc5bd9a2e95b8ecffb6eb657f8bf2bbb512e9b3791918dd1e489840f64d67`。**未安装**，安装需要输入密码。
+- **测试**：web 334、桌面 100、后端 389；`--headed` 二次启动通过。
+
+## 此前状态（2026-10-04 晚，ReadFlow 0.9.7 已打包待安装：内置版面模型 + OCR + 图片翻译）
 
 - **X2 / X2b / X2c**：Astra 实现（用户授权 Fast 模式），Claude 验收。
   - **内置组件**：ORT 1.25.1、NumPy 2.3.5、PP-DocLayout-S、PP-OCRv5 mobile。清单在 `ops/models/manifest.json`，所有文件固定版本与 sha256；缓存不进 git，CI 按清单下载。安装后新增约 100MB，deb 新增约 38MB。

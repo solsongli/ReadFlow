@@ -88,6 +88,7 @@ export interface ReaderPorts {
   tone: PaperTone;
   setTone: (tone: PaperTone) => void;
   progress: (page: number, pages: number) => void;
+  onPageChange?: (page: number) => void;
   quote: (text: string, page: number, format: "author" | "gbt") => string;
   lookup: (query: string) => Promise<Array<{ id: string; title: string }>>;
   reveal: (id: string) => void;

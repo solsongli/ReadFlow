@@ -12,10 +12,18 @@ class ReaderModelClient(httpx.Client):
         return super().build_request(method, url, **kwargs)
 
 
-def run_chat(config, messages, delta=None, *, transport=None, control=None, batch=False):
-    if batch:
+def run_chat(config, messages, delta=None, *, transport=None, control=None, batch=False,
+             translation=False, policy=None, permit=None):
+    if batch or translation:
         from .paper_blocks_transport import run_batch
-        return run_batch(config, messages, transport=transport, control=control)
+        result = run_batch(config, messages, transport=transport, control=control,
+                           policy=policy, permit=permit, json_mode=batch)
+        if batch:
+            return result
+        answer = result['content']
+        if not answer.strip() or len(answer) > 100000:
+            raise ValueError('模型未返回有效文本。')
+        return answer
     endpoint = httpx.URL(config['base_url'].rstrip('/') + '/chat/completions')
     control = control or RequestControl(60)
 

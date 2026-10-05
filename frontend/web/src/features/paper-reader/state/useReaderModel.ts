@@ -139,6 +139,7 @@ export function useReaderModel(ports: ReaderPorts) {
       fromSecondary ? { ...value, page: correspondingPage(value.page, source.pdf?.numPages ?? 1) } : value,
     );
     if (source.pdf) {
+      latest.current.onPageChange?.(Math.min(value.page, source.pdf.numPages));
       pendingProgress.current = {
         page: Math.min(value.page, source.pdf.numPages),
         pages: source.pdf.numPages,
