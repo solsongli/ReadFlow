@@ -27,6 +27,8 @@ export const SHORTCUTS = [
   { id: "reader-settings", group: "阅读", keys: "Ctrl ,", label: "从阅读器打开设置" },
   { id: "reader-shortcuts", group: "阅读", keys: "Ctrl /", label: "打开快捷键一览" },
   { id: "reader-note", group: "阅读", keys: "Ctrl N", label: "选择文献并新建笔记" },
+  { id: "reader-inline-peek", group: "阅读", keys: "按住 Alt", label: "原位模式临时看原文（松开恢复）" },
+  { id: "reader-block-next", group: "阅读", keys: "↑ / ↓", label: "块卡片打开时切换上一块 / 下一块" },
   { id: "reader-scroll", group: "阅读", keys: "J / K · 空格 / Shift 空格", label: "连续滚动论文" },
   { id: "reader-ends", group: "阅读", keys: "gg / G · Home / End", label: "首页 / 末页" },
   { id: "reader-page", group: "阅读", keys: "数字 + Enter", label: "跳到指定页" },

@@ -12,7 +12,7 @@ export function InformationPanel({
 }: {
   hidden?: boolean;
   panelRequest?: number;
-  panels?: Partial<Record<"批注" | "画布" | "AI", ReactNode>>;
+  panels?: Partial<Record<"批注" | "画布" | "AI" | "译文", ReactNode>>;
   metadata: PaperMetadata;
   seconds: number;
   page: number;
@@ -36,7 +36,7 @@ export function InformationPanel({
         aria-label="论文面板类别"
         className="flex gap-1 border-b border-wb-line-soft px-2 py-2"
       >
-        {["批注", "画布", "AI", "信息"].map((name) => (
+        {["批注", "画布", "AI", "译文", "信息"].map((name) => (
           <button
             role="tab"
             aria-selected={tab === name}
@@ -53,7 +53,7 @@ export function InformationPanel({
           </button>
         ))}
       </div>
-      {(["批注", "画布", "AI"] as const).map((name) => (
+      {(["批注", "画布", "AI", "译文"] as const).map((name) => (
         <div key={name} className={tab === name ? "min-h-0 flex-1 overflow-auto" : "hidden"}>
           {panels?.[name] ?? <p className="p-5 text-[0.8125rem] text-wb-text-3">即将推出</p>}
         </div>

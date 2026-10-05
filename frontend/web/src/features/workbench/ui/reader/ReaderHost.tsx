@@ -47,6 +47,9 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
       <PaperReader
         assistance={assistance}
         blockOverlay={blocks.overlay}
+        inlineAvailable={blocks.inlineAvailable}
+        registerBlockNavigation={blocks.registerBlockNavigation}
+        translationPanel={blocks.sidebar}
         {...canvas.ports}
         canvas={canvas.dock}
         panels={{ 画布: canvas.dock }}

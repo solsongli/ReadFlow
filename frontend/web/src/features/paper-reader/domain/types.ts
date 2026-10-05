@@ -54,7 +54,7 @@ export interface Bookmark {
   offset: number;
   mode?: "source" | "translated";
 }
-export type Mode = "source" | "compare" | "translated";
+export type Mode = "source" | "compare" | "translated" | "inline";
 export type PaperTone = "auto" | "white" | "sepia" | "night";
 export interface PaperMetadata {
   id: string;
@@ -66,6 +66,8 @@ export interface PaperMetadata {
   citekey: string;
 }
 export interface ReaderPorts {
+  inlineAvailable?: boolean;
+  registerBlockNavigation?: (jump: (page: number, offset: number) => void) => (() => void);
   assistance?: AssistancePorts;
   canvasLinks?: Array<{ canvas_id: string; node_id: string; annotation_id: string; name: string }>;
   openCanvasLink?: (canvas: string, name: string, node: string) => void;

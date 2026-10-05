@@ -126,13 +126,14 @@ export function Toolbar({
       <IconButton label="放大 PDF" onClick={() => setZoom(Math.min(4, scale() * 1.15))}>
         <Plus size={15} />
       </IconButton>
-      {translated ? (
+      {translated || ports.inlineAvailable ? (
         <div role="group" aria-label="阅读模式" className="ml-2 flex rounded-lg bg-wb-fill p-0.5">
           {(
             [
               ["source", "原文"],
               ["compare", "对照"],
               ["translated", "译文"],
+              ["inline", "原位"],
             ] as const
           ).map(([value, label]) => (
             <Button
@@ -140,7 +141,7 @@ export function Toolbar({
               size="sm"
               variant={mode === value ? "secondary" : "ghost"}
               aria-pressed={mode === value}
-              disabled={value !== "source" && !translatedReady}
+              disabled={value === "inline" ? !ports.inlineAvailable : value !== "source" && !translatedReady}
               onClick={() => setMode(value)}
             >
               {label}
@@ -152,6 +153,11 @@ export function Toolbar({
           {ports.translation.running ? ports.translation.label : "翻译全文"}
         </Button>
       )}
+      {!translated && ports.inlineAvailable ? (
+        <Button size="sm" disabled={ports.translation.running} onClick={ports.translation.start}>
+          {ports.translation.running ? ports.translation.label : "翻译全文"}
+        </Button>
+      ) : null}
       {tools}
       <span className="flex-1" />
       <select

@@ -181,7 +181,7 @@ export async function readerBrowser(query = "", fixture = "tests/paper-reader/fi
       }
       let file;
       if (/^\/api\/research\/attachments\/[^/]+\/pdf$/.test(p))
-        file = resolve(query.includes("blocks") ? "tests/fixtures/blocks/paper.pdf" : "tests/fixtures/paper.pdf");
+        file = resolve(query.includes("x6") ? "/tmp/readflow-x6/paper-links.pdf" : query.includes("blocks") ? "tests/fixtures/blocks/paper.pdf" : "tests/fixtures/paper.pdf");
       if (p === "/api/v1/jobs/task/pdf") file = resolve("tests/fixtures/paper-translated.pdf");
       if (p === "/src/assets/readflow-logo.svg") file = resolve(p.slice(1));
       if (/^\/fixtures\/paper(?:-translated|-100|-no-outline|-images)?\.pdf$/.test(p)) file = resolve("tests" + p);

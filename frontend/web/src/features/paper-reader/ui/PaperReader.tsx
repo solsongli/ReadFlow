@@ -1,3 +1,4 @@
+import { useInlinePeek } from "../state/useInlinePeek.js";
 import { useReaderCards } from "../state/useReaderCards.js";
 import { CardBadges } from "./annotations/CardBadges.js";
 import { useAssistance } from "../state/assistance/useAssistance.js";
@@ -23,7 +24,8 @@ import { Preview } from "./Preview.js";
 import { SelectionTools } from "./SelectionTools.js";
 export interface PaperReaderProps extends ReaderPorts {
   toolbarTools?: ReactNode;
-  blockOverlay?: (page: number, interactive: boolean) => ReactNode;
+  blockOverlay?: (page: number, interactive: boolean, inline?: boolean, peek?: boolean) => ReactNode;
+  translationPanel?: (page: number) => ReactNode;
   canvas?: ReactNode;
   selectionTools?: ReactNode;
   panels?: Partial<Record<"批注" | "画布" | "AI", ReactNode>>;
@@ -37,6 +39,7 @@ export function PaperReader(ports: PaperReaderProps) {
   }, [ports.flashAnnotationId, ports.navigationKey, ports.active]);
   const annotationKeys = useRef<(event: KeyboardEvent) => boolean>(() => false);
   const model = useReaderModel({ ...ports, annotationKeys: (event) => annotationKeys.current(event) });
+  const peek = useInlinePeek(ports.active && model.mode === "inline");
   const annotations = useAnnotationReader(ports, model);
   const assistance = useAssistance(ports, model, annotations, () => setLayout("document"));
   const cards = useReaderCards(
@@ -112,6 +115,7 @@ export function PaperReader(ports: PaperReaderProps) {
       data-paper-reader
       data-tone={ports.tone}
       data-focus={focus}
+      data-reading-mode={mode}
       className="pr-reader relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-wb-panel text-wb-text"
       onMouseDown={(event) => {
         if (event.button === 3 || event.button === 4) {
@@ -252,7 +256,7 @@ export function PaperReader(ports: PaperReaderProps) {
                 ? undefined
                 : (page) => (
                     <>
-                      {ports.blockOverlay?.(page + 1, c.tool === "select")}
+                      {ports.blockOverlay?.(page + 1, c.tool === "select", mode === "inline", peek)}
                       <AnnotationLayer page={page} rows={byPage.get(page) ?? []} controller={c} />
                       <CanvasBadges rows={byPage.get(page) ?? []} ports={ports} />
                       <CardBadges rows={byPage.get(page) ?? []} />
@@ -281,6 +285,7 @@ export function PaperReader(ports: PaperReaderProps) {
           hidden={!right || focus || layout !== "document"}
           panelRequest={assistance.panelRequest}
           panels={{
+            译文: ports.translationPanel?.(position.page),
             ...ports.panels,
             AI: assistance.panel ?? ports.panels?.AI,
             批注: (

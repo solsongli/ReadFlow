@@ -6,7 +6,7 @@ import type { AssistancePorts } from "@/features/reader-assistance/domain.js";
 import { blocksApi } from "./api.js";
 import { useBlockMode, type BlockModePreferences } from "./useBlockMode.js";
 import { busy, jobViews, type Block, type BlockStatus } from "../domain/model.js";
-import { BlockLayer } from "../ui/BlockLayer.js";
+import { useBlockReading } from "./useBlockReading.js";
 import { BlockCard } from "../ui/BlockCard.js";
 import { fallbackMessages, usageText } from "../domain/status.js";
 export function usePaperBlocks(
@@ -32,11 +32,6 @@ export function usePaperBlocks(
     language,
   );
   const enabled = mode.enabled;
-  const [selected, setSelected] = useState<{
-    id: string;
-    x: number;
-    y: number;
-  } | null>(null);
   const [error, setError] = useState("");
   const [dismissed, setDismissed] = useState("");
   const [sending, setSending] = useState(false);
@@ -55,6 +50,19 @@ export function usePaperBlocks(
       mounted.current = false;
     };
   }, []);
+  const reading = useBlockReading(
+    status,
+    active,
+    enabled,
+    options.imageText,
+    api.url,
+    () => {
+      if (!enabled) mode.toggle();
+    },
+    (id) => void start(id),
+    sending,
+  );
+  const { selected, setSelected } = reading;
   useEffect(() => {
     const selectionChanged = () => {
       const selection = window.getSelection();
@@ -150,7 +158,6 @@ export function usePaperBlocks(
       if (mounted.current) setSending(false);
     }
   }
-  const open = useCallback((block: Block, x: number, y: number) => setSelected({ id: block.id, x, y }), []);
   const blocks = status?.document?.blocks || [];
   const block = blocks.find((b) => b.id === selected?.id);
   const usage = usageText(jobs.full?.usage ?? status?.result?.usage);
@@ -173,9 +180,10 @@ export function usePaperBlocks(
             .catch(() => setError("取消失败，请重试。"));
       },
     },
-    overlay: (page: number, interactive: boolean) => (
-      <BlockLayer blocks={blocks} page={page} active={active && enabled && interactive} open={open} />
-    ),
+    inlineAvailable: Boolean(status?.has_translation && status.language === language),
+    registerBlockNavigation: reading.registerNavigation,
+    sidebar: reading.sidebar,
+    overlay: reading.overlay,
     tools: (
       <>
         {usage ? (
@@ -233,6 +241,7 @@ export function usePaperBlocks(
     ),
     panel: (
       <>
+        {reading.figure}
         {active && mode.hint ? (
           <div
             role="status"
@@ -274,6 +283,8 @@ export function usePaperBlocks(
             ports={ports}
             translate={(id, force) => void start(id, force)}
             running={blockRunning}
+            move={reading.move}
+            enlarge={() => reading.enlarge(block)}
             close={() => setSelected(null)}
           />
         ) : null}

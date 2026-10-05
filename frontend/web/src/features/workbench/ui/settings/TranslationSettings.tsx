@@ -38,6 +38,7 @@ export function TranslationSettings() {
           />
         </SettingsRow>
       </SettingsCard>
+      <p className="text-xs text-wb-text-3">图内文字开关也控制原位阅读和图表查看器的默认叠加显示。</p>
       <RenderFontSettings />
     </>
   );

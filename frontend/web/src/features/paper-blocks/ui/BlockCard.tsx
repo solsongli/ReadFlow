@@ -5,22 +5,7 @@ import type { AssistancePorts } from "@/features/reader-assistance/domain.js";
 import { InlineRuns } from "./InlineRuns.js";
 import { sourceRuns } from "../domain/model.js";
 import type { Block } from "../domain/model.js";
-const labels: Record<string, string> = {
-  title: "题名",
-  author: "作者",
-  abstract: "摘要",
-  heading: "标题",
-  text: "正文",
-  list: "列表",
-  caption: "图表题注",
-  figure: "图片",
-  table: "表格",
-  formula: "公式",
-  algorithm: "算法",
-  code: "代码清单",
-  reference: "参考文献",
-  footnote: "脚注",
-};
+import { BLOCK_LABELS as labels, adjacentBlock } from "../domain/reading.js";
 export function BlockCard({
   block,
   blocks,
@@ -31,6 +16,8 @@ export function BlockCard({
   translate,
   close,
   running,
+  move,
+  enlarge,
 }: {
   block: Block;
   blocks: Block[];
@@ -41,6 +28,8 @@ export function BlockCard({
   translate: (id: string, force?: boolean) => void;
   close: () => void;
   running: boolean;
+  move?: (direction: number) => void;
+  enlarge?: () => void;
 }) {
   const cards = useFlashcards();
   const root = useRef<HTMLElement>(null);
@@ -73,9 +62,23 @@ export function BlockCard({
       tabIndex={-1}
       role="dialog"
       aria-label="块译文"
+      data-block-card={block.id}
       onKeyDown={(event) => {
         event.stopPropagation();
-        if (event.key === "Escape") close();
+        if (event.key === "Escape") {
+          event.preventDefault();
+          close();
+        }
+        if (
+          !event.ctrlKey &&
+          !event.metaKey &&
+          !event.altKey &&
+          !event.isDefaultPrevented() &&
+          ["ArrowUp", "ArrowDown"].includes(event.key)
+        ) {
+          event.preventDefault();
+          move?.(event.key === "ArrowUp" ? -1 : 1);
+        }
       }}
       className="fixed z-50 w-[min(440px,92vw)] space-y-3 rounded-xl bg-wb-panel p-4 shadow-wb-pop"
       style={{
@@ -93,6 +96,26 @@ export function BlockCard({
           关闭
         </Button>
       </header>
+      {move ? (
+        <div className="flex gap-1">
+          <Button
+            size="sm"
+            title="上一块（↑）"
+            disabled={!adjacentBlock(blocks, block.id, -1)}
+            onClick={() => move(-1)}
+          >
+            上一块
+          </Button>
+          <Button
+            size="sm"
+            title="下一块（↓）"
+            disabled={!adjacentBlock(blocks, block.id, 1)}
+            onClick={() => move(1)}
+          >
+            下一块
+          </Button>
+        </div>
+      ) : null}
       <p className="whitespace-pre-wrap text-[1rem] leading-relaxed">
         {translated ? (
           <InlineRuns runs={value.translation_runs} text={translated} />
@@ -116,6 +139,11 @@ export function BlockCard({
         </section>
       ) : null}
       <div className="flex flex-wrap gap-1">
+        {block.asset && ["figure", "table"].includes(block.type) && enlarge ? (
+          <Button size="sm" onClick={enlarge}>
+            放大
+          </Button>
+        ) : null}
         {readable ? (
           <Button size="sm" disabled={running} onClick={() => translate(block.id, Boolean(translated))}>
             {translated ? "重新翻译" : "翻译这一块"}

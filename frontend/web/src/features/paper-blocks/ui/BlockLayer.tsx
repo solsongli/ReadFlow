@@ -5,13 +5,19 @@ export function BlockLayer({
   page,
   active,
   open,
+  expand,
+  highlighted,
 }: {
   blocks: Block[];
   page: number;
   active: boolean;
   open: (block: Block, x: number, y: number) => void;
+  expand?: (block: Block, x: number, y: number) => void;
+  highlighted?: string;
 }) {
   const root = useRef<HTMLDivElement>(null);
+  const latest = useRef({ blocks, open });
+  latest.current = { blocks, open };
   const [hover, setHover] = useState<ReturnType<typeof blockAt>>();
   useEffect(() => {
     const element = root.current?.closest<HTMLElement>("[data-paper-page]");
@@ -27,7 +33,7 @@ export function BlockLayer({
     const hit = (event: MouseEvent) => {
       const rect = element.getBoundingClientRect();
       return blockAt(
-        blocks,
+        latest.current.blocks,
         page,
         (event.clientX - rect.left) / rect.width,
         (event.clientY - rect.top) / rect.height,
@@ -38,9 +44,11 @@ export function BlockLayer({
       moved = 0;
     };
     const move = (event: PointerEvent) => {
+      if ((event.target as Element).closest("[data-block-tools]")) return;
       if (start && event.buttons)
         moved = Math.max(moved, Math.hypot(event.clientX - start.x, event.clientY - start.y));
       const value = !event.buttons && eligible(event) ? hit(event) : undefined;
+      element.title = value?.block.translation || "";
       setHover((old) => (old?.block.id === value?.block.id && old?.anchor === value?.anchor ? old : value));
     };
     const click = (event: MouseEvent) => {
@@ -54,10 +62,13 @@ export function BlockLayer({
           value &&
           plainClick(distance, window.getSelection()?.toString() || "", event.detail, event.defaultPrevented)
         )
-          open(value.block, event.clientX, event.clientY);
+          latest.current.open(value.block, event.clientX, event.clientY);
       }, 0);
     };
-    const leave = () => setHover(undefined);
+    const leave = () => {
+      setHover(undefined);
+      element.title = "";
+    };
     element.addEventListener("pointerdown", down);
     element.addEventListener("pointermove", move);
     element.addEventListener("click", click);
@@ -69,20 +80,20 @@ export function BlockLayer({
       element.removeEventListener("click", click);
       element.removeEventListener("pointerleave", leave);
     };
-  }, [active, blocks, page, open]);
-  const box = hover?.anchor.view_bbox;
+  }, [active, page]);
+  const indicated = blocks.find((b) => b.id === highlighted);
+  const box = hover?.anchor.view_bbox || indicated?.anchors.find((a) => a.page === page)?.view_bbox;
   return (
     <div
       ref={root}
       data-block-layer={page}
       data-block-active={active}
       data-block-count={blocks.length}
-      className="pointer-events-none absolute inset-0"
-      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 z-[2]"
     >
       {box ? (
         <div
-          data-block-hover={hover!.block.id}
+          data-block-hover={hover?.block.id || highlighted}
           className="absolute rounded border border-wb-accent bg-wb-accent-soft"
           style={{
             left: `${box[0] * 100}%`,
@@ -91,6 +102,24 @@ export function BlockLayer({
             height: `${(box[3] - box[1]) * 100}%`,
           }}
         />
+      ) : null}
+      {hover && expand ? (
+        <button
+          type="button"
+          data-block-tools
+          className="pointer-events-auto absolute rounded-lg border-0 bg-wb-panel px-2 py-1 text-xs text-wb-text shadow-wb-pop"
+          style={{
+            left: `${Math.min(75, hover.anchor.view_bbox[0] * 100)}%`,
+            top: `${hover.anchor.view_bbox[1] * 100}%`,
+            transform: "translateY(-100%)",
+          }}
+          onClick={(event) => {
+            event.stopPropagation();
+            expand(hover.block, event.clientX, event.clientY);
+          }}
+        >
+          展开译文
+        </button>
       ) : null}
     </div>
   );

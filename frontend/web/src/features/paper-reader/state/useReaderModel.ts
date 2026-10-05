@@ -1,3 +1,4 @@
+import { useBlockNavigation } from "./useBlockNavigation.js";
 import { useReferenceLookup } from "./useReferenceLookup.js";
 import { copySelection } from "./copySelection.js";
 import { useReaderDialogFocus } from "./useReaderDialogFocus.js";
@@ -108,6 +109,7 @@ export function useReaderModel(ports: ReaderPorts) {
       offset:
         offset ?? y / ((targetMode === "translated" ? translated : source).sizes[page - 1]?.height || 842),
     });
+  useBlockNavigation(ports, mode, setMode, navigate);
   const travel = (direction: -1 | 1) => {
     const result = moveHistory(
       history,

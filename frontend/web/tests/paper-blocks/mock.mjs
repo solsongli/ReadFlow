@@ -2,7 +2,9 @@ import { readFile } from "node:fs/promises";
 import { sourceRuns } from "../../src/features/paper-blocks/domain/model.js";
 export async function blocksMock(query) {
   const fixture = query.includes("blocks");
-  const manifest = fixture ? JSON.parse(await readFile("tests/fixtures/blocks/manifest.json", "utf8")) : null;
+  const corpus = new URLSearchParams(query.replace(/^\?/, "")).get("corpus");
+  const manifest = fixture ? JSON.parse(await readFile(corpus
+    ? `/tmp/readflow-x6/${corpus}/manifest.json` : "tests/fixtures/blocks/manifest.json", "utf8")) : null;
   if (manifest && query.includes("x2")) {
     const figure = manifest.blocks.find((block) => block.type === "figure");
     figure.figure_text = [
@@ -15,6 +17,19 @@ export async function blocksMock(query) {
     language = "zh-CN",
     fail = false,
     ticks = 0;
+  if (manifest && query.includes("x6")) {
+    document = structuredClone(manifest);
+    if (!corpus) document.blocks.forEach((block, index) => {
+      if (["title", "heading", "text", "caption", "abstract", "list", "footnote"].includes(block.type) && index % 3 !== 2) {
+        block.translation = "【译】" + "这是一段用于离线验收的中文译文，保留原论文布局与数学结构。".repeat(Math.max(1, Math.ceil(block.text.length / 120)));
+        block.translation_runs = [{ kind: "text", text: block.translation }, { kind: "sub", text: "i" }, { kind: "super", text: "2" }];
+        block.translation += "i2";
+      }
+      if (["figure", "table"].includes(block.type) && block.figure_text?.length) {
+        block.figure_text[0].translation = "训练输入";
+      }
+    });
+  }
   const jobs = [],
     requests = [];
   const active = (job) => ["running", "queued", "cancelling"].includes(job.status);
@@ -107,7 +122,9 @@ export async function blocksMock(query) {
       const url = new URL(route.request().url()),
         path = url.pathname;
       if (!/^\/api\/research\/workbench\/items\/[^/]+\/blocks(?:\/|$)/.test(path)) return false;
-      if (path.endsWith("/files/translated.pdf")) {
+      if (/\/files\/[a-f0-9]{24}\.pdf$/.test(path)) {
+        await route.fulfill({ body: await readFile(`/tmp/readflow-x6/${corpus ? corpus + "/" : ""}assets/${path.split("/").at(-1)}`), contentType: "application/pdf" });
+      } else if (path.endsWith("/files/translated.pdf")) {
         await route.fulfill({
           body: await readFile("tests/fixtures/blocks/translated.pdf"),
           contentType: "application/pdf",

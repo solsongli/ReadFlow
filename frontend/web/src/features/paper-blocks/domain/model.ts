@@ -13,6 +13,9 @@ export interface Block {
   page: number;
   type: string;
   text: string;
+  size?: number;
+  text_size?: number;
+  bbox?: number[];
   anchors: Anchor[];
   translation?: string;
   translation_runs?: InlineRun[];
@@ -29,11 +32,14 @@ export interface Block {
     text: string;
     translation?: string;
     translatable?: boolean;
+    bbox?: number[];
+    size?: number;
   }>;
 }
 export interface BlockStatus {
   document: {
     schema_version: number;
+    pages?: PageGeometry[];
     blocks: Block[];
     warnings: string[];
   } | null;
@@ -127,4 +133,12 @@ export function plainClick(distance: number, selection: string, detail: number, 
 }
 export function busy(status?: string) {
   return ["queued", "running", "cancelling"].includes(status || "");
+}
+
+export interface PageGeometry {
+  page: number;
+  width: number;
+  height: number;
+  page_to_display: number[];
+  rotation: number;
 }
