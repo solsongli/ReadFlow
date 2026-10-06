@@ -22,6 +22,12 @@ export function fallbackMessages(result: BlockStatus["result"], job: BlockJob | 
       text: "服务不支持关闭思考参数，已自动兼容重试；本次运行后续请求将省略此参数。",
     });
   }
+  if ((job?.notices || result?.notices || []).includes("render_skipped")) {
+    messages.push({
+      kind: "render-skipped",
+      text: "这一块的译文已更新，译文 PDF 暂未重新排版；可在「翻译」菜单中选择「仅重新排版」刷新。",
+    });
+  }
   const translation = new Set([
     ...(result?.translation_fallback || []),
     ...(job?.translation_fallback || job?.fallback_blocks || []),

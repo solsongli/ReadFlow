@@ -291,28 +291,41 @@ def run(
         check()
         if any(cache_key(block, language, fingerprint) in cache for block in blocks):
             select_context()
-        if not block_id or self.storage.result(entry):
+        previous = self.storage.result(entry) or {}
+        # A failed job also writes result.json; only re-render for a block when PDFs were really rendered before.
+        rendered_before = bool(previous.get("layout_ready") or previous.get("reflow_ready"))
+        if not block_id or rendered_before:
             stage = "render"
-            render_snapshot(
-                self,
-                entry,
-                document,
-                language,
-                fingerprint,
-                check,
-                update,
-                image_text,
-                {
-                    "usage": dict(self.jobs[identity]["usage"]),
-                    "notices": list(self.jobs[identity].get("notices", [])),
-                    "diagnostics": list(self.jobs[identity].get("diagnostics", [])),
-                    "error": None,
-                    "translation_fallback": failed,
-                    "qa": self.jobs[identity].get("qa", {}),
-                },
-                density,
-                metrics=metrics,
-            )
+            render_block_pages = block_id is not None
+            try:
+                render_snapshot(
+                    self,
+                    entry,
+                    document,
+                    language,
+                    fingerprint,
+                    check,
+                    update,
+                    image_text,
+                    {
+                        "usage": dict(self.jobs[identity]["usage"]),
+                        "notices": list(self.jobs[identity].get("notices", [])),
+                        "diagnostics": list(self.jobs[identity].get("diagnostics", [])),
+                        "error": None,
+                        "translation_fallback": failed,
+                        "qa": self.jobs[identity].get("qa", {}),
+                    },
+                    density,
+                    metrics=metrics,
+                )
+            except Exception as error:
+                if token["cancel"].is_set() or not render_block_pages:
+                    raise
+                # The block translation itself succeeded; a page refresh problem must not fail the job.
+                diagnose(error, "render")
+                diagnostics.notice(self, identity, "render_skipped")
+                with self.lock:
+                    problems.clear()
         from .paper_blocks_model import SKIP
 
         if failed and len(failed) == sum(b["type"] not in SKIP and bool(b["text"].strip()) for b in blocks):

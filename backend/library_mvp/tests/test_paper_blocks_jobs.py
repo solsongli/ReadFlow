@@ -147,6 +147,24 @@ class BlockJobTests(unittest.IsolatedAsyncioTestCase):
         retry = self.service.start(self.items[0][0], payload)
         self.assertEqual((await self.settled(retry["id"]))["status"], "done")
 
+    async def test_block_job_survives_render_failure_after_a_failed_job(self):
+        """A single-block job must not fail because the PDF refresh fails (e.g. Typst missing on CI)."""
+        import os
+        from unittest import mock
+
+        def failed(*args, **kwargs):
+            raise RuntimeError("401 synthetic")
+
+        original = self.service.assistance.chat
+        self.service.assistance.chat = failed
+        payload = {"translation": self.config, "block_id": self.items[0][1]}
+        first = await self.settled(self.service.start(self.items[0][0], payload)["id"])
+        self.assertEqual(first["status"], "failed")
+        self.service.assistance.chat = original
+        with mock.patch.dict(os.environ, {"READFLOW_TYPST_BIN": "/nonexistent/typst"}):
+            retry = await self.settled(self.service.start(self.items[0][0], payload)["id"])
+        self.assertEqual(retry["status"], "done")
+
     async def test_failed_new_service_keeps_existing_current_language_translation_visible(self):
         payload = {"translation": self.config, "block_id": self.items[0][1]}
         good = self.service.start(self.items[0][0], payload)
@@ -200,3 +218,4 @@ class BlockJobTests(unittest.IsolatedAsyncioTestCase):
         result = await self.settled(job["id"])
         self.assertEqual(result["error"]["code"], "no_text")
         self.assertEqual(self.calls, [])
+
