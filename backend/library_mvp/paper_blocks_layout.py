@@ -14,11 +14,11 @@ from .layout_geometry import (
     owned_lines,
     text_color,
     visible_images,
-    residual_counts,
 )
 from .layout_fit import fit
 from .layout_balanced import plan_page, close_plans
-from .layout_page import isolate_background
+from .layout_cleanup import finish_page
+from .layout_links import apply_links
 from .layout_regions import ruled_tables
 from .layout_save import save_pdf
 from . import layout_incremental as incremental
@@ -128,6 +128,11 @@ def render_layout(
         "label_fallback": [],
         "rendered_pages": [],
         "reused_pages": [],
+        "links_reanchored": 0,
+        "link_borders_hidden": 0,
+        "links_unaffected": 0,
+        "decorations_removed": 0,
+        "decorations_removed_by_type": {},
     }
     output = Path(root) / "translated-layout.pending.pdf"
     with fitz.open(source) as pdf, ExitStack() as resources:
@@ -162,6 +167,7 @@ def render_layout(
             ):
                 incremental.graft_content(pdf, prior[0], index, graft)
                 record = prior[2]["pages"][index]
+                page = apply_links(pdf[index], record.get("links", []))
                 audit["pages"].append(record)
                 incremental.add_counts(audit, record["stats"])
                 audit["reused_pages"].append(index + 1)
@@ -240,6 +246,7 @@ def render_layout(
                                 previous["doc"].close()
                             fragments = []
                             break
+                        placement.update(owner=task["id"], label=task["label"])
                         fragments.append((slot, placement))
                     if not fragments:
                         audit["label_fallback" if task["label"] else "render_fallback"].append(task["id"])
@@ -275,37 +282,17 @@ def render_layout(
                             ],
                         }
                     )
-                if masks:
-                    # Detach all original annotations while applying our redactions, including
-                    # original redaction annotations and links that MuPDF would otherwise remove.
-                    original_annots = pdf.xref_get_key(page.xref, "Annots")[1]
-                    pdf.xref_set_key(page.xref, "Annots", "[]")
-                    page = pdf.reload_page(page)
-                    try:
-                        for rect in masks:
-                            page.add_redact_annot(rect, fill=None, cross_out=False)
-                        page.apply_redactions(
-                            images=fitz.PDF_REDACT_IMAGE_NONE,
-                            graphics=fitz.PDF_REDACT_LINE_ART_NONE,
-                            text=fitz.PDF_REDACT_TEXT_REMOVE,
-                        )
-                        visible, zero = residual_counts(native_lines(page), masks)
-                        audit["residual_source_chars"] += visible
-                        audit["zero_width_source_chars"] += zero
-                        isolate_background(page)
-                        page = pdf.reload_page(page)
-                        # The public show_pdf_page scans destination resources. Build on
-                        # an empty page, then graft once to the expensive original page.
-                        with fitz.open() as overlay:
-                            layer = overlay.new_page(width=bounds.width, height=bounds.height)
-                            for rect, placement in prepared:
-                                layer.show_pdf_page(rect, placement["doc"], 0)
-                            page.show_pdf_page(bounds, overlay, 0)
-                    finally:
-                        pdf.xref_set_key(page.xref, "Annots", original_annots)
-                        page = pdf.reload_page(page)
+                page, links, decorations = finish_page(
+                    page, prepared, masks, records, lines, regions[index + 1], tables, images, audit
+                )
                 audit["pages"].append(
-                    {"page": index + 1, "records": records, "stats": incremental.delta(audit, before)}
+                    {
+                        "page": index + 1,
+                        "records": records,
+                        "links": links,
+                        "decorations": decorations,
+                        "stats": incremental.delta(audit, before),
+                    }
                 )
                 progress(index + 1, len(pdf))
             finally:

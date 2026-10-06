@@ -4,9 +4,17 @@ from pathlib import Path
 import pymupdf as fitz
 from .paper_blocks_model import digest
 
-VERSION = "layout-x10-1"
+VERSION = "layout-x10b-1"
 LISTS = ("layout_overflow", "layout_truncated", "render_fallback", "label_fallback")
-COUNTS = ("residual_source_chars", "zero_width_source_chars")
+COUNTS = (
+    "residual_source_chars",
+    "zero_width_source_chars",
+    "links_reanchored",
+    "link_borders_hidden",
+    "links_unaffected",
+    "decorations_removed",
+)
+MAPS = ("decorations_removed_by_type",)
 
 
 def signatures(source, count, tasks, regions, density):
@@ -36,17 +44,19 @@ def previous(root, expected):
         return None
 
 
-def graft_content(target, source, index, graft):
+def graft_content(target, source, index, graft, source_index=None, copy_group=True):
     """MuPDF's pinned 1.26.5 object graft API avoids rasterization and resource rescans.
 
     Copy exactly Contents/Resources/Group, never page geometry or Annots. This also
     keeps widgets, replies, named destinations and internal link page references.
     """
     mu = fitz.mupdf
-    left = mu.pdf_lookup_page_obj(fitz._as_pdf_document(source), index)
+    left = mu.pdf_lookup_page_obj(
+        fitz._as_pdf_document(source), index if source_index is None else source_index
+    )
     right = mu.pdf_lookup_page_obj(fitz._as_pdf_document(target), index)
     values = {}
-    for key in ("Contents", "Resources", "Group"):
+    for key in ("Contents", "Resources", "Group") if copy_group else ("Contents", "Resources"):
         value = mu.pdf_dict_get_inheritable(left, mu.pdf_new_name(key))
         values[key] = mu.pdf_graft_mapped_object(graft.this, value) if value.m_internal else None
     for key, value in values.items():
@@ -58,13 +68,27 @@ def graft_content(target, source, index, graft):
 
 
 def start_counts(audit):
-    return {key: len(audit[key]) if key in LISTS else audit[key] for key in (*LISTS, *COUNTS)}
+    return {
+        **{key: len(audit[key]) if key in LISTS else audit[key] for key in (*LISTS, *COUNTS)},
+        **{key: dict(audit[key]) for key in MAPS},
+    }
 
 
 def delta(audit, before):
-    return {
+    counts = {
         key: audit[key][before[key] :] if key in LISTS else audit[key] - before[key]
         for key in (*LISTS, *COUNTS)
+    }
+    return {
+        **counts,
+        **{
+            key: {
+                name: value - before[key].get(name, 0)
+                for name, value in audit[key].items()
+                if value != before[key].get(name, 0)
+            }
+            for key in MAPS
+        },
     }
 
 
@@ -73,3 +97,6 @@ def add_counts(audit, stats):
         audit[key].extend(stats[key])
     for key in COUNTS:
         audit[key] += stats[key]
+    for key in MAPS:
+        for name, value in stats[key].items():
+            audit[key][name] = audit[key].get(name, 0) + value

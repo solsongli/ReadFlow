@@ -3,6 +3,7 @@ import hashlib
 import json
 import re
 from .paper_blocks_inline import restore_rich
+from .paper_reference_tokens import reference_spans, add_reference_spans
 
 SCHEMA_VERSION = 1
 EXTRACTOR_VERSION = "hybrid-9"
@@ -39,10 +40,7 @@ def cache_key(block, language, service):
 
 
 def protected_ranges(text, math_parts=()):
-    spans = [
-        {"start": m.start(), "end": m.end(), "text": m.group()}
-        for m in re.finditer(r"\[\s*\d+(?:\s*[,，;；–—-]\s*\d+)*\s*\]", text)
-    ]
+    spans = reference_spans(text)
     cursor = 0
     for part in math_parts:
         part = {"text": part} if isinstance(part, str) else part
@@ -63,7 +61,7 @@ def protect(block):
     prefix = "__RF_" + block["id"][:12] + "_"
     while prefix in text:
         prefix += "X"
-    for index, span in reversed(list(enumerate(block.get("protected", [])))):
+    for index, span in reversed(list(enumerate(add_reference_spans(block)))):
         marker = f"{prefix}{index}__"
         mapping[marker] = {
             **span,

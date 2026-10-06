@@ -70,7 +70,7 @@ def copy_inputs(library, output):
     return selected
 
 
-def sheets(root, name, pages):
+def sheets(root, name, pages, labels=("原文页", "旧版原版式 0.9.15", "新版原版式 0.9.16")):
     font_path = Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc")
     font = ImageFont.truetype(str(font_path), 18) if font_path.is_file() else ImageFont.load_default()
     with tempfile.TemporaryDirectory(prefix="readflow-type-pages-") as temporary:
@@ -106,7 +106,7 @@ def sheets(root, name, pages):
                 with Image.open(prefix.with_suffix(".png")) as image:
                     image.thumbnail((580, 950))
                     sheet.paste(image.convert("RGB"), (index * 600 + 10, 40))
-                label = ("原文页", "旧版原版式 0.9.15", "新版原版式 0.9.16")[index]
+                label = labels[index]
                 draw.text((index * 600 + 10, 10), f"{label} · {name} p.{number}", font=font, fill="black")
             sheet.save(root / f"comparison-p{number}.png")
 

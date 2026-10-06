@@ -706,3 +706,16 @@ X1b 最终包：224,542,336 字节，SHA-256 `e98831473b752c3373bfacc121bbe9cf1d
 
 - X10 收尾：单行题名与居中节标题按页/栏中心推断，保留缩短后的位置；紧凑模式保留旧标题字重与颜色取样。tsc/build、Web 357/357、桌面 100/100，后端 502 项（13 条件跳过）无失败；模拟缺少 Typst 500 项（26 跳过）无失败，最新 18 项均通过。单文件上限与 diff --check 通过。
 - X10 最终完整 nice 包：262737296 字节，SHA-256 `ffcf56875561ab8d3c084c2e1bd3c8580155813f98d5aafa0d860cb9485a68d2`；control/权限/ASAR/112 Python/7 模型/86 ELF（GLIBC 2.34）/MIT、三套 CPU 推理和含原版式 PDF 的包内服务二次启动 2/2 通过。输入 JSON/PDF 哈希未变，未调用模型、启停预览或安装 deb。验收材料 `/tmp/readflow-x10/`。
+
+## X10b：原版式链接与文字装饰修复（0.9.17）
+
+- `paper_reference_tokens` 增补引用、Fig/Table/Eq/数字括号保护，旧块在内存增补，缓存 ID/键与局部数学 runs 不变。
+- `layout_link_text` 在源行提取引用上下文，并从译文小页的字形 trace 取框；`layout_links` 只修改 Rect/QuadPoints/边框，不重建动作。唯一匹配才锚定；缺失、歧义或跨行则隐藏边框。旋转/CropBox 坐标通过原生矩阵处理，不临时改变 Rotate。
+- `layout_decorations` 只识别成功替换文字内的独立细线，排除图表/算法/公式/页眉页脚、数学字体和正常字体的分数结构；在副本执行 covered-only graphics redaction，逐路径核验后才 graft 回原页。原批注临时分离并恢复，局部字母线不补画。
+- `layout_cleanup` 汇集两项操作；增量页缓存提升版本，保留每页链接修复计划及装饰签名，复用时同步恢复链接。
+- 语料审计允许的矢量减少严格等于登记装饰路径；除此逐路径比较，只有 0.02pt 的流重写容差。链接目标、非目标矩形和边框亦分别校验。验收素材只读取 `/tmp/readflow-x10/` 的副本，输出 `/tmp/readflow-x10b/`。
+
+- X10b 语料：104 页，770 链接重锚定、437 隐藏边框、485 未受影响；删除 9 条装饰路径（heading 6、text 3）。ACT 第 3 页 14/1/0 链接、4 条标题线。矢量 6,936 → 6,927，其余路径逐一保持；几何、图像、链接目标/边框、原注释、原文残留、文字越界全部通过；输入哈希不变。Poppler 六张三联与放大图在 `/tmp/readflow-x10b/`，避免 MuPDF raster 不显示 Link 边框造成假阳性。
+- X10b 验证：tsc/build、Web 357/357、桌面 100/100；后端 517 项、504 通过/13 条件跳过。完整缺 Typst 模拟 517 项、491 通过/26 条件跳过，新增 15 项缺 Typst 下也通过；无失败，单文件 ≤380 与 diff --check 通过。
+
+- X10b 最终完整 nice 包：262735024 字节，SHA-256 `b3845cda32491cba4f2e14d7506f5a6f5aa0d7db645b2d378c1c40fb10f9c57e`；control/权限/ASAR/117 Python 源文件/7 模型/86 ELF（GLIBC 2.34）/MIT、CPU 推理和包内服务二次启动 2/2 通过。验收索引 `/tmp/readflow-x10b/验收索引.md`。

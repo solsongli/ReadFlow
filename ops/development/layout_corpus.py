@@ -13,6 +13,7 @@ from backend.library_mvp.paper_blocks_model import cache_key
 from backend.library_mvp.layout_metrics import typography_metrics
 from .reader_inline_fixtures import fake
 from .layout_graphics_audit import non_text_drawings, image_signature, same_images
+from .layout_repair_audit import drawing_mismatch, link_mismatches
 
 
 def signature_image(page):
@@ -31,6 +32,8 @@ def audit(source, target, report):
         "image_mismatches": 0,
         "drawing_mismatches": 0,
         "link_mismatches": 0,
+        "link_border_mismatches": 0,
+        "declared_decoration_paths_removed": 0,
         "annotation_mismatches": 0,
         "glyph_overflow": 0,
         "original_images": 0,
@@ -55,7 +58,9 @@ def audit(source, target, report):
                 new_images, new_clipped = images, clipped
                 metrics["raw_image_identity_pages"] = metrics.get("raw_image_identity_pages", 0) + 1
             metrics["clipped_image_records"] = metrics.get("clipped_image_records", 0) + clipped
-            metrics["output_clipped_image_records"] = metrics.get("output_clipped_image_records", 0) + new_clipped
+            metrics["output_clipped_image_records"] = (
+                metrics.get("output_clipped_image_records", 0) + new_clipped
+            )
             metrics["image_mismatches"] += not same_images(images, new_images)
             metrics["original_images"] += sum(images.values())
             metrics["output_images"] += sum(new_images.values())
@@ -63,14 +68,17 @@ def audit(source, target, report):
             new_drawings, new_glyphs = non_text_drawings(right)
             metrics["type3_glyph_paints"] = metrics.get("type3_glyph_paints", 0) + glyphs
             metrics["output_type3_glyph_paints"] = metrics.get("output_type3_glyph_paints", 0) + new_glyphs
-            metrics["drawing_mismatches"] += len(drawings) != len(new_drawings)
+            page_record = report["pages"][left.number]
+            metrics["drawing_mismatches"] += drawing_mismatch(drawings, new_drawings, page_record)
+            metrics["declared_decoration_paths_removed"] += len(page_record.get("decorations", []))
             metrics["original_drawings"] += len(drawings)
             metrics["output_drawings"] += len(new_drawings)
-            clean_links = lambda page: [
-                {k: str(v) for k, v in link.items() if k not in {"xref", "id"}} for link in page.get_links()
+            links, borders = link_mismatches(left, right, page_record)
+            metrics["link_mismatches"] += links
+            metrics["link_border_mismatches"] += borders
+            metrics["annotation_mismatches"] += [a.type for a in left.annots()] != [
+                a.type for a in right.annots()
             ]
-            metrics["link_mismatches"] += clean_links(left) != clean_links(right)
-            metrics["annotation_mismatches"] += [a.type for a in left.annots()] != [a.type for a in right.annots()]
             placed = [
                 placement
                 for record in report["pages"][left.number]["records"]
@@ -150,8 +158,9 @@ def worker(options):
         for label in block.get("figure_text", []):
             if label.get("translation"):
                 cache[cache_key(label, "zh-CN", "layout-fake")] = {"text": label["translation"]}
-    outcome = render_layout(options.source, directory, document, cache, "zh-CN", "layout-fake",
-                            density=options.density)
+    outcome = render_layout(
+        options.source, directory, document, cache, "zh-CN", "layout-fake", density=options.density
+    )
     report = json.loads((directory / "layout-audit.json").read_text())
     metrics = {
         "name": options.name,
@@ -213,7 +222,8 @@ def main():
                     name,
                     "--output",
                     str(dest),
-                    "--density", options.density,
+                    "--density",
+                    options.density,
                 ],
                 stdout=log,
                 stderr=log,
