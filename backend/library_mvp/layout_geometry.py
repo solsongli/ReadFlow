@@ -111,12 +111,13 @@ def residual_counts(lines, masks):
     return visible, zero
 
 
-def text_color(box, lines):
+def text_color(box, lines, exact=True):
     values = [
         (len(s["text"]), s.get("color", 0))
         for line in lines
         if overlap(line["bbox"], box) > 0
         for s in line["spans"]
+        if not exact or overlap(s["bbox"], box) > 0
     ]
     color = max(values, default=(0, 0))[1]
     return f"rgb({color >> 16 & 255},{color >> 8 & 255},{color & 255})"

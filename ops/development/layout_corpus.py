@@ -10,6 +10,7 @@ import pymupdf as fitz
 from PIL import Image, ImageDraw
 from backend.library_mvp.paper_blocks_layout import render_layout
 from backend.library_mvp.paper_blocks_model import cache_key
+from backend.library_mvp.layout_metrics import typography_metrics
 from .reader_inline_fixtures import fake
 from .layout_graphics_audit import non_text_drawings, image_signature, same_images
 
@@ -155,6 +156,7 @@ def worker(options):
     metrics = {
         "name": options.name,
         **audit(options.source, directory / "translated-layout.pdf", report),
+        "typography": typography_metrics(document, report),
         **{k: len(v) if isinstance(v, list) else v for k, v in outcome.items()},
         "translated_input_pages": len(document["pages"]),
     }

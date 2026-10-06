@@ -15,7 +15,8 @@ class CorpusRunnerTests(unittest.TestCase):
             root = Path(directory)
             (root / "metrics.json").write_text('{"name":"old","pages":10}')
             with patch(
-                "ops.development.paper_blocks_corpus.subprocess.run", return_value=SimpleNamespace(returncode=-6)
+                "ops.development.paper_blocks_corpus.subprocess.run",
+                return_value=SimpleNamespace(returncode=-6),
             ):
                 result = run_one(Path("public.pdf"), root, "fixture", options)
             self.assertIn("exited -6", result["extraction_error"])
@@ -23,7 +24,14 @@ class CorpusRunnerTests(unittest.TestCase):
             self.assertEqual(json.loads((root / "metrics.json").read_text()), result)
 
     def test_clean_worker_record_and_explicit_options(self):
-        options = SimpleNamespace(limit_over=100, limit_pages=40, no_render=True, keep_assets=True)
+        options = SimpleNamespace(
+            limit_over=100,
+            limit_pages=40,
+            no_render=True,
+            keep_assets=True,
+            layout=True,
+            layout_density="compact",
+        )
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
 
@@ -31,6 +39,8 @@ class CorpusRunnerTests(unittest.TestCase):
                 self.assertIn("--worker-pdf", command)
                 self.assertIn("--no-render", command)
                 self.assertIn("--keep-assets", command)
+                self.assertIn("--layout", command)
+                self.assertEqual(command[command.index("--layout-density") + 1], "compact")
                 self.assertEqual(kwargs["timeout"], 600)
                 (root / "metrics.json").write_text('{"pages":1,"types":{"text":2}}')
                 return SimpleNamespace(returncode=0)

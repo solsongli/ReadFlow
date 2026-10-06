@@ -17,6 +17,7 @@ from .layout_geometry import (
     residual_counts,
 )
 from .layout_fit import fit
+from .layout_balanced import plan_page, close_plans
 from .layout_page import isolate_background
 from .layout_regions import ruled_tables
 from .layout_save import save_pdf
@@ -38,7 +39,7 @@ def value_runs(block, cache, language, fingerprint):
     )
 
 
-def tasks_for(document, cache, language, fingerprint, image_text):
+def tasks_for(document, cache, language, fingerprint, image_text, density="balanced"):
     tasks, regions = defaultdict(list), defaultdict(list)
     for block in document["blocks"]:
         for a in block["anchors"]:
@@ -55,7 +56,10 @@ def tasks_for(document, cache, language, fingerprint, image_text):
                         "box": anchor["bbox"],
                         "runs": parts[index],
                         "size": block.get("text_size", block.get("size", 10)),
-                        "bold": block["type"] in {"title", "heading"},
+                        "type": block["type"],
+                        "bold": (block.get("bold", True) if density == "balanced" else True)
+                        if block["type"] in {"title", "heading"}
+                        else False,
                         "label": False,
                     }
                 )
@@ -113,7 +117,7 @@ def render_layout(
     progress=lambda *_: None,
 ):
     started = time.perf_counter()
-    tasks, regions = tasks_for(document, cache, language, fingerprint, image_text)
+    tasks, regions = tasks_for(document, cache, language, fingerprint, image_text, density)
     audit = {
         "pages": [],
         "residual_source_chars": 0,
@@ -170,6 +174,13 @@ def render_layout(
             tables = ruled_tables(page, regions[index + 1]) if tasks[index + 1] else []
             bounds = fitz.Rect(0, 0, page.cropbox.width, page.cropbox.height)
             prepared, masks, records = [], [], []
+            for task in tasks[index + 1]:
+                task["color"] = text_color(fitz.Rect(task["box"]), lines, exact=density == "balanced")
+            plans = (
+                plan_page(tasks[index + 1], bounds.width, lines, fonts, archive, check)
+                if density == "balanced"
+                else {}
+            )
             try:
                 for task in tasks[index + 1]:
                     check()
@@ -201,7 +212,8 @@ def render_layout(
                     if not slots:
                         audit["label_fallback" if task["label"] else "render_fallback"].append(task["id"])
                         continue
-                    chunks = allocate(task["runs"], [area(r) for r in slots])
+                    plan = plans.get(id(task))
+                    chunks = allocate(plan["runs"] if plan else task["runs"], [area(r) for r in slots])
                     fragments = []
                     for slot, chunk in zip(slots, chunks):
                         if not plain(chunk):
@@ -214,10 +226,11 @@ def render_layout(
                                 archive,
                                 max(1, task["size"]),
                                 task["bold"],
-                                text_color(box, lines),
+                                task["color"],
                                 task["label"],
                                 check,
                                 density=density,
+                                plan=plan,
                             )
                         except Exception:
                             check()
@@ -242,6 +255,8 @@ def render_layout(
                             "id": task["id"],
                             "status": "placed",
                             "label": task["label"],
+                            "type": task.get("type", "label"),
+                            "group": list(plan["group"]) if plan else None,
                             "bbox": list(box),
                             "redactions": [list(r) for r in native],
                             "placements": [
@@ -251,6 +266,10 @@ def render_layout(
                                     "text": p["text"],
                                     "glyph_boxes": p["boxes"],
                                     "fonts": p["fonts"],
+                                    "font_size": p.get("font_size", task["size"] * p["scale"]),
+                                    "leading": p.get("leading", 1.05),
+                                    "outlier": p.get("outlier", False),
+                                    "outlier_reason": p.get("outlier_reason"),
                                 }
                                 for r, p in fragments
                             ],
@@ -290,6 +309,7 @@ def render_layout(
                 )
                 progress(index + 1, len(pdf))
             finally:
+                close_plans(plans)
                 for _, placement in prepared:
                     placement["doc"].close()
         translated_outline(pdf, document, cache, language, fingerprint)

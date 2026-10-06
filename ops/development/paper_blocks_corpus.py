@@ -105,6 +105,17 @@ def evaluate(path, directory, models, options):
             )
             write_json(directory / "result.json", {**result, "translation_fallback": failures})
             contact_sheets(source, directory / "translated.pdf", directory)
+            if getattr(options, "layout", False):
+                from backend.library_mvp.paper_blocks_layout import render_layout
+                from backend.library_mvp.layout_metrics import typography_metrics
+
+                layout = render_layout(
+                    source, directory, document, cache, "zh-CN", "corpus-fake", density=options.layout_density
+                )
+                audit = json.loads((directory / "layout-audit.json").read_text())
+                metrics.update(
+                    typography=typography_metrics(document, audit), layout_seconds=layout["seconds"]
+                )
         except Exception as error:
             metrics.update(render_error=str(error), render_fallback=None, translation_fallback=len(failures))
     write_json(directory / "metrics.json", metrics)
@@ -147,6 +158,24 @@ def report(directory, records):
             f'{r["post_reference_untranslated_characters"]} | {r["seconds_per_page"]} |'
         )
     (directory / "summary.md").write_text("\n".join(text) + "\n")
+    typography = [r for r in records if r.get("typography")]
+    if typography:
+        table = [
+            "",
+            "## Original-layout typography",
+            "",
+            "| Paper | Occupancy P10 / P50 / P90 | Body font SD pt | Added body blank % |",
+            "|---|---|---:|---:|",
+        ]
+        for record in typography:
+            value = record["typography"]
+            quantiles = " / ".join(str(value["paragraph_occupancy"][p]) for p in ("p10", "p50", "p90"))
+            table.append(
+                f'| {record["name"]} | {quantiles} | {value["body_font_sd_pt"]} | '
+                f'{100 * value["added_body_blank_ratio"]:.2f} |'
+            )
+        with (directory / "summary.md").open("a") as stream:
+            stream.write("\n".join(table) + "\n")
     links = ["# Corpus review", "", "The PDFs use a local echo translator, not a real model.", ""]
     for r in records:
         label = r["name"]
@@ -179,9 +208,10 @@ def run_one(path, destination, label, options):
         "--limit-pages",
         str(options.limit_pages),
     ]
-    for flag in ("no_render", "keep_assets"):
-        if getattr(options, flag):
+    for flag in ("no_render", "keep_assets", "layout"):
+        if getattr(options, flag, False):
             command.append("--" + flag.replace("_", "-"))
+    command.extend(["--layout-density", getattr(options, "layout_density", "balanced")])
     with (destination / "worker.log").open("w") as log:
         try:
             completed = subprocess.run(command, stdout=log, stderr=log, timeout=600, check=False)
@@ -198,6 +228,7 @@ def run_one(path, destination, label, options):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     from .paper_quality_report import arguments, run
+
     arguments(parser)
     parser.add_argument("--corpus-dir", type=Path, default=os.environ.get("READFLOW_CORPUS_DIR"))
     parser.add_argument("--fixtures", type=Path)
@@ -205,8 +236,16 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--limit-over", type=int, default=100)
     parser.add_argument("--limit-pages", type=int, default=40)
-    parser.add_argument("--no-render", action="store_true", help="Extraction diagnostics only, for fast iteration")
-    parser.add_argument("--keep-assets", action="store_true", help="Retain intermediate vector crops/thumbnails")
+    parser.add_argument(
+        "--no-render", action="store_true", help="Extraction diagnostics only, for fast iteration"
+    )
+    parser.add_argument(
+        "--keep-assets", action="store_true", help="Retain intermediate vector crops/thumbnails"
+    )
+    parser.add_argument("--layout", action="store_true", help="Also measure original-layout PDF typography")
+    parser.add_argument(
+        "--layout-density", choices=("balanced", "compact", "legacy-balanced"), default="balanced"
+    )
     parser.add_argument("--worker-pdf", type=Path, help=argparse.SUPPRESS)
     options = parser.parse_args()
     if options.quality_blocks:
