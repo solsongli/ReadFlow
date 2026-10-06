@@ -11,6 +11,7 @@ from PIL import Image, ImageDraw
 from backend.library_mvp.paper_blocks_layout import render_layout
 from backend.library_mvp.paper_blocks_model import cache_key
 from backend.library_mvp.layout_metrics import typography_metrics
+from backend.library_mvp.layout_squeeze import suspected_squeeze
 from .reader_inline_fixtures import fake
 from .layout_graphics_audit import non_text_drawings, image_signature, same_images
 from .layout_repair_audit import drawing_mismatch, link_mismatches
@@ -41,6 +42,7 @@ def audit(source, target, report):
         "original_drawings": 0,
         "output_drawings": 0,
         "residual_source_chars": report["residual_source_chars"],
+        "suspected_squeeze": len(suspected_squeeze(report["pages"])),
     }
     with fitz.open(source) as original, fitz.open(target) as translated:
         metrics["pages"] = len(original)

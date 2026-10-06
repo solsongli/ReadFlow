@@ -1,6 +1,6 @@
 {
   "name": "retain-pdf-desktop",
-  "version": "0.9.17",
+  "version": "0.9.18",
   "private": true,
   "description": "ReadFlow research library, bilingual reading and PDF translation desktop application",
   "homepage": "https://github.com/Lsy-aia/ReadFlow",

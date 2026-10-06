@@ -124,17 +124,6 @@ def text_color(box, lines, exact=True):
 
 
 def visible_images(page):
-    bounds = fitz.Rect(0, 0, page.cropbox.width, page.cropbox.height)
-    resources = page.get_images(full=True)
-    all_in_forms = resources and all(row[-1] for row in resources)
-    clips = (
-        [fitz.Rect(d["scissor"]) for d in page.get_drawings(extended=True) if d["type"] == "clip"]
-        if all_in_forms
-        else []
-    )
-    return [
-        fitz.Rect(image["bbox"])
-        for image in page.get_image_info()
-        if bounds.intersects(fitz.Rect(image["bbox"]))
-        and (not clips or any(clip.intersects(fitz.Rect(image["bbox"])) for clip in clips))
-    ]
+    from .layout_images import visible_image_boxes
+
+    return visible_image_boxes(page)

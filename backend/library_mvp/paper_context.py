@@ -4,6 +4,10 @@ from .paper_blocks_model import protect, SKIP
 
 
 def leading(block):
+    if block["type"] == "abstract":
+        prefix = re.match(r"^(?:Abstract|摘要)\s*[—–:：-]\s*", block["text"], re.I)
+        if prefix:
+            return prefix.group().strip()
     line = next(iter(block.get("source_lines", [])), {})
     lead = line.get("lead", "")
     if not lead and re.search(r"bold|black|demi", line.get("start_font", ""), re.I):

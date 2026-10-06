@@ -20,6 +20,9 @@ from .layout_balanced import plan_page, close_plans
 from .layout_cleanup import finish_page
 from .layout_links import apply_links
 from .layout_regions import ruled_tables
+from .layout_ownership import bounded_tables, source_boxes, region_obstacles, flow_slots, overlap_policy
+from .layout_squeeze import suspected_squeeze
+from .layout_glyphs import display_runs
 from .layout_save import save_pdf
 from . import layout_incremental as incremental
 from .paper_blocks_model import cache_key
@@ -44,9 +47,17 @@ def tasks_for(document, cache, language, fingerprint, image_text, density="balan
     for block in document["blocks"]:
         for a in block["anchors"]:
             regions[a["page"]].append(
-                {"id": block["id"], "type": block["type"], "bbox": a["bbox"], "text": block.get("text", "")}
+                {
+                    "id": block["id"],
+                    "type": block["type"],
+                    "bbox": a["bbox"],
+                    "text": block.get("text", ""),
+                    "line_boxes": source_boxes(block, a),
+                    "caption_id": block.get("caption_id"),
+                }
             )
         runs = value_runs(block, cache, language, fingerprint) if block["type"] in TRANSLATABLE else None
+        runs = display_runs(runs) if runs else None
         if runs:
             parts = allocate(runs, [area(fitz.Rect(a["bbox"])) for a in block["anchors"]])
             for index, anchor in enumerate(block["anchors"]):
@@ -136,7 +147,8 @@ def render_layout(
     }
     output = Path(root) / "translated-layout.pending.pdf"
     with fitz.open(source) as pdf, ExitStack() as resources:
-        signatures = incremental.signatures(source, len(pdf), tasks, regions, density)
+        policies = {p: "shared_rows_only" for p in regions if overlap_policy(regions[p])}
+        signatures = incremental.signatures(source, len(pdf), tasks, regions, density, policies)
         prior = incremental.previous(root, signatures)
         graft = None
         if prior:
@@ -149,6 +161,7 @@ def render_layout(
                     "reused_pages": list(range(1, len(pdf) + 1)),
                     "seconds": round(time.perf_counter() - started, 3),
                 }
+                audit["suspected_squeeze"] = suspected_squeeze(audit["pages"])
                 write_json(Path(root) / "layout-audit.json", audit)
                 return {key: value for key, value in audit.items() if key != "pages"}
         archive, fonts, _ = prepare_fonts(
@@ -176,6 +189,7 @@ def render_layout(
             before = incremental.start_counts(audit)
             audit["rendered_pages"].append(index + 1)
             lines = native_lines(page)
+            regions[index + 1] = bounded_tables(page, regions[index + 1])
             images = visible_images(page) if tasks[index + 1] else []
             tables = ruled_tables(page, regions[index + 1]) if tasks[index + 1] else []
             bounds = fitz.Rect(0, 0, page.cropbox.width, page.cropbox.height)
@@ -191,14 +205,7 @@ def render_layout(
                 for task in tasks[index + 1]:
                     check()
                     box = fitz.Rect(task["box"]) & bounds
-                    parent = next((r for r in regions[index + 1] if r["id"] == task.get("parent")), None)
-                    obstacles = tables + [
-                        r["bbox"]
-                        for r in regions[index + 1]
-                        if r["id"] not in {task["id"], task.get("parent")}
-                        and fitz.Rect(r["bbox"]).intersects(box)
-                        and not (parent and fitz.Rect(parent["bbox"]).contains(fitz.Rect(r["bbox"])))
-                    ]
+                    obstacles = region_obstacles(box, task, regions[index + 1], tables)
                     native = owned_lines(box, lines, obstacles)
                     # Bitmap-only OCR text cannot be removed without changing the original image.
                     if not native:
@@ -210,11 +217,7 @@ def render_layout(
                     # location out of the writing area, but still remove owned text
                     # behind them using text-only redaction.
                     writing_obstacles = obstacles + ([] if task["label"] else images)
-                    slots = [
-                        r
-                        for r in free_rects(box, writing_obstacles)
-                        if r.width > 4 and r.height >= max(2, task["size"] * 0.55 * 1.49)
-                    ]
+                    slots = flow_slots(box, writing_obstacles, native, task["size"])
                     if not slots:
                         audit["label_fallback" if task["label"] else "render_fallback"].append(task["id"])
                         continue
@@ -277,6 +280,7 @@ def render_layout(
                                     "leading": p.get("leading", 1.05),
                                     "outlier": p.get("outlier", False),
                                     "outlier_reason": p.get("outlier_reason"),
+                                    "truncated": p["truncated"],
                                 }
                                 for r, p in fragments
                             ],
@@ -307,12 +311,14 @@ def render_layout(
     for key in ("layout_overflow", "layout_truncated", "render_fallback", "label_fallback"):
         audit[key] = list(dict.fromkeys(audit[key]))
     audit["seconds"] = round(time.perf_counter() - started, 3)
+    audit["suspected_squeeze"] = suspected_squeeze(audit["pages"])
     write_json(Path(root) / "layout-audit.json", audit)
     path = Path(root) / "translated-layout.pdf"
     write_json(
         Path(root) / "layout-pages.json",
         {
             "version": incremental.VERSION,
+            "fit_revision": incremental.FIT_REVISION,
             "signatures": signatures,
             "file_size": path.stat().st_size,
             "mtime_ns": path.stat().st_mtime_ns,

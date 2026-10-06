@@ -114,6 +114,27 @@ def pack(result, size, leading, runs, outlier=False):
     }
 
 
+def explicit_floor(rect, runs, fonts, archive, size, bold, color, check):
+    # Story's automatic scale is based on line boxes. A superscript can still
+    # violate the glyph-bounds guard at that scale. Before truncating, explicitly
+    # lay out the full text at the allowed source-size floor and check its glyphs.
+    check()
+    floor = size * 0.55
+    css = css_for(fonts, floor, bold, color, 1.05, {"align": "left", "indent": 0})
+    for leading in (1.05, 0.94):
+        adjusted = (
+            css
+            if leading == 1.05
+            else css_for(fonts, floor, bold, color, leading, {"align": "left", "indent": 0})
+        )
+        full = attempt(rect, runs, adjusted, archive, 1, rich_html)
+        if full:
+            result = pack(full, floor, leading, runs, True)
+            result.update(scale=0.55, overflow=leading < 1, outlier_reason="tight_geometry")
+            return result
+    return None
+
+
 def balanced_fit(rect, runs, fonts, archive, source_size, bold, color, check, plan=None):
     style = plan["style"] if plan else {"align": "left", "indent": 0}
     size = plan["size"] if plan else source_size
@@ -127,6 +148,11 @@ def balanced_fit(rect, runs, fonts, archive, source_size, bold, color, check, pl
         result = probe(rect, runs, fonts, archive, size, bold, color, style)
     if not result:
         fallback = legacy_fit(rect, runs, fonts, archive, source_size, bold, color, False, check, "compact")
+        if fallback and fallback["truncated"]:
+            complete = explicit_floor(rect, runs, fonts, archive, source_size, bold, color, check)
+            if complete:
+                fallback["doc"].close()
+                return complete
         if fallback:
             fallback.update(
                 font_size=source_size * fallback["scale"], outlier=True, outlier_reason="unbreakable_or_dense"
@@ -175,6 +201,11 @@ def balanced_fit(rect, runs, fonts, archive, source_size, bold, color, check, pl
     # Existing guarded truncation handles exceptionally dense text and keeps
     # all rectangle/HTML safety checks. It never moves neighbouring paragraphs.
     last = legacy_fit(rect, runs, fonts, archive, source_size, bold, color, False, check, "compact")
+    if last and last["truncated"]:
+        complete = explicit_floor(rect, runs, fonts, archive, source_size, bold, color, check)
+        if complete:
+            last["doc"].close()
+            return complete
     if last:
         last.update(
             font_size=source_size * last["scale"], outlier=True, outlier_reason="unbreakable_or_dense"

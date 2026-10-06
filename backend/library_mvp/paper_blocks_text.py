@@ -186,7 +186,7 @@ def text_blocks(rows, body_size, page_number, width, height, words=None):
                     and -row["size"] * 0.55 <= gap < row["size"] * 0.6
                 )
             elif prior["type"] in ("caption", "abstract") and row["type"] in ("text", "caption", "formula"):
-                compatible = prose_font(prior, row) if prior["type"] == "caption" else same_font(prior, row)
+                compatible = prose_font(prior, row)
                 match = horizontal and compatible and -row["size"] * 0.2 <= gap < row["size"] * 0.65
                 match = match and not model.CAPTION.match(value) and abs(box[0] - prior["bbox"][0]) < body_size * 2
             elif prior["type"] == "list" and row["type"] == "text":

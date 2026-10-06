@@ -4,7 +4,7 @@ from pathlib import Path
 import pymupdf as fitz
 from .paper_blocks_model import digest
 
-VERSION = "layout-x10b-1"
+VERSION = "layout-x10c-2"
 LISTS = ("layout_overflow", "layout_truncated", "render_fallback", "label_fallback")
 COUNTS = (
     "residual_source_chars",
@@ -15,12 +15,19 @@ COUNTS = (
     "decorations_removed",
 )
 MAPS = ("decorations_removed_by_type",)
+FIT_REVISION = "explicit-glyph-floor-1"
 
 
-def signatures(source, count, tasks, regions, density):
+def signatures(source, count, tasks, regions, density, policies=None):
     stat = Path(source).stat()
     identity = [str(Path(source).resolve()), stat.st_size, stat.st_mtime_ns]
-    return [digest([VERSION, identity, tasks[p], regions[p], density]) for p in range(1, count + 1)]
+    return [
+        digest(
+            [VERSION, identity, tasks[p], regions[p], density]
+            + ([policies[p]] if policies and policies.get(p) else [])
+        )
+        for p in range(1, count + 1)
+    ]
 
 
 def previous(root, expected):
@@ -39,7 +46,17 @@ def previous(root, expected):
         if len(pdf) != len(expected) or len(audit["pages"]) != len(expected):
             pdf.close()
             return None
-        return pdf, value["signatures"], audit
+        cached_signatures = list(value["signatures"])
+        if value.get("fit_revision") != FIT_REVISION:
+            for index, page in enumerate(audit["pages"]):
+                if any(
+                    p.get("truncated") or p["text"].rstrip().endswith("…")
+                    for r in page["records"]
+                    if r["status"] == "placed"
+                    for p in r["placements"]
+                ):
+                    cached_signatures[index] = None
+        return pdf, cached_signatures, audit
     except (OSError, ValueError, KeyError):
         return None
 
