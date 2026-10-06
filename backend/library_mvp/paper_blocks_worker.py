@@ -18,6 +18,8 @@ from .paper_quality import summary
 from .paper_blocks_inline import rich_text
 from .translation_metrics import TranslationMetrics
 from .paper_blocks_batches import estimate_tokens
+from .paper_diagnostics import annotate, global_failure
+from . import paper_job_diagnostics as diagnostics
 
 
 def run(
@@ -40,6 +42,8 @@ def run(
     token = self.controls[identity]
     secret = config.get("api_key", "")
     metrics = TranslationMetrics()
+    stage = "extract"
+    problems = []
     if not extraction and not render_only:
         metrics.policy = {"configured_workers": workers(config), "pool_workers": parallel_workers(config)}
 
@@ -50,6 +54,17 @@ def run(
     def update(**changes):
         with self.lock:
             self.jobs[identity].update(changes)
+
+    def diagnose(error, phase):
+        detail = diagnostics.record(self, identity, error, phase)
+        with self.lock:
+            problems[:] = [{**mapped_error(error, secret), "details": detail}]
+        return detail
+
+    def abort_requests():
+        with self.lock:
+            for request in list(token["requests"]):
+                request.cancel("fatal_model_error")
 
     try:
         update(status="running")
@@ -62,13 +77,21 @@ def run(
             update(status="done", phase="已提取", percent=100)
             return
         if render_only:
+            stage = "render"
             old = self.storage.result(entry) or {}
             with self.lock:
                 cached = self.storage.cache(entry)
-            extra = {key: old.get(key, default) for key, default in (
-                ("usage", token_usage({})), ("notices", []), ("translation_fallback", []))}
-            extra["qa"] = summary(cached.get(cache_key(b, language, fingerprint))
-                                  for b in translation_units(document["blocks"]))
+            extra = {
+                key: old.get(key, default)
+                for key, default in (
+                    ("usage", token_usage({})),
+                    ("notices", []),
+                    ("translation_fallback", []),
+                )
+            }
+            extra["qa"] = summary(
+                cached.get(cache_key(b, language, fingerprint)) for b in translation_units(document["blocks"])
+            )
             update(qa=extra["qa"])
             render_snapshot(
                 self,
@@ -146,7 +169,8 @@ def run(
                     response = self.assistance.chat(
                         config, messages, control=control, batch=True, policy=self.policy, permit=permit
                     )
-                update(notices=self.policy.notices(config))
+                for item in self.policy.notices(config):
+                    diagnostics.notice(self, identity, item)
                 if isinstance(response, dict):
                     usage = token_usage(response.get("usage"))
                     with self.lock:
@@ -154,6 +178,14 @@ def run(
                             self.jobs[identity]["usage"][key] += value
                     return {**response, "content": response.get("content", "").replace(secret, "[已隐藏]")}
                 return response.replace(secret, "[已隐藏]")
+            except Exception as error:
+                usage = getattr(error, "reported_usage", {})
+                with self.lock:
+                    for key, value in token_usage(usage).items():
+                        self.jobs[identity]["usage"][key] += value
+                raise annotate(
+                    error, {"terminology": "terms", "qa_retranslation": "qa_retry"}.get(phase, "batch")
+                )
             finally:
                 control.finish()
                 with self.lock:
@@ -182,9 +214,18 @@ def run(
                     terminology = paper_terms.load(root, language)
                 if not terminology["prepared"]:
                     update(phase="统一本篇术语", percent=8)
-                    proposals = paper_terms.propose(
-                        paper_terms.candidates(document["blocks"]), call, language
-                    )
+                    term_failed = False
+                    try:
+                        proposals = paper_terms.propose(
+                            paper_terms.candidates(document["blocks"]), call, language
+                        )
+                    except Exception as error:
+                        if global_failure(error):
+                            raise annotate(error, "terms")
+                        diagnose(error, "terms")
+                        diagnostics.notice(self, identity, "terms_unavailable")
+                        proposals = []
+                        term_failed = True
                     check()
                     with self.lock:
                         # An explicit user edit made during the request takes priority.
@@ -202,16 +243,28 @@ def run(
                             paper_terms.save(
                                 root,
                                 language,
-                                {"entries": proposals, "prepared": True, "revision": 1, "affected": affected},
+                                {
+                                    "entries": proposals,
+                                    "prepared": not term_failed,
+                                    "revision": 1,
+                                    "affected": affected,
+                                },
                             )
             finally:
                 metrics.timings["terminology"] += metrics.clock() - term_started
                 self.terms_lock.release()
         with self.lock:
             terms = paper_terms.effective(paper_terms.load(root, language)["entries"], terms)
+        diagnostics.recheck_cached(self, entry, document["blocks"], cache, language, fingerprint, terms)
+        update(
+            qa=summary(
+                cache.get(cache_key(b, language, fingerprint)) for b in translation_units(document["blocks"])
+            )
+        )
         context = {b["id"]: b for b in translation_units(contextualize(document["blocks"], terms))}
         blocks = prioritize_pages([context.get(b["id"], b) for b in blocks], current_page)
 
+        stage = "batch"
         update(phase="翻译", percent=10)
         translation_started = metrics.clock()
         failed = translate_blocks(
@@ -231,12 +284,15 @@ def run(
             title=title,
             concurrency=parallel_workers(config),
             quality=True,
+            diagnose=diagnose,
+            abort=abort_requests,
         )
         metrics.timings["translation"] = metrics.clock() - translation_started
         check()
         if any(cache_key(block, language, fingerprint) in cache for block in blocks):
             select_context()
         if not block_id or self.storage.result(entry):
+            stage = "render"
             render_snapshot(
                 self,
                 entry,
@@ -248,13 +304,20 @@ def run(
                 image_text,
                 {
                     "usage": dict(self.jobs[identity]["usage"]),
-                    "notices": self.policy.notices(config),
+                    "notices": list(self.jobs[identity].get("notices", [])),
+                    "diagnostics": list(self.jobs[identity].get("diagnostics", [])),
+                    "error": None,
                     "translation_fallback": failed,
                     "qa": self.jobs[identity].get("qa", {}),
                 },
                 density,
                 metrics=metrics,
             )
+        from .paper_blocks_model import SKIP
+
+        if failed and len(failed) == sum(b["type"] not in SKIP and bool(b["text"].strip()) for b in blocks):
+            diagnostics.exhausted(self, identity, entry, problems[-1] if problems else None)
+            return
         update(
             status="done",
             phase="完成",
@@ -266,7 +329,8 @@ def run(
         if token["cancel"].is_set():
             update(status="cancelled", phase="已取消", error=None)
         else:
-            update(status="failed", phase="失败", error=mapped_error(error, secret))
+            with self.lock:
+                diagnostics.fail(self, identity, entry, error, stage, secret, language, fingerprint)
     finally:
         update(performance=metrics.snapshot())
         config.clear()

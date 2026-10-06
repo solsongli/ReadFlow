@@ -1,3 +1,4 @@
+import { setPaperTone } from "../paper-reader/controls.mjs";
 import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { readerBrowser } from "../paper-reader/browser.mjs";
@@ -59,7 +60,7 @@ for (const [identity, title, pages] of performanceOnly
     }
     if (!performanceOnly) {
       await page.evaluate(() => window.fixture.wb.setPrefs({ theme: "dark" }));
-      await page.getByLabel("页面底色", { exact: true }).selectOption("night");
+      await setPaperTone(page, "night");
       await page.screenshot({ path: `${output}/${identity}-inline-night.png`, animations: "disabled" });
     } else {
       const measure = await page.evaluate(async (count) => {

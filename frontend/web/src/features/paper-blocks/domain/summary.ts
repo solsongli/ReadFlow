@@ -12,6 +12,8 @@ export function translationSummary(status: BlockStatus | null) {
     if (previous >= 0) details.splice(previous, 1);
     if (quality) details.unshift(quality);
   }
+  if ((status.result?.notices || job?.notices || []).includes("terms_unavailable"))
+    details.push({ kind: "terms", text: "术语预处理未完成，本次已继续翻译；可在下次翻译时重试。" });
   for (const [i, text] of (status.document?.warnings || []).entries())
     details.push({ kind: `warning-${i}`, text });
   const usage = usageText(job?.usage || status.result?.usage);
@@ -30,14 +32,25 @@ export function translationSummary(status: BlockStatus | null) {
     (status.result?.layout_truncated?.length || 0) +
     (status.result?.render_fallback?.length || 0) +
     (status.result?.layout_render_fallback?.length || 0);
+  const problem = status.job?.error || status.result?.error;
+  if (problem) details.push({ kind: "error", text: problem.message });
   const actionable = Boolean(
-    review || failures || layout || status.document?.warnings?.length || status.result?.repair_pending,
+    problem ||
+    review ||
+    failures ||
+    layout ||
+    status.document?.warnings?.length ||
+    status.result?.repair_pending,
   );
   const phase = status.result?.repair_pending
-    ? (busy(job?.status) ? "正在修复已有译文" : "旧译文待本地修复")
+    ? busy(job?.status)
+      ? "正在修复已有译文"
+      : "旧译文待本地修复"
     : busy(job?.status)
       ? "翻译进行中"
-      : "翻译完成";
+      : problem
+        ? "翻译失败"
+        : "翻译完成";
   const suffix = review
     ? `${review} 块需核对`
     : failures

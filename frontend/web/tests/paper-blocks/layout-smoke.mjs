@@ -1,3 +1,4 @@
+import { setTranslationFormat, translationAction, selectedTranslationFormat } from "../paper-reader/controls.mjs";
 import assert from "node:assert/strict";
 import { readerBrowser } from "../paper-reader/browser.mjs";
 const env = await readerBrowser("?blocks&configured&x6&x7", "tests/paper-reader/integration-fixture.tsx");
@@ -20,13 +21,13 @@ try {
   await page.getByRole("option", { name: "Paper a", exact: true }).dblclick();
   await ready("原文页面");
   if (await button("知道了").count()) await button("知道了").click();
-  const format = page.getByLabel("译文版式", { exact: true });
-  assert.equal(await format.inputValue(), "layout");
+  const format = (value) => setTranslationFormat(page,value);
+  assert.equal(await selectedTranslationFormat(page), "layout");
   await button("译文").click();
   await ready("译文页面");
   assert.ok(paths.some((p) => p.endsWith("translated-layout.pdf")));
   await page.screenshot({ path: "/tmp/readflow-x7/screenshots/layout-view.png", animations: "disabled" });
-  await format.selectOption("reflow");
+  await format("reflow");
   await ready("译文页面");
   await page.waitForFunction(() => window.fixture.wb.store.getSnapshot().translationFormat === "reflow");
   assert.ok(paths.some((p) => p.endsWith("translated.pdf")));
@@ -34,8 +35,8 @@ try {
   await page.reload();
   await page.getByRole("option", { name: "Paper a", exact: true }).dblclick();
   await ready("原文页面");
-  assert.equal(await format.inputValue(), "reflow");
-  await format.selectOption("layout");
+  assert.equal(await selectedTranslationFormat(page), "reflow");
+  await format("layout");
   await button("译文").click();
   await ready("译文页面");
   await button("对照").click();
@@ -56,7 +57,7 @@ try {
     ["重排 PDF", "translated.pdf"],
     ["LaTeX 工程", "/latex"],
   ]) {
-    await button("导出译文").click();
+    await page.getByRole("button",{name:"翻译菜单",exact:true}).click();
     const before = paths.length;
     const download = page.waitForEvent("download");
     await page.getByRole("menuitem", { name: label, exact: true }).click();
@@ -67,12 +68,14 @@ try {
     );
   }
   env.blocks.legacy();
-  await button("生成原版式").waitFor();
-  assert.equal(await format.inputValue(), "reflow");
-  await button("生成原版式").click();
-  await page.waitForFunction(() => document.querySelector('[aria-label="译文版式"]')?.value === "layout");
-  await button("仅重新排版").click();
-  await page.waitForFunction(() => document.querySelector('[aria-label="译文版式"]')?.value === "layout");
+  await page.getByRole("button",{name:"翻译菜单",exact:true}).click();
+  await page.getByRole("menuitem",{name:"生成原版式",exact:true}).waitFor();
+  await page.keyboard.press("Escape");
+  assert.equal(await selectedTranslationFormat(page), "reflow");
+  await translationAction(page,"生成原版式");
+  await page.waitForFunction(() => window.fixture.wb.store.getSnapshot().translationFormat === "layout");
+  await translationAction(page,"仅重新排版");
+  await page.waitForFunction(() => window.fixture.wb.store.getSnapshot().translationFormat === "layout");
   assert.equal(env.blocks.requests().at(-1).render_only, true);
   assert.equal(env.blocks.requests().at(-1).attachment_id, "a");
   assert.equal(env.blocks.requests().at(-1).translation, undefined);

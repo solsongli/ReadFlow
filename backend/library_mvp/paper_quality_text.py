@@ -4,6 +4,7 @@ from decimal import Decimal, DecimalException
 import re
 import unicodedata
 from .paper_blocks_inline import source_runs
+from .paper_term_matching import occurs
 
 
 def numeric_text(runs):
@@ -75,16 +76,16 @@ def paired_numbers(block, value):
 
 
 def term_present(term, translated):
-    if term["target"].casefold() in translated.casefold():
+    if occurs(term["target"], translated, plural=not term.get("user")):
         return True
     if term.get("user"):
         return False
     if term.get("keep") and term["source"] == term["target"]:
         plural = re.fullmatch(r"([A-Z][A-Z0-9]{1,})s", term["source"])
-        if plural and plural[1].casefold() in translated.casefold():
+        if plural and occurs(plural[1], translated):
             return True
         suffix = re.fullmatch(r"(.+)-(only|based)", term["source"])
-        if suffix and suffix[1].casefold() in translated.casefold():
+        if suffix and occurs(suffix[1], translated):
             return bool(re.search(r"仅|只|only" if suffix[2] == "only" else r"基于|based", translated, re.I))
     return False
 

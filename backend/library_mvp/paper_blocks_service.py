@@ -139,7 +139,7 @@ class BlockService:
         rows = body.get("entries")
         if not isinstance(rows, list) or len(rows) > 100 or len(json.dumps(rows)) > 50000:
             raise StoreError("INVALID_TERMS", "术语表格式无效。")
-        entries = paper_terms.normalize(rows)
+        entries = paper_terms.normalize([{**r, "automatic": False} if isinstance(r, dict) else r for r in rows])
         if len(entries) != len(rows):
             raise StoreError("INVALID_TERMS", "术语不能为空、重复或过长。")
         entry = self.storage.attachment(item, body.get("attachment_id"))
@@ -158,7 +158,7 @@ class BlockService:
                 if b["type"] not in SKIP and any(paper_terms.occurs(t, b["text"]) for t in changed)
             ]
             value = {
-                "entries": [dict(r, keep=r["source"] == r["target"]) for r in entries],
+                "entries": [dict(r, keep=r["source"] == r["target"], automatic=False) for r in entries],
                 "prepared": True,
                 "revision": prior["revision"] + 1,
                 "affected": affected,

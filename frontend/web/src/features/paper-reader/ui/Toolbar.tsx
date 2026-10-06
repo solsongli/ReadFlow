@@ -1,3 +1,4 @@
+import { ReaderActions } from "./ReaderActions.js";
 import type { ReactNode } from "react";
 import {
   ArrowLeft,
@@ -64,7 +65,7 @@ export function Toolbar({
     <div
       role="toolbar"
       aria-label="论文阅读工具栏"
-      className="pr-toolbar flex min-h-12 shrink-0 flex-wrap items-center gap-1 border-b border-wb-line-soft bg-wb-panel px-3 py-1.5"
+      className="pr-toolbar flex h-12 min-h-12 shrink-0 flex-nowrap items-center gap-1 border-b border-wb-line-soft bg-wb-panel px-3 py-1.5"
     >
       <IconButton label="切换目录侧栏" onClick={toggleLeft}>
         <PanelLeft size={17} />
@@ -150,36 +151,26 @@ export function Toolbar({
         </div>
       ) : (
         <Button size="sm" disabled={ports.translation.running} onClick={ports.translation.start}>
-          {ports.translation.running ? ports.translation.label : "翻译全文"}
+          {ports.translation.running ? "翻译中" : "翻译全文"}
         </Button>
       )}
       {!translated && ports.inlineAvailable ? (
         <Button size="sm" disabled={ports.translation.running} onClick={ports.translation.start}>
-          {ports.translation.running ? ports.translation.label : "翻译全文"}
+          {ports.translation.running ? "翻译中" : "翻译全文"}
         </Button>
       ) : null}
       {tools}
       <span className="flex-1" />
-      <select
-        aria-label="页面底色"
-        value={ports.tone}
-        onChange={(e) => ports.setTone(e.target.value as PaperTone)}
-        className="rounded-lg border-0 bg-wb-fill px-2 py-1 text-[0.75rem]"
-      >
-        <option value="auto">跟随明暗</option>
-        <option value="white">白纸</option>
-        <option value="sepia">护眼米色</option>
-        <option value="night">夜间</option>
-      </select>
       <IconButton label="搜索全文" title="搜索全文（Ctrl F）" onClick={search}>
         <Search size={16} />
       </IconButton>
-      <IconButton label="添加书签" onClick={bookmark}>
-        <BookmarkPlus size={16} />
-      </IconButton>
-      <IconButton label={focus ? "退出专注模式" : "专注模式"} title="专注模式（F）" onClick={toggleFocus}>
-        <Maximize size={16} />
-      </IconButton>
+      <ReaderActions
+        tone={ports.tone}
+        setTone={ports.setTone}
+        bookmark={bookmark}
+        focus={focus}
+        toggleFocus={toggleFocus}
+      />
       <IconButton label="切换信息面板" onClick={toggleRight}>
         <PanelRight size={17} />
       </IconButton>

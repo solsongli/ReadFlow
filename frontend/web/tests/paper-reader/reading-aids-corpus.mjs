@@ -1,3 +1,4 @@
+import { setPaperTone } from "./controls.mjs";
 import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { readerBrowser } from "./browser.mjs";
@@ -40,7 +41,7 @@ for (const [identity, title] of performanceOnly ? [["2406.09246", "OpenVLA"]] :
       await page.locator("[data-inline-block] .pb-fitted-content").first().waitFor();
       await page.screenshot({ path: `${output}/${identity}-outline-inline.png` });
       await page.evaluate(() => window.fixture.wb.setPrefs({ theme: "dark" }));
-      await page.getByLabel("页面底色", { exact: true }).selectOption("night");
+      await setPaperTone(page,"night");
       await page.screenshot({ path: `${output}/${identity}-night.png` });
     } else {
       // Same document/window, sequential disabled/enabled passes, no background test jobs.

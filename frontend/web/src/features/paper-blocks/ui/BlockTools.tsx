@@ -1,10 +1,21 @@
+import { ChevronDown } from "lucide-react";
 import { Button } from "@/ui/wb/Button.js";
-import { MenuRoot, MenuTrigger, MenuContent, MenuItem } from "@/ui/wb/Menu.js";
+import {
+  MenuRoot,
+  MenuTrigger,
+  MenuContent,
+  MenuItem,
+  MenuLabel,
+  MenuRadioGroup,
+  MenuRadioItem,
+  MenuSeparator,
+} from "@/ui/wb/Menu.js";
 import { downloadBlob } from "@/platform/utils/downloads.js";
 import type { BlockStatus } from "../domain/model.js";
 import { pdfFormats, type TranslationFormat } from "../domain/formats.js";
 import type { blocksApi } from "../state/api.js";
 export function BlockTools({
+  recheck,
   status,
   api,
   format,
@@ -18,6 +29,7 @@ export function BlockTools({
   render,
   error,
 }: {
+  recheck: () => void;
   status: BlockStatus | null;
   api: ReturnType<typeof blocksApi>;
   format: TranslationFormat;
@@ -34,52 +46,51 @@ export function BlockTools({
   const variants = pdfFormats(status?.result || null, format);
   return (
     <>
-      {usage ? (
-        <span className="max-w-60 text-xs text-wb-text-3" role="status" title={usage}>
-          {usage}
-        </span>
-      ) : null}
       <Button size="sm" aria-pressed={enabled} onClick={toggle}>
         块模式
       </Button>
-      {status?.result ? (
-        <select
-          aria-label="译文版式"
-          value={variants.selected || format}
-          onChange={(event) => {
-            const next = event.target.value as TranslationFormat;
-            setFormat?.(next);
-            if (next === "layout" && !variants.layout) render();
-          }}
-          className="rounded-lg border-0 bg-wb-fill px-2 py-1 text-xs text-wb-text"
-        >
-          <option value="layout" disabled={!variants.layout && (!status?.has_translation || running)}>
-            原版式
-          </option>
-          <option value="reflow" disabled={!variants.reflow}>
-            重排
-          </option>
-        </select>
-      ) : null}
-      {status?.result || legacy ? (
-        <Button size="sm" disabled={running} onClick={start}>
-          {status?.result ? "补翻／重新排版" : "翻译全文（块级）"}
-        </Button>
-      ) : null}
-      {status?.has_translation ? (
-        <Button size="sm" disabled={running} onClick={render} title="只使用已有块译文，不发送模型请求">
-          {variants.layout ? "仅重新排版" : "生成原版式"}
-        </Button>
-      ) : null}
       <MenuRoot>
         <MenuTrigger asChild>
-          <Button size="sm" disabled={!status?.document || running}>
-            导出译文
+          <Button size="sm" aria-label="翻译菜单" title="翻译、版式与导出">
+            翻译 <ChevronDown size={12} aria-hidden="true" />
           </Button>
         </MenuTrigger>
         <MenuContent>
+          {usage ? <MenuLabel>{usage}</MenuLabel> : null}
+          <MenuItem disabled={running} onSelect={start}>
+            {status?.result ? "补翻／重新排版" : legacy ? "翻译全文（块级）" : "翻译全文"}
+          </MenuItem>
+          <MenuItem disabled={!status?.has_translation || running} onSelect={render}>
+            {variants.layout ? "仅重新排版" : "生成原版式"}
+          </MenuItem>
+          <MenuItem disabled={!status?.has_translation || running} onSelect={recheck}>
+            本地重新质检
+          </MenuItem>
+          <MenuSeparator />
+          <MenuLabel>译文版式</MenuLabel>
+          <MenuRadioGroup
+            aria-label="译文版式"
+            value={variants.selected || format}
+            onValueChange={(value) => {
+              const next = value as TranslationFormat;
+              setFormat?.(next);
+              if (next === "layout" && !variants.layout) render();
+            }}
+          >
+            <MenuRadioItem
+              value="layout"
+              disabled={!variants.layout && (!status?.has_translation || running)}
+            >
+              原版式
+            </MenuRadioItem>
+            <MenuRadioItem value="reflow" disabled={!variants.reflow}>
+              重排
+            </MenuRadioItem>
+          </MenuRadioGroup>
+          <MenuSeparator />
+          <MenuLabel>导出译文</MenuLabel>
           <MenuItem
-            disabled={!variants.layout}
+            disabled={!variants.layout || running}
             onSelect={() =>
               void api
                 .pdf("layout")
@@ -90,7 +101,7 @@ export function BlockTools({
             原版式 PDF（推荐）
           </MenuItem>
           <MenuItem
-            disabled={!variants.reflow}
+            disabled={!variants.reflow || running}
             onSelect={() =>
               void api
                 .pdf("reflow")
@@ -101,6 +112,7 @@ export function BlockTools({
             重排 PDF
           </MenuItem>
           <MenuItem
+            disabled={!status?.document || running}
             onSelect={() =>
               void api
                 .latex()

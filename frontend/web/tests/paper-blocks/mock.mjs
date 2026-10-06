@@ -70,6 +70,13 @@ export async function blocksMock(query) {
   if (query.includes("repaired-sam")) {
     document = JSON.parse(await readFile("/tmp/readflow-x9b/sam-final/ui-document.json", "utf8"));
   }
+  if (query.includes("diagnostics")) {
+    const detail = { stage: "terms", exception: "ConnectTimeout" };
+    result = { revision: "diagnostics", language, layout_ready: true, reflow_ready: true,
+      error: { code: "network", message: "无法连接模型服务或请求超时", details: detail }, diagnostics: [detail] };
+    jobs.push({ id: "failed", scope: "full", phase: "失败", status: "failed", percent: 0,
+      error: result.error, diagnostics: [detail] });
+  }
   const active = (job) => ["running", "queued", "cancelling"].includes(job.status);
   const state = (requestedLanguage) => {
     const current = jobs.filter(active);
@@ -193,6 +200,9 @@ export async function blocksMock(query) {
         terms = { entries: body.entries, revision: terms.revision + 1, prepared: true,
           affected: [document.blocks.find((b) => b.type === "text").id] };
         await route.fulfill({ json: terms });
+      } else if (path.endsWith("/recheck")) {
+        qa = { checked: 8, retried: 0, needs_review: 0 };
+        await route.fulfill({ json: { qa, model_requests: 0 } });
       } else if (path.endsWith("/render")) {
         requests.push({ render_only: true, ...route.request().postDataJSON() });
         result = { revision: "local-render", language, layout_ready: true, reflow_ready: true };

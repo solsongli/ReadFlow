@@ -60,12 +60,9 @@ class PaperQualityTests(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         self.assertIn("Simplified Chinese", calls[0][0]["content"])
         self.assertEqual(result[0]["target"], "VLA")
-        self.assertEqual(
-            propose(
-                [{"source": "policy", "target": "policy", "keep": False}], lambda _: "malformed", "zh-CN"
-            ),
-            [],
-        )
+        from backend.library_mvp.paper_json import ModelJSONError
+        with self.assertRaises(ModelJSONError):
+            propose([{"source": "policy", "target": "policy", "keep": False}], lambda _: "malformed", "zh-CN")
         with tempfile.TemporaryDirectory() as temp:
             save(Path(temp), "zh-CN", {"entries": merged, "revision": 1, "prepared": True})
             self.assertEqual(load(Path(temp), "zh-CN")["entries"], merged)

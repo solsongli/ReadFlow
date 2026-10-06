@@ -23,6 +23,7 @@ export function blocksApi(item: string, attachment: string, language = "zh-CN") 
     status: async () => (await request(`?language=${encodeURIComponent(language)}`)).json(),
     start: async (body: unknown, extract = false) =>
       (await request(extract ? "/extract" : "/translate", "POST", body)).json(),
+    recheck: async (body: unknown) => (await request("/recheck", "POST", body)).json(),
     render: async (body: unknown) => (await request("/render", "POST", body)).json(),
     terms: async (body: unknown) =>
       (await request("/terms", "PATCH", { ...(body as object), attachment_id: attachment, language })).json(),

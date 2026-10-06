@@ -65,6 +65,10 @@ class BlockStorage:
                 or value["extractor_version"] == EXTRACTOR_VERSION
                 and (not revision() or value.get("model_revision") == revision())
             ):
+                if value.get("text_normalization") != 1:
+                    from .paper_text_normalization import normalized_document
+                    value = {**normalized_document(value), "text_normalization": 1}
+                    write_json(path, value)
                 return value
         except (ValueError, KeyError):
             pass
@@ -76,6 +80,8 @@ class BlockStorage:
         if value is None:
             root = self.directory(entry)
             value = extract(self.store.attachment_path(entry["id"]), root, entry["sha256"], check)
+            from .paper_text_normalization import normalized_document
+            value = {**normalized_document(value), "text_normalization": 1}
             check()
             write_json(root / "blocks.json", value)
         return value

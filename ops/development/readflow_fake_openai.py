@@ -11,6 +11,14 @@ import threading
 def completion_response(body, attempt=0):
     """Deterministic adverse responses, selected by fake model name; never a real upstream."""
     model = body.get('model', 'readflow-test')
+    if model in ('readflow-real-variants', 'readflow-real-faults'):
+        if __package__:
+            from .model_response_variants import response
+        else:
+            from model_response_variants import response
+        variant = response(body, attempt)
+        if variant is not None:
+            return variant
     content = completion_content(body)
     try:
         rows = json.loads(content).get('blocks', [])

@@ -1,6 +1,8 @@
 """Turn the two text fields into locally typed runs; model output cannot choose formatting."""
 from .paper_context import protected_fields
 from .paper_blocks_inline import restore_rich
+from .layout_text import slice_runs
+import re
 
 
 def restore_fields(block, row, mapping):
@@ -8,8 +10,23 @@ def restore_fields(block, row, mapping):
     if not expected_head:
         return restore_rich(row.get("text"), mapping)
     head, body = row.get("head"), row.get("text")
-    if not isinstance(head, str) or not head.strip() or not isinstance(body, str) or not body.strip():
+    if not isinstance(body, str) or not body.strip():
         return None
+    if not isinstance(head, str) or not head.strip():
+        # Several compatible providers merge the label into text. Preserve the complete
+        # translation and only add bold when a short, punctuated run-in label is clear.
+        combined = restore_rich(body, mapping)
+        if combined:
+            lead = re.match(r"^.{1,60}?(?:[.:](?=\s)|[：。])(?=\s*\S)", combined["text"])
+            if lead:
+                at = lead.end()
+                combined["runs"] = [{**r, "bold": True} for r in slice_runs(combined["runs"], 0, at)] + slice_runs(
+                    combined["runs"], at, len(combined["text"]))
+        return combined
+    if body.lstrip().startswith(head.strip()):
+        body = body.lstrip()[len(head.strip()):].lstrip()
+        if not body:
+            return restore_rich(head, mapping)
     # Every protected token belongs to one of these two local source fields.
     head_map = {key: span for key, span in mapping.items() if key in expected_head}
     body_map = {key: span for key, span in mapping.items() if key not in head_map}

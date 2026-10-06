@@ -1,3 +1,5 @@
+import { translationDiagnostics } from "../domain/diagnostics.js";
+import { TranslationDiagnostics } from "./TranslationDiagnostics.js";
 import { useState } from "react";
 import { Button } from "@/ui/wb/Button.js";
 import type { BlockStatus } from "../domain/model.js";
@@ -40,6 +42,7 @@ export function TranslationSummary({ item, status }: { item: string; status: Blo
               {detail.text}
             </p>
           ))}
+          <TranslationDiagnostics values={translationDiagnostics(status)} />
         </div>
       ) : null}
     </section>

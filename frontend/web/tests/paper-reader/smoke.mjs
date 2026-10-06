@@ -1,3 +1,5 @@
+import { setPaperTone } from "./controls.mjs";
+import { readerAction } from "./controls.mjs";
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { readerBrowser } from './browser.mjs';
@@ -29,7 +31,7 @@ try{
   await page.screenshot({path:output+'/figure-preview.png'});await preview.getByRole('button',{name:'跳到图表区域',exact:true}).click();await page.waitForFunction(()=>document.querySelector('input[name=page]').value==='3');
  });
  await check('outline, named bookmark persistence and deletion',async()=>{
-  await page.getByRole('button',{name:'2 Methods',exact:true}).click();await button('添加书签').click();await page.getByRole('textbox',{name:'书签名称'}).fill('Research method');await button('保存书签').click();await page.getByRole('button',{name:'Research method · 2'}).waitFor();
+  await page.getByRole('button',{name:'2 Methods',exact:true}).click();await readerAction(page,"添加书签");await page.getByRole('textbox',{name:'书签名称'}).fill('Research method');await button('保存书签').click();await page.getByRole('button',{name:'Research method · 2'}).waitFor();
   await button('删除书签 Research method').click();await page.getByRole('button',{name:'Research method · 2'}).waitFor({state:'hidden'});
  });
  await check('search results jump, highlight text and have navigation history',async()=>{
@@ -38,9 +40,9 @@ try{
   await page.locator('[data-pdf-pane]').first().focus();await page.keyboard.press('n');await button('后退').click();
  });
  await check('night tone, focus and independent UI text remain readable',async()=>{
-  await page.getByRole('combobox',{name:'页面底色'}).selectOption('night');assert.match(await page.locator('[data-pdf-pane] canvas').first().evaluate(el=>getComputedStyle(el).filter),/invert/);
+  await setPaperTone(page,"night");assert.match(await page.locator('[data-pdf-pane] canvas').first().evaluate(el=>getComputedStyle(el).filter),/invert/);
   await page.locator('[data-pdf-pane]').first().focus();await page.keyboard.press('f');assert.equal(await page.getByLabel('阅读导航',{exact:true}).count(),0);
-  await page.screenshot({path:output+'/focus-night.png'});await page.mouse.move(400,4);await button('退出专注模式').waitFor();await button('退出专注模式').click();
+  await page.screenshot({path:output+'/focus-night.png'});await page.mouse.move(400,4);await page.getByRole("button",{name:"更多阅读操作",exact:true}).waitFor();await readerAction(page,"退出专注模式");
  });
  await check('compare mode follows page numbers and can disable synchronization',async()=>{
   await button('对照').click();await page.getByLabel('译文页面',{exact:true}).waitFor();await go(5);
@@ -62,7 +64,7 @@ try{
   await page.evaluate(()=>window.getSelection().removeAllRanges());
  });
  await check('supplementary translated pages can have their own named bookmarks',async()=>{
-  await button('译文').click();await go(14);await button('添加书签').click();await page.getByRole('textbox',{name:'书签名称'}).fill('Supplement');await button('保存书签').click();
+  await button('译文').click();await go(14);await readerAction(page,"添加书签");await page.getByRole('textbox',{name:'书签名称'}).fill('Supplement');await button('保存书签').click();
   await button('原文').click();await page.getByRole('button',{name:'Supplement · 14（译文）',exact:true}).click();await page.waitForFunction(()=>document.querySelector('input[name=page]').value==='14');
   await button('后退').click();await page.waitForFunction(()=>document.querySelector('[aria-label="阅读模式"] button[aria-pressed="true"]').textContent==='原文');
  });

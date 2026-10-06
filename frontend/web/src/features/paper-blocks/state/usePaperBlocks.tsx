@@ -1,3 +1,6 @@
+import { useLocalReview } from "./useLocalReview.js";
+import { translationDiagnostics } from "../domain/diagnostics.js";
+import { TranslationDiagnostics } from "../ui/TranslationDiagnostics.js";
 import { TranslationSummary } from "../ui/TranslationSummary.js";
 import { useDismissBlockSelection } from "./useDismissBlockSelection.js";
 import { useReadingAids } from "./useReadingAids.js";
@@ -212,6 +215,7 @@ export function usePaperBlocks(
       if (mounted.current) setSending(false);
     }
   }
+  const localReview = useLocalReview(api, attachment, language, refresh, setError);
   const variant = pdfFormats(status?.result || null, options.format || "layout");
   const blocks = status?.document?.blocks || [];
   const block = blocks.find((b) => b.id === selected?.id);
@@ -249,12 +253,13 @@ export function usePaperBlocks(
     ),
     tools: (
       <BlockTools
+        recheck={() => void localReview.run()}
         status={status}
         api={api}
         format={options.format || "layout"}
         setFormat={options.setFormat}
         enabled={enabled}
-        running={running}
+        running={running || localReview.pending}
         legacy={legacyAvailable}
         usage={usage}
         start={() => void start()}
@@ -322,6 +327,7 @@ export function usePaperBlocks(
             className="absolute bottom-3 left-3 z-40 max-w-lg rounded-xl bg-wb-panel p-3 shadow-wb-pop"
           >
             {issue}
+            <TranslationDiagnostics values={translationDiagnostics(status)} />
             <div className="flex gap-2">
               <Button
                 size="sm"

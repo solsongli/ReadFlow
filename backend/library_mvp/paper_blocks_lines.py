@@ -5,6 +5,7 @@ import statistics
 import pymupdf as fitz
 from . import paper_blocks_model as model
 from .paper_blocks_inline import span_content
+from .paper_text_normalization import expand_ligatures
 
 
 def same_baseline(a, b, size):
@@ -15,11 +16,12 @@ def lines(page):
     spans = [
         {
             **span,
+            "text": expand_ligatures(span["text"]),
             "sideways": abs(line.get("dir", (1, 0))[1]) > 0.3,
             "source_block": block_index,
             "source_width": group["bbox"][2] - group["bbox"][0],
         }
-        for block_index, group in enumerate(page.get_text("dict", flags=fitz.TEXTFLAGS_TEXT)["blocks"])
+        for block_index, group in enumerate(page.get_text("dict", flags=fitz.TEXTFLAGS_TEXT & ~fitz.TEXT_PRESERVE_LIGATURES)["blocks"])
         if group.get("type") == 0
         for line in group["lines"]
         for span in line["spans"]

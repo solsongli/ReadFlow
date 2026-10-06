@@ -88,19 +88,26 @@ class BlockJobTests(unittest.IsolatedAsyncioTestCase):
     async def test_at_most_two_requests_dedup_and_queued_cancel_release_credentials(self):
         entered = threading.Barrier(3)
         release = threading.Event()
-        active, peak = 0, 0
+        active, peak, started = 0, 0, 0
         lock = threading.Lock()
 
         def waiting(config, messages, control=None, **options):
-            nonlocal active, peak
+            nonlocal active, peak, started
             with lock:
                 active += 1
+                started += 1
+                synchronize = started <= 2
                 peak = max(peak, active)
             control.add_cancel_callback(release.set)
-            entered.wait(timeout=5)
-            release.wait(timeout=5)
-            with lock:
-                active -= 1
+            try:
+                # Only the first two calls rendezvous. Quality retries are later
+                # requests, and a broken fake barrier must not leak the active counter.
+                if synchronize:
+                    entered.wait(timeout=5)
+                release.wait(timeout=5)
+            finally:
+                with lock:
+                    active -= 1
             control.raise_if_stopped()
             rows = json.loads(messages[-1]["content"])["blocks"]
             return json.dumps({"blocks": [{"id": r["id"], "text": r["text"]} for r in rows]})

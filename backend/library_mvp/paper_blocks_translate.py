@@ -10,23 +10,31 @@ from .paper_quality import checks
 from .paper_markers import has_markers
 
 
-def parse_response(raw, structured=False):
+def parse_response(raw, structured=False, strict=False):
+    from .paper_json import read_payload, records, ModelJSONError
+
     try:
-        value = json.loads(
-            raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-        )
-        rows = value.get("blocks", [])
-        if not isinstance(rows, list):
-            return {}
+        rows = records(read_payload(raw, "blocks"), "blocks")
         output, duplicate = {}, set()
         for row in rows:
-            if not isinstance(row, dict) or not isinstance(row.get("id"), str):
+            identity = row.get("id")
+            if isinstance(identity, bool) or not isinstance(identity, (str, int, float)):
                 continue
-            if row["id"] in output:
-                duplicate.add(row["id"])
-            output[row["id"]] = row if structured else row.get("text")
-        return {key: val for key, val in output.items() if key not in duplicate}
-    except (ValueError, AttributeError):
+            if isinstance(identity, float):
+                if not identity.is_integer():
+                    continue
+                identity = int(identity)
+            identity = str(identity)
+            if identity in output:
+                duplicate.add(identity)
+            output[identity] = {**row, "id": identity} if structured else row.get("text")
+        result = {key: val for key, val in output.items() if key not in duplicate}
+        if strict and not result:
+            raise ModelJSONError("No usable block records")
+        return result
+    except (ValueError, TypeError, AttributeError):
+        if strict:
+            raise ModelJSONError("No usable block JSON") from None
         return {}
 
 
@@ -46,9 +54,16 @@ def translate_blocks(
     concurrency=4,
     plan=planned_batches,
     quality=False,
+    diagnose=lambda *_: None,
+    abort=lambda: None,
 ):
     selected = [b for b in blocks if b["type"] not in SKIP and b["text"].strip()]
-    missing = [b for b in selected if force or not rich_text(cache.get(cache_key(b, language, fingerprint)))]
+
+    def missing_value(block):
+        value = cache.get(cache_key(block, language, fingerprint))
+        return not rich_text(value) or isinstance(value, dict) and bool((value.get("qa") or {}).get("failure"))
+
+    missing = [b for b in selected if force or missing_value(b)]
     completed = len(selected) - len(missing)
     errors = []
 
@@ -59,29 +74,46 @@ def translate_blocks(
     def request(group, review):
         check()
         messages, maps = messages_for(group, terms, language, title, review)
-        response = call(messages)
+        from .paper_diagnostics import annotate
+
+        try:
+            response = call(messages)
+        except Exception as error:
+            check()
+            raise annotate(error, "qa_retry" if review else "batch")
         if isinstance(response, dict) and response.get("finish_reason") == "length" and len(group) > 1:
             return None, None  # Scheduler splits it; no serial recursion holds a worker.
         raw = response.get("content", "") if isinstance(response, dict) else response
-        parsed = parse_response(raw, structured=True)
+        try:
+            parsed = parse_response(raw, structured=True, strict=True)
+        except Exception as error:
+            raise annotate(error, "parse")
         values, reasons = {}, {}
         for block in group:
             raw_row = parsed.get(block["id"], {})
             raw_value = raw_row.get("text")
             from .paper_translation_response import restore_fields
+
             values[block["id"]] = restore_fields(block, raw_row, maps[block["id"]])
             if values[block["id"]] is None:
+                from .paper_json import ModelJSONError
+
+                problem = ModelJSONError("Block record could not be restored")
+                if isinstance(response, dict):
+                    problem.http_status = response.get("http_status")
+                diagnose(problem, "parse")
                 reasons[block["id"]] = (
                     "truncated"
                     if isinstance(response, dict) and response.get("finish_reason") == "length"
                     else "missing_id"
                     if raw_value is None
-                    else "unresolved_marker" if has_markers(raw_row) or has_markers(raw_row.get("head"))
+                    else "unresolved_marker"
+                    if has_markers(raw_row) or has_markers(raw_row.get("head"))
                     else "invalid_placeholder"
                 )
         return values, reasons
 
-    main = deque((group, None) for group in plan(missing, max(1, min(16, concurrency)), title, terms))
+    main = deque((group, None, 0) for group in plan(missing, max(1, min(16, concurrency)), title, terms))
     retries = deque()
     concurrency = max(1, min(16, concurrency))
     progress(completed, len(selected))
@@ -89,7 +121,7 @@ def translate_blocks(
         pending = {}
         while main or retries or pending:
             check()
-            qa_running = sum(review is not None for _, review in pending.values())
+            qa_running = sum(review is not None for _, review, _ in pending.values())
             while len(pending) < concurrency and (main or retries):
                 if retries and (not main or qa_running < max(1, concurrency // 3)):
                     entries, tokens = [], 0
@@ -102,20 +134,39 @@ def translate_blocks(
                     group = [b for b, _ in entries]
                     review = {b["id"]: issues for b, issues in entries}
                     qa_running += 1
+                    attempt = 0
                 else:
-                    group, review = main.popleft()
-                pending[pool.submit(request, group, review)] = (group, review)
+                    group, review, attempt = main.popleft()
+                pending[pool.submit(request, group, review)] = (group, review, attempt)
             finished, _ = wait(pending, timeout=0.05, return_when=FIRST_COMPLETED)
             patches = []
             for future in finished:
                 patch = {}
-                group, review = pending.pop(future)
-                values, reasons = future.result()
+                group, review, attempt = pending.pop(future)
+                failed_request = False
+                try:
+                    values, reasons = future.result()
+                except Exception as error:
+                    check()
+                    from .paper_diagnostics import global_failure
+
+                    diagnose(error, "qa_retry" if review else "batch")
+                    if global_failure(error):
+                        abort()
+                        raise
+                    if attempt < 2:
+                        size = max(1, len(group) // 2)
+                        for offset in range(0, len(group), size):
+                            main.appendleft((group[offset : offset + size], review, attempt + 1))
+                        continue
+                    failed_request = True
+                    values = {b["id"]: None for b in group}
+                    reasons = {b["id"]: "request_failed" for b in group}
                 if values is None:
                     middle = len(group) // 2
                     # These are format/length subdivisions, not another quality retry.
-                    main.appendleft((group[middle:], review))
-                    main.appendleft((group[:middle], review))
+                    main.appendleft((group[middle:], review, attempt))
+                    main.appendleft((group[:middle], review, attempt))
                     continue
                 for block in group:
                     translated = values.get(block["id"])
@@ -126,7 +177,7 @@ def translate_blocks(
                     )
                     if reasons.get(block["id"]) == "unresolved_marker":
                         issues = list(dict.fromkeys([*issues, "internal_markers"]))
-                    if issues and review is None:
+                    if issues and review is None and not failed_request:
                         retries.append((block, issues))
                         continue
                     if translated is None:

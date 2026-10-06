@@ -3,30 +3,32 @@ from collections import Counter
 import json
 import re
 from .paper_blocks_storage import write_json
+from .paper_text_normalization import expand_ligatures
+from .paper_term_matching import occurs, automatic_term_valid, ORDINARY
 
 WORD = r"[A-Za-z][A-Za-z0-9]*(?:[-/][A-Za-z0-9]+)*"
 STOP = frozenset("the a an and of in for to with on our this we is are as by from that these using".split())
 
 
-def occurs(term, text):
-    return bool(re.search(r"(?<!\w)" + re.escape(term) + r"(?!\w)", text, re.I))
-
-
 def candidates(blocks):
     prose = [b for b in blocks if b["type"] in {"title", "abstract", "heading", "text", "list"}]
-    text = "\n".join(b["text"] for b in prose)
-    focus = "\n".join(b["text"] for b in prose if b.get("page", 1) <= 2 or b["type"] in {"title", "abstract"})
+    text = "\n".join(expand_ligatures(b["text"]) for b in prose)
+    focus = "\n".join(
+        expand_ligatures(b["text"])
+        for b in prose
+        if b.get("page", 1) <= 2 or b["type"] in {"title", "abstract"}
+    )
     result = {}
 
     def add(source, kind, score):
         source = source.strip(" .,:;-\n")
-        if 2 <= len(source) <= 100:
+        if 2 <= len(source) <= 100 and automatic_term_valid({"source": source, "kind": kind}):
             key = source.casefold()
             if key not in result or score > result[key]["score"]:
                 result[key] = {"source": source, "kind": kind, "keep": kind == "name", "score": score}
 
     for match in re.finditer(
-        r"((?:" + WORD + r"[ \n]+){0,7}" + WORD + r")\s*\(([A-Z][A-Z0-9-]{1,11})\)", text
+        r"(?<!\w)((?:" + WORD + r"[ \n]+){0,7}" + WORD + r")\s*\(([A-Z][A-Z0-9-]{1,11})\)", text
     ):
         words, short = match[1].split(), match[2]
         while words and words[0].casefold() in STOP:
@@ -45,7 +47,7 @@ def candidates(blocks):
             add(name, "name", 30 + count)
     counts, spelling = Counter(), {}
     for sentence in re.split(r"[.!?;:\n]", focus):
-        words = re.findall(WORD, sentence)
+        words = re.findall(r"(?<!\w)" + WORD + r"(?!\w)", sentence)
         for length in (2, 3, 4):
             for index in range(len(words) - length + 1):
                 group = words[index : index + length]
@@ -68,26 +70,30 @@ def normalize(rows):
     for row in rows or []:
         if not isinstance(row, dict):
             continue
-        source = row.get("source", row.get("original", ""))
-        target = row.get("target", row.get("translation", ""))
+        source = expand_ligatures(row.get("source", row.get("original", "")))
+        target = expand_ligatures(row.get("target", row.get("translation", "")))
         if (
             isinstance(source, str)
             and isinstance(target, str)
             and 0 < len(source.strip()) <= 100
             and 0 < len(target.strip()) <= 300
         ):
+            if row.get("automatic", "score" in row) and not automatic_term_valid({**row, "source": source}):
+                continue
             result[source.strip().casefold()] = {
                 "source": source.strip(),
+                "automatic": bool(row.get("automatic", "score" in row)),
                 "target": target.strip(),
                 "keep": bool(row.get("keep")),
                 "kind": row.get("kind", "term"),
+                **({"user": True} if row.get("user") else {}),
             }
     return list(result.values())
 
 
 def effective(paper, user):
     rows = {r["source"].casefold(): r for r in normalize(paper)}
-    for row in normalize(user):
+    for row in normalize([{**r, "automatic": False} if isinstance(r, dict) else r for r in (user or [])]):
         rows[row["source"].casefold()] = {**row, "user": True, "keep": row["source"] == row["target"]}
     return list(rows.values())
 
@@ -100,7 +106,11 @@ def relevant(terms, blocks):
 def load(root, language):
     path = root / "terms.json"
     all_terms = json.loads(path.read_text()) if path.exists() else {}
-    return all_terms.get(language, {"entries": [], "prepared": False, "revision": 0})
+    value = all_terms.get(language, {"entries": [], "prepared": False, "revision": 0})
+    if value.get("term_normalization") != 1 and value.get("entries"):
+        entries = normalize(value["entries"])
+        value = {**value, "entries": entries, "term_normalization": 1, "revision": value.get("revision", 0)}
+    return value
 
 
 def save(root, language, value):
@@ -134,13 +144,13 @@ def propose(rows, call, language):
         ]
     )
     raw = response.get("content", "") if isinstance(response, dict) else response
-    try:
-        values = json.loads(
-            raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-        )
-        proposals = {r["source"].casefold(): r for r in normalize(values.get("terms", []))}
-    except (ValueError, AttributeError):
-        proposals = {}
+    from .paper_json import read_payload, records
+
+    values = read_payload(raw, "terms")
+    proposals = {r["source"].casefold(): r for r in normalize(records(values, "terms"))}
+    if any(not row["keep"] for row in rows) and not any(not row["keep"] and row["source"].casefold() in proposals for row in rows):
+        from .paper_json import ModelJSONError
+        raise ModelJSONError("No usable terminology proposals")
     return [
         {
             **row,

@@ -1,3 +1,4 @@
+import { setPaperTone } from "../paper-reader/controls.mjs";
 import assert from "node:assert/strict";
 import { mkdir, readFile } from "node:fs/promises";
 import { readerBrowser } from "../paper-reader/browser.mjs";
@@ -31,7 +32,7 @@ try {
   await page.locator(`[data-inline-block="${translated.id}"]`).first().waitFor();
   assert.equal(await page.locator(`[data-inline-block="${missing.id}"]`).count(), 0);
   for (const tone of ["white", "sepia", "night"]) {
-    await page.getByLabel("页面底色", { exact: true }).selectOption(tone);
+    await setPaperTone(page, tone);
     await page.screenshot({ path: `${output}/inline-${tone}.png`, animations: "disabled" });
   }
   await page.evaluate(() => window.fixture.wb.setPrefs({ blockImageText: false }));

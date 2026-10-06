@@ -1,3 +1,14 @@
+export interface TranslationDiagnostic {
+  stage: string;
+  exception: string;
+  http_status?: number;
+  provider_code?: string;
+}
+export interface BlockError {
+  code: string;
+  message: string;
+  details?: TranslationDiagnostic;
+}
 export interface InlineRun {
   kind: "text" | "super" | "sub";
   text: string;
@@ -72,6 +83,8 @@ export interface BlockStatus {
   language?: string;
   result: {
     qa?: QualitySummary;
+    diagnostics?: TranslationDiagnostic[];
+    error?: BlockError | null;
     repair_pending?: boolean;
     marker_cleanup?: { tokens: number; unresolved: number };
     revision: string;
@@ -103,7 +116,8 @@ export interface BlockJob {
   percent: number;
   fallback_blocks?: string[];
   translation_fallback?: string[];
-  error?: { code: string; message: string };
+  error?: BlockError;
+  diagnostics?: TranslationDiagnostic[];
   usage?: BlockUsage;
   notices?: string[];
 }

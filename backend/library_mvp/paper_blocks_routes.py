@@ -1,4 +1,5 @@
 import re
+import asyncio
 from fastapi import Request
 from fastapi.responses import FileResponse, Response
 from .paper_blocks_service import BlockService
@@ -21,6 +22,11 @@ def register_paper_blocks(app, store, json_body):
     @app.patch(root + "/terms")
     async def terms(item_id: str, request: Request):
         return service.edit_terms(item_id, await json_body(request))
+
+    @app.post(root + "/recheck")
+    async def recheck(item_id: str, request: Request):
+        from .paper_recheck import recheck
+        return await asyncio.to_thread(recheck, service, item_id, await json_body(request))
 
     @app.post(root + "/translate", status_code=202)
     async def translate(item_id: str, request: Request):

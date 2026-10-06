@@ -20,7 +20,7 @@ async function open(configured = true) {
     await page.getByRole("button", { name: "块模式", exact: true }).click();
     await page.waitForFunction(() =>
       [...document.querySelectorAll("button")].some(
-        (button) => button.textContent === "导出译文" && !button.disabled,
+        (button) => button.textContent?.includes("翻译") && button.getAttribute("aria-label") === "翻译菜单",
       ),
     );
     return env;
@@ -138,11 +138,11 @@ try {
   await page.getByLabel("原文页面", { exact: true }).waitFor();
   await page.screenshot({ path: output + "/compare-pdf.png" });
   checks.push("failed request retry, new Typst PDF and comparison mode");
-  await button("导出译文").click();
+  await page.getByRole("button",{name:"翻译菜单",exact:true}).click();
   const pdfDownload = page.waitForEvent("download");
   await page.getByRole("menuitem", { name: "重排 PDF", exact: true }).click();
   assert.equal((await pdfDownload).suggestedFilename(), "ReadFlow-重排译文.pdf");
-  await button("导出译文").click();
+  await page.getByRole("button",{name:"翻译菜单",exact:true}).click();
   const latexDownload = page.waitForEvent("download");
   await page.getByRole("menuitem", { name: "LaTeX 工程", exact: true }).click();
   assert.equal((await latexDownload).suggestedFilename(), "ReadFlow-LaTeX.zip");

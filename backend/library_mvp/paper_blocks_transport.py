@@ -7,6 +7,8 @@ import httpx
 from .ai_runtime import RequestControl
 from .workbench_translation_errors import translation_error
 from .translation_speed import TranslationPolicy, official_deepseek, workers
+from .paper_diagnostics import provider_code, global_failure, annotate
+from .paper_json import lower_keys
 
 
 def wait_backoff(seconds, control):
@@ -131,6 +133,23 @@ async def _request(config, messages, control, transport, backoff, json_mode, pol
                 ):
                     policy.reject_thinking(config)
                     continue
+                http_error = None
+                if not 200 <= status < 300:
+                    failure = translation_error(content, status, [config.get("api_key", "")])
+                    http_error = RuntimeError(failure["message"])
+                    http_error.safe_error = {"code": failure["code"], "message": failure["message"]}
+                    http_error.http_status = status
+                    try:
+                        data = json.loads(content).get("error", {})
+                        http_error.provider_code = (
+                            provider_code(data.get("code") or data.get("type"))
+                            if isinstance(data, dict)
+                            else None
+                        )
+                    except (ValueError, AttributeError):
+                        pass
+                    if global_failure(http_error):
+                        raise http_error
                 if status == 429:
                     policy.limiter.rate_limited(permit.epoch)
                 if (status == 429 or status >= 500) and retry < 3:
@@ -141,23 +160,29 @@ async def _request(config, messages, control, transport, backoff, json_mode, pol
                     permit.backoff(delay, backoff)
                     retry += 1
                     continue
-                if not 200 <= status < 300:
-                    failure = translation_error(content, status, [config.get("api_key", "")])
-                    error = RuntimeError(failure["message"])
-                    error.safe_error = {"code": failure["code"], "message": failure["message"]}
-                    raise error
-                value = json.loads(content)
-                if metrics:
-                    metrics.tokens(phase, value.get("usage"))
-                choice = value["choices"][0]
-                answer = choice.get("message", {}).get("content", "")
-                if not isinstance(answer, str):
-                    raise ValueError("翻译服务没有返回文本。")
+                if http_error:
+                    raise http_error
+                value = {}
+                try:
+                    value = lower_keys(json.loads(content))
+                    if metrics:
+                        metrics.tokens(phase, value.get("usage"))
+                    choice = lower_keys(value["choices"][0])
+                    answer = lower_keys(choice.get("message", {})).get("content", "")
+                    if not isinstance(answer, str):
+                        raise ValueError("Translation response contains no text")
+                except Exception as error:
+                    error.http_status = status
+                    error.reported_usage = (
+                        token_usage(value.get("usage")) if isinstance(value, dict) else token_usage({})
+                    )
+                    raise annotate(error, "parse")
                 if config.get("api_key"):
                     answer = answer.replace(config["api_key"], "[已隐藏]")
                 policy.limiter.succeeded(permit.epoch, permit.ramp)
                 return {
                     "content": answer,
+                    "http_status": status,
                     "finish_reason": choice.get("finish_reason"),
                     "usage": token_usage(value.get("usage")),
                     "notices": policy.notices(config),
