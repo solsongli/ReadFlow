@@ -8,7 +8,8 @@ try {
   await page.getByRole("option", { name: "Paper a", exact: true }).dblclick();
   await page.getByRole("tab", { name: "译文", exact: true }).click();
   const panel = page.getByLabel("本页译文", { exact: true });
-  await panel.getByText("质检：2 块已自动重译，1 块仍需核对", { exact: true }).waitFor();
+  await panel.getByRole("button", { name: /翻译完成.*1 块需核对/ }).click();
+  await panel.getByText("质检：2 块已自动重译，1 块仍需核对。", { exact: true }).waitFor();
   await panel.getByRole("button", { name: "需核对", exact: true }).click();
   assert.equal(await panel.locator("[data-sidebar-block]").count(), 1);
   assert.equal(await panel.locator("strong").filter({ hasText: "任务。" }).evaluate((el) => getComputedStyle(el).fontWeight), "700");

@@ -11,6 +11,8 @@ try {
   await page.getByText("翻译 35%", { exact: true }).first().waitFor();
   blocks.finish();
   await page.getByText("本次约 842 tokens，其中推理约 512", { exact: true }).waitFor();
+  await page.getByRole("tab", { name: "译文", exact: true }).click();
+  await page.getByRole("button", { name: /翻译完成.*排版需核对/ }).click();
   const render = page.locator('[data-block-fallback="render"]');
   const labels = page.locator('[data-block-fallback="label"]');
   await labels.waitFor();

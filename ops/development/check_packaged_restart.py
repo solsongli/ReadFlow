@@ -11,6 +11,7 @@ import selectors
 import subprocess
 import sys
 import tempfile
+import time
 from urllib.request import Request, urlopen
 
 
@@ -44,17 +45,29 @@ async def seed(resources, root):
         deck = store.flashcards.deck({'name': 'Restart deck'})
         store.flashcards.save({'item_id': imported['item']['id'], 'annotation_id': annotation['id'],
             'deck_id': deck['id'], 'front': 'Synthetic question', 'back': 'Synthetic answer', 'page': 1})
+        term = {'item_id': imported['item']['id'], 'deck_id': deck['id'], 'kind': 'term',
+                'front': 'Synthetic term', 'back': '本地术语', 'quote': 'Synthetic source', 'page': 1}
+        first = store.flashcards.save(term)
+        assert store.flashcards.save(term)['id'] == first['id']
+        with store.transaction():
+            store.db.execute('INSERT INTO reader_overviews(item_id,result) VALUES(?,?)',
+                (imported['item']['id'], json.dumps({'sections': {}, 'target': 'restart-fixture'})))
         (root / 'optional-ocr/fixture').mkdir(parents=True, exist_ok=True)
         (root / 'optional-ocr/fixture/model.bin').write_bytes(b'synthetic fixture, never loaded')
         AgentConfig(root / 'agent-config.json').save({'base_url': 'http://127.0.0.1:9/v1', 'model': 'fixture', 'api_key': ''})
         document = app.state.paper_blocks.storage.extract(imported['attachment'])
         from library_mvp.paper_blocks_layout import render_layout
         from library_mvp.paper_blocks_model import cache_key
-        cache = {cache_key(block, 'zh-CN', 'restart-fixture'): {'text': '本地译文排版重启校验'}
+        cache = {cache_key(block, 'zh-CN', 'restart-fixture'): {'text': '__BOLD_START__本地译文排版重启校验BOLD_END'}
                  for block in document['blocks']}
         folder = app.state.paper_blocks.storage.directory(imported['attachment'])
         render_layout(store.attachment_path(imported['attachment']['id']), folder, document,
                       cache, 'zh-CN', 'restart-fixture')
+        from library_mvp.paper_blocks_storage import write_json
+        write_json(folder / 'translations.json', cache)
+        write_json(folder / 'selection.json', {'language': 'zh-CN', 'fingerprint': 'restart-fixture'})
+        write_json(folder / 'result.json', {'language': 'zh-CN', 'fingerprint': 'restart-fixture',
+            'revision': 'legacy-marker-fixture', 'layout_ready': True, 'reflow_ready': False})
         assert (folder / 'translated-layout.pdf').is_file()
         assert list((root / 'paper-blocks').glob('*/blocks.json'))
         assert list((root / 'paper-blocks').glob('*/layout-*.json'))
@@ -99,6 +112,12 @@ def check(unpacked, home):
             items = get('/api/research/items')['items']
             assert len(items) == 1
             blocks = get('/api/research/workbench/items/' + items[0]['id'] + '/blocks')
+            deadline = time.monotonic() + 30
+            while blocks.get('result', {}).get('repair_pending') and time.monotonic() < deadline:
+                time.sleep(.1)
+                blocks = get('/api/research/workbench/items/' + items[0]['id'] + '/blocks')
+            assert blocks['result']['reflow_ready'] and not blocks['result'].get('repair_pending')
+            assert all('BOLD' not in (b.get('translation') or '') for b in blocks['document']['blocks'])
             assert blocks['document']['blocks']
             assert blocks['document']['capabilities']['ocr']
             assert blocks['document']['capabilities']['layout'] == 'PP-DocLayout-S'
@@ -107,10 +126,12 @@ def check(unpacked, home):
                                  '/blocks/files/translated-layout.pdf', headers={'X-RetainPDF-Internal': token}), timeout=5) as pdf:
                 assert pdf.read(5) == b'%PDF-'
             assert len(get('/api/research/workbench/canvases')['items']) == 1
-            assert len(get('/api/research/workbench/flashcards')['items']) == 1
+            assert len(get('/api/research/workbench/flashcards')['items']) == 2
+            overview = get('/api/research/workbench/items/' + items[0]['id'] + '/assistance/overview')
+            assert overview['result']['target'] == 'restart-fixture'
             status = get('/api/research/connector/status')
             assert status['status'] == 'disabled' and status['client'] == 'ReadFlow'
-            results.append({'run': number + 1, 'health': True, 'persistent_items': 1,
+            results.append({'run': number + 1, 'health': True, 'persistent_items': 1, 'overview_cache': True, 'term_cards': True, 'marker_repair': True,
                             'blocks_cache': True, 'layout_cache': True, 'ocr_cache': True, 'layout_pdf': True, 'connector': 'disabled'})
         finally:
             child.terminate()

@@ -49,6 +49,27 @@ export async function blocksMock(query) {
       review.translation = review.translation_runs.map((r) => r.text).join("");
     }
   }
+  if (query.includes("x9")) {
+    terms = { entries: [{ source: corpus ? "robot" : "method", target: "机器人方法", kind: "term" },
+      { source: corpus === "2304.02643" ? "segmentation" : corpus ? "policy" : "model", target: "控制策略", kind: "term" }],
+      revision: 1, prepared: true };
+    if (document) for (const block of document.blocks) {
+      if (["title", "heading", "abstract", "text", "caption"].includes(block.type)) {
+        block.translation = (block.type === "heading" ? "【译】章节：" : "【译】") +
+          "机器人方法与控制策略用于研究与验证。".repeat(Math.max(1, Math.ceil(block.text.length / 80)));
+        block.translation_runs = [{ kind: "text", text: block.translation }];
+      }
+    }
+  }
+  if (query.includes("summary")) {
+    qa = { checked: 345, retried: 24, needs_review: 6 };
+    result = { revision: "summary", language, layout_ready: true, reflow_ready: true, qa,
+      layout_overflow: ["a"], layout_truncated: ["a"], layout_render_fallback: ["b"],
+      layout_label_fallback: ["c", "d"], label_fallback: ["e"], render_fallback: [] };
+  }
+  if (query.includes("repaired-sam")) {
+    document = JSON.parse(await readFile("/tmp/readflow-x9b/sam-final/ui-document.json", "utf8"));
+  }
   const active = (job) => ["running", "queued", "cancelling"].includes(job.status);
   const state = (requestedLanguage) => {
     const current = jobs.filter(active);
@@ -142,7 +163,12 @@ export async function blocksMock(query) {
       const url = new URL(route.request().url()),
         path = url.pathname;
       if (!/^\/api\/research\/workbench\/items\/[^/]+\/blocks(?:\/|$)/.test(path)) return false;
-      if (/\/files\/[a-f0-9]{24}\.pdf$/.test(path)) {
+      if (/\/files\/[a-f0-9]{24}\.png$/.test(path)) {
+        if (query.includes("auth-thumbs") && route.request().headers()["x-api-key"] !== "offline-thumbnail-fixture") {
+          await route.fulfill({ status: 401 }); return true;
+        }
+        await route.fulfill({ body: await readFile(`/tmp/readflow-x6/${corpus ? corpus + "/" : ""}assets/${path.split("/").at(-1)}`), contentType: "image/png" });
+      } else if (/\/files\/[a-f0-9]{24}\.pdf$/.test(path)) {
         await route.fulfill({ body: await readFile(`/tmp/readflow-x6/${corpus ? corpus + "/" : ""}assets/${path.split("/").at(-1)}`), contentType: "application/pdf" });
       } else if (path.endsWith("/files/translated-layout.pdf")) {
         await route.fulfill({ body: await readFile("/tmp/readflow-x7/fixture/translated-layout.pdf"), contentType: "application/pdf" });

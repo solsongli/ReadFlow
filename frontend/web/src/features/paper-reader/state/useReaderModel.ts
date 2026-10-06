@@ -1,9 +1,10 @@
+import { useOutline } from "./useOutline.js";
 import { useBlockNavigation } from "./useBlockNavigation.js";
 import { useReferenceLookup } from "./useReferenceLookup.js";
 import { copySelection } from "./copySelection.js";
 import { useReaderDialogFocus } from "./useReaderDialogFocus.js";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { figureTargets, heuristicOutline, parseReferences, searchLines } from "../domain/analysis.js";
+import { figureTargets, parseReferences, searchLines } from "../domain/analysis.js";
 import {
   correspondingPage,
   externalLink,
@@ -56,10 +57,7 @@ export function useReaderModel(ports: ReaderPorts) {
       ),
     [source.lines, source.sizes],
   );
-  const headings = useMemo(
-    () => (main.outline.length ? main.outline : heuristicOutline(main.lines)),
-    [main.outline, main.lines],
-  );
+  const headings = useOutline(main, mode, ports);
   const hits = useMemo(() => searchLines(main.lines, query), [main.lines, query]);
   const hovered = useHover(main.pdf, references, figures, source.pdf);
   const saveTime = useRef(0),

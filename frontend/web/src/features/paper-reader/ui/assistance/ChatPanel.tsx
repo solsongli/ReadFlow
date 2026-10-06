@@ -4,6 +4,7 @@ import type { AssistancePorts, ReaderContext } from "../../domain/assistance.js"
 import type { useReaderChat } from "../../state/assistance/useChat.js";
 import { Answer } from "./Answer.js";
 export function ChatPanel({
+  overview,
   chat,
   ports,
   context,
@@ -11,6 +12,7 @@ export function ChatPanel({
   pages,
   jump,
 }: {
+  overview: () => void;
   chat: ReturnType<typeof useReaderChat>;
   ports: AssistancePorts;
   context: () => ReaderContext;
@@ -38,6 +40,9 @@ export function ChatPanel({
   }, [quote.key]);
   return (
     <section aria-label="AI 伴读对话" className="flex h-full min-h-0 flex-col p-3">
+      <Button size="sm" className="mb-2 self-start" onClick={overview}>
+        论文速览
+      </Button>
       <header className="flex items-center gap-2 text-[0.75rem] text-wb-text-3">
         <span className="min-w-0 flex-1 truncate">
           {chat.status ? `${chat.status.service} · ${chat.status.model}` : "AI 伴读"}

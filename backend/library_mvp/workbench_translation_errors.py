@@ -26,7 +26,7 @@ def translation_error(value, status=None, secrets=()):
     elif re.search(r'ocr|rapidocr|扫描|识别', text):
         code, message, settings = 'ocr', '文字识别失败，请检查本地 OCR 模块后重试。', 'ocr'
     elif status in (502, 503, 504) or re.search(r'timeout|timed.out|connect|network|dns|超时|连接', text):
-        code, message, settings = 'network', '无法连接翻译服务或请求超时，请检查服务地址。', 'translation'
+        code, message, settings = 'network', '无法连接翻译服务或请求超时，请检查网络连接和服务地址。', 'translation'
     else:
         code, message, settings = 'other', '翻译未能完成，请查看详情后重试。', None
     return {'code': code, 'message': message, 'settings': settings, 'details': safe_detail(raw, secrets)}

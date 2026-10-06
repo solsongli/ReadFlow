@@ -1,5 +1,7 @@
 export function assistanceMock(query) {
   const sessions = new Map();
+  const overviews = new Map();
+  let overviewDelay = 0;
   const calls = [];
   const status = {
     service: "本地假服务",
@@ -18,7 +20,7 @@ export function assistanceMock(query) {
       return true;
     }
     const match = path.match(
-      /^\/api\/research\/workbench\/items\/([^/]+)\/assistance\/(translate|conversation|ask)$/,
+      /^\/api\/research\/workbench\/items\/([^/]+)\/assistance\/(translate|conversation|ask|overview)$/,
     );
     if (!match) return false;
     const method = route.request().method();
@@ -27,6 +29,22 @@ export function assistanceMock(query) {
       action = match[2];
     if (!sessions.has(item)) sessions.set(item, { messages: [], consent_target: "", generation: 0 });
     const session = sessions.get(item);
+    if (action === "overview") {
+      const saved = overviews.get(item) || { result: null, consent_target: "" };
+      if (method === "GET") { await route.fulfill({ json: saved }); return true; }
+      if (!value.consent && saved.consent_target !== status.target) {
+        await route.fulfill({ status: 409, json: { error: { code: "consent_required" } } }); return true;
+      }
+      calls.push({ action });
+      if (overviewDelay) await new Promise(resolve => setTimeout(resolve, overviewDelay));
+      const result = { sections: Object.fromEntries(["motivation", "methods", "results", "conclusions", "related_work"].map(key => [key,
+        [{ text: "这是离线导读：从视觉与语言指令学习动作策略，请结合原文核对。", page: 2, trusted: true },
+          { text: "输入片段未提供这部分证据。", page: null, trusted: false }]])),
+        target: status.target, attachment_id: value.attachment_id, created_at: new Date().toISOString(), pages: [1, 2] };
+      overviews.set(item, { result, consent_target: value.remember ? status.target : "" });
+      await route.fulfill({ contentType: "text/event-stream", body: 'data: ' + JSON.stringify({ type: "done", text: JSON.stringify(result) }) + '\n\n' });
+      return true;
+    }
     if (action === "translate") {
       calls.push({ action, text: value.text, translation: value.translation });
       await route.fulfill({ json: { text: "【译】" + value.text, service: status.service } });
@@ -77,6 +95,7 @@ export function assistanceMock(query) {
     route,
     calls,
     sessions,
+    setOverviewDelay: (value) => { overviewDelay = value; },
     setOffline: (value) => {
       offline = value;
     },

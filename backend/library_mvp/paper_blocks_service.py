@@ -48,7 +48,15 @@ class BlockService:
                 else {}
             )
             context = contexts.get(language, old if old.get("language") == language else {})
+            if not context.get("fingerprint"):
+                prior = self.storage.result(entry) or {}
+                if prior.get("language") == language and prior.get("fingerprint"):
+                    context = prior
             cache = self.storage.cache(entry)
+            jobs = [dict(j) for j in self.jobs.values() if j["sha256"] == entry["sha256"]]
+        from .paper_cache_repair import schedule_repair
+        schedule_repair(self, item, entry)
+        with self.lock:
             jobs = [dict(j) for j in self.jobs.values() if j["sha256"] == entry["sha256"]]
         active = [j for j in jobs if j["status"] in ("queued", "running", "cancelling")]
         job = next(
@@ -71,7 +79,7 @@ class BlockService:
                     if block["type"] in SKIP
                     else cache.get(cache_key(block, language, context.get("fingerprint", "")))
                 )
-                has_translation = has_translation or bool(value)
+                has_translation = has_translation or bool(rich_text(value))
                 runs = (
                     value.get("runs")
                     if isinstance(value, dict)
@@ -102,6 +110,9 @@ class BlockService:
             renderer = True
         except StoreError:
             renderer = False
+        result = self.storage.result(entry)
+        if result and self.storage.repair_state(entry).get("pending"):
+            result = {**result, "layout_ready": False, "reflow_ready": False, "repair_pending": True}
         return {
             "document": document,
             "job": job,
@@ -109,7 +120,7 @@ class BlockService:
             "has_translation": has_translation,
             "language": language,
             "needs_extract": stale,
-            "result": self.storage.result(entry),
+            "result": result,
             "renderer_ready": renderer,
             "terms": paper_terms.load(root, language),
             "qa": summary(
@@ -236,9 +247,7 @@ class BlockService:
 
     def merge_cache(self, entry, patch):
         with self.lock:
-            latest = self.storage.cache(entry)
-            latest.update(patch)
-            write_json(self.storage.directory(entry) / "translations.json", latest)
+            self.storage.merge_cache(entry, patch)
 
     def cancel(self, item, identity):
         with self.lock:

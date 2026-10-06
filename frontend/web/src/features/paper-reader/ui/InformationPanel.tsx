@@ -1,6 +1,8 @@
+import { Button } from "@/ui/wb/Button.js";
 import { useState, useEffect, type ReactNode } from "react";
 import type { PaperMetadata, Reference } from "../domain/types.js";
 export function InformationPanel({
+  overview,
   metadata,
   seconds,
   page,
@@ -10,6 +12,7 @@ export function InformationPanel({
   hidden,
   panelRequest,
 }: {
+  overview?: () => void;
   hidden?: boolean;
   panelRequest?: number;
   panels?: Partial<Record<"批注" | "画布" | "AI" | "译文", ReactNode>>;
@@ -65,6 +68,11 @@ export function InformationPanel({
         <p className="text-[0.75rem] leading-relaxed text-wb-text-3">
           {metadata.authors.join(", ") || "作者未知"}
         </p>
+        {overview ? (
+          <Button size="sm" className="mb-3" onClick={overview}>
+            论文速览
+          </Button>
+        ) : null}
         <dl className="m-0 space-y-3 rounded-xl bg-wb-panel-2 p-3 text-[0.75rem]">
           {[
             ["出处", metadata.venue],

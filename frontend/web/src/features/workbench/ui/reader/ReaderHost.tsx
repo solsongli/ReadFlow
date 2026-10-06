@@ -13,6 +13,8 @@ import { useWb, useWorkbench } from "../context.js";
 export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean }) {
   const wb = useWorkbench();
   const annotationSemantics = useWb((state) => state.annotationSemantics);
+  const termHover = useWb((state) => state.termHover);
+  const bilingualOutline = useWb((state) => state.bilingualOutline);
   const tone = useWb((state) => state.paperTone);
   const language = useWb((state) => state.blockLanguage);
   const format = useWb((state) => state.translationFormat);
@@ -33,7 +35,7 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
     row?.translation.status === "done",
     (message) => wb.notify(message, "success"),
     { disabled, hintDismissed, save: (prefs) => wb.setPrefs(prefs) },
-    { imageText, density, currentPage: () => currentPage.current, format, setFormat: (translationFormat) => wb.setPrefs({ translationFormat }) },
+    { imageText, termHover, density, currentPage: () => currentPage.current, format, setFormat: (translationFormat) => wb.setPrefs({ translationFormat }) },
   );
   if (!row || !tab.attachmentId) {
     return (
@@ -48,6 +50,9 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
     <div data-wb-reader-active={active} className={cn("absolute inset-0", !active && "hidden")}>
       <PaperReader
         assistance={assistance}
+        blockHeadings={blocks.headings}
+        bilingualOutline={bilingualOutline}
+        figures={blocks.figures}
         blockOverlay={blocks.overlay}
         inlineAvailable={blocks.inlineAvailable}
         layoutAligned={blocks.layoutAligned}

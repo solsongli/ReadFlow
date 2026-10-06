@@ -24,6 +24,7 @@ import { Preview } from "./Preview.js";
 import { SelectionTools } from "./SelectionTools.js";
 export interface PaperReaderProps extends ReaderPorts {
   toolbarTools?: ReactNode;
+  figures?: ReactNode;
   blockOverlay?: (page: number, interactive: boolean, inline?: boolean, peek?: boolean) => ReactNode;
   translationPanel?: (page: number) => ReactNode;
   canvas?: ReactNode;
@@ -201,7 +202,9 @@ export function PaperReader(ports: PaperReaderProps) {
       ) : null}
       {mode === "compare" ? (
         <div className="flex justify-between border-b border-wb-line-soft px-4 py-1 text-[0.6875rem] text-wb-text-3">
-          <span>{ports.layoutAligned ? "原版式译文 · 同页同位置对齐" : "重排译文 · 同页号对应，缺页停在末页"}</span>
+          <span>
+            {ports.layoutAligned ? "原版式译文 · 同页同位置对齐" : "重排译文 · 同页号对应，缺页停在末页"}
+          </span>
           <label>
             <input type="checkbox" checked={sync} onChange={(event) => setSync(event.target.checked)} />{" "}
             同步滚动
@@ -211,6 +214,7 @@ export function PaperReader(ports: PaperReaderProps) {
       <ReaderCanvasLayout layout={layout} canvas={ports.canvas}>
         {left && !focus && layout === "document" && main.pdf ? (
           <NavigationPanel
+            figures={ports.figures}
             tab={nav}
             setTab={setNav}
             outline={headings}
@@ -282,6 +286,7 @@ export function PaperReader(ports: PaperReaderProps) {
           />
         ) : null}
         <InformationPanel
+          overview={ports.assistance ? assistance.overview : undefined}
           hidden={!right || focus || layout !== "document"}
           panelRequest={assistance.panelRequest}
           panels={{

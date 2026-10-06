@@ -3,6 +3,7 @@ import json
 import os
 import re
 import tempfile
+import threading
 from pathlib import Path
 from .data_layout import PAPER_BLOCKS
 from .store import StoreError
@@ -26,6 +27,8 @@ def write_json(path, value):
 class BlockStorage:
     def __init__(self, store):
         self.store = store
+        self.cache_lock = threading.RLock()
+        self.validated_caches = {}
         self.root = store.data_root / PAPER_BLOCKS
         if self.root.is_symlink():
             raise StoreError("UNSAFE_DATA_ROOT", "块目录不能是符号链接。")
@@ -77,9 +80,59 @@ class BlockStorage:
             write_json(root / "blocks.json", value)
         return value
 
+    @staticmethod
+    def cache_signature(path):
+        if not path.exists():
+            return None
+        stat = path.stat()
+        return stat.st_ino, stat.st_mtime_ns, stat.st_size
+
     def cache(self, entry):
-        path = self.directory(entry) / "translations.json"
+        from .paper_cache_repair import normalize_cache
+        from .paper_markers import has_markers
+        with self.cache_lock:
+            path = self.directory(entry) / "translations.json"
+            stamp = self.cache_signature(path)
+            cache = json.loads(path.read_text()) if stamp else {}
+            if stamp is None or self.validated_caches.get(entry["sha256"]) == stamp:
+                return cache
+            if not any(has_markers(value) for value in cache.values()):
+                self.validated_caches[entry["sha256"]] = stamp
+                return cache
+            patch, counts = normalize_cache(self.load(entry, accept_stale=True) or {}, cache)
+            if patch:
+                previous = self.repair_state(entry)
+                # Pending marker is published first, so a crash can never skip PDF repair.
+                write_json(path.parent / "marker-repair.json", {
+                    "pending": True, "revision": previous.get("revision", 0) + 1,
+                    "entries": sorted(set(previous.get("entries", [])) | set(patch)),
+                    "tokens": previous.get("tokens", 0) + counts["tokens"],
+                    "unresolved": previous.get("unresolved", 0) + counts["unresolved"],
+                })
+                cache.update(patch)
+                write_json(path, cache)
+            self.validated_caches[entry["sha256"]] = self.cache_signature(path)
+            return cache
+
+    def merge_cache(self, entry, patch):
+        from .paper_markers import has_markers
+        with self.cache_lock:
+            latest = self.cache(entry)
+            latest.update(patch)
+            path = self.directory(entry) / "translations.json"
+            write_json(path, latest)
+            if not any(has_markers(value) for value in patch.values()):
+                self.validated_caches[entry["sha256"]] = self.cache_signature(path)
+
+    def repair_state(self, entry):
+        path = self.directory(entry) / "marker-repair.json"
         return json.loads(path.read_text()) if path.exists() else {}
+
+    def finish_repair(self, entry, revision):
+        with self.cache_lock:
+            value = self.repair_state(entry)
+            if value.get("pending") and value.get("revision") == revision:
+                write_json(self.directory(entry) / "marker-repair.json", {**value, "pending": False})
 
     def result(self, entry):
         path = self.directory(entry) / "result.json"

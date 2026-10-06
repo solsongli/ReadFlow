@@ -23,6 +23,15 @@ def completion_response(body, attempt=0):
     if model == 'readflow-no-json' and body.get('response_format'):
         return 400, {'error': {'message': 'response_format json_object unsupported'}}
     reason = 'stop'
+    if model == 'readflow-marker-variants' and rows:
+        for row in rows:
+            row['text'] = re.sub(r'__RF_[A-Za-z0-9_]+__',
+                                lambda m: m[0].strip('_').replace('_', ' ').lower(), row['text'])
+            row['text'] = '__BoLd StArT__' + row['text'] + 'BOLD_END'
+            if 'head' in row:
+                row['head'] = re.sub(r'__RF_[A-Za-z0-9_]+__',
+                                    lambda m: m[0].replace('_', '').lower(), row['head'])
+        content = json.dumps({'blocks': rows}, ensure_ascii=False)
     if model == 'readflow-fenced':
         content = '```json\n' + content + '\n```'
     elif model == 'readflow-length' and len(rows) > 2:
@@ -80,6 +89,12 @@ def completion_content(body):
         payload = {}
     if not isinstance(payload, dict):
         payload = {}
+    if 'academic Chinese reading guide' in system:
+        pages = [row.get('page') for row in payload.get('excerpts', []) if type(row.get('page')) is int]
+        return json.dumps({name: [{'text': '这是本地假服务的导读示例，不代表论文结论。',
+                                  'page': pages[0] if pages else None}] * (3 if name == 'methods' else 1)
+                           for name in ('motivation', 'methods', 'results', 'conclusions', 'related_work')},
+                          ensure_ascii=False)
     if "READFLOW_PAPER_TERMS" in system:
         return json.dumps({"terms": [{"source": r["source"], "target": r["source"] if r.get("keep") else "示例术语"}
                                      for r in payload.get("terms", [])]}, ensure_ascii=False)
@@ -90,7 +105,8 @@ def completion_content(body):
             else:
                 from quality_fixtures import quality_content
             return quality_content(payload, system, body['model'])
-        return json.dumps({'blocks': [{'id': block['id'], 'text': translated(block.get('text'))}
+        return json.dumps({'blocks': [{'id': block['id'], 'text': translated(block.get('text')),
+                                     **({'head': translated(block['head'])} if block.get('head') else {})}
                         for block in payload['blocks']]}, ensure_ascii=False)
     items = payload.get('items', [])
     if not items:

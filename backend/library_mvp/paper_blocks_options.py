@@ -19,6 +19,10 @@ def submission(service, entry, body, extraction, render_only):
             old = json.loads((root / "selection.json").read_text()) if (root / "selection.json").exists() else {}
             context = contexts.get(language, old if old.get("language") == language else {})
         if not context.get("fingerprint"):
+            previous = service.storage.result(entry) or {}
+            if previous.get("language") == language and previous.get("fingerprint"):
+                context = previous
+        if not context.get("fingerprint"):
             raise StoreError("no_translation", "当前语言还没有块译文，请先翻译。", 409)
         return config, terms, language, context["fingerprint"]
     if not extraction:

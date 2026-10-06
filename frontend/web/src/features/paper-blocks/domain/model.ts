@@ -35,6 +35,7 @@ export interface Block {
   text_size?: number;
   bbox?: number[];
   anchors: Anchor[];
+  continuations?: Array<{ source_start?: string }>;
   translation?: string;
   translation_runs?: InlineRun[];
   qa?: { issues: string[]; retried: boolean };
@@ -71,6 +72,8 @@ export interface BlockStatus {
   language?: string;
   result: {
     qa?: QualitySummary;
+    repair_pending?: boolean;
+    marker_cleanup?: { tokens: number; unresolved: number };
     revision: string;
     layout_ready?: boolean;
     reflow_ready?: boolean;
@@ -90,6 +93,7 @@ export interface BlockStatus {
   renderer_ready: boolean;
 }
 export interface BlockJob {
+  repair_revision?: number;
   qa?: QualitySummary;
   id: string;
   status: string;

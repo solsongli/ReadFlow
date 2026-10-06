@@ -1,3 +1,6 @@
+import { TranslationSummary } from "../ui/TranslationSummary.js";
+import { useDismissBlockSelection } from "./useDismissBlockSelection.js";
+import { useReadingAids } from "./useReadingAids.js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/ui/wb/Button.js";
 import { BlockTools } from "../ui/BlockTools.js";
@@ -9,7 +12,7 @@ import { useBlockMode, type BlockModePreferences } from "./useBlockMode.js";
 import { busy, jobViews, type Block, type BlockStatus } from "../domain/model.js";
 import { useBlockReading } from "./useBlockReading.js";
 import { BlockCard } from "../ui/BlockCard.js";
-import { fallbackMessages, usageText } from "../domain/status.js";
+import { usageText } from "../domain/status.js";
 export function usePaperBlocks(
   item: string,
   attachment: string,
@@ -25,6 +28,7 @@ export function usePaperBlocks(
   },
   options: {
     imageText: boolean;
+    termHover?: boolean;
     currentPage?: () => number;
     format?: TranslationFormat;
     density?: "balanced" | "compact";
@@ -75,6 +79,8 @@ export function usePaperBlocks(
     (id) => void start(id),
     sending,
     <PaperTerms
+      item={item}
+      blocks={status?.document?.blocks || []}
       key={`${item}:${language}`}
       value={status?.terms}
       busy={sending || busy(jobViews(status).full?.status)}
@@ -85,17 +91,18 @@ export function usePaperBlocks(
       }}
       retranslate={(ids) => void start(undefined, true, false, ids)}
     />,
+    <TranslationSummary item={item} status={status} />,
+  );
+  const aids = useReadingAids(
+    status,
+    active,
+    options.termHover !== false,
+    api.url,
+    reading,
+    () => void start(undefined, false, true),
   );
   const { selected, setSelected } = reading;
-  useEffect(() => {
-    const selectionChanged = () => {
-      const selection = window.getSelection();
-      const parent = selection?.anchorNode?.parentElement;
-      if (selection?.toString().trim() && parent?.closest("[data-paper-page]")) setSelected(null);
-    };
-    document.addEventListener("selectionchange", selectionChanged);
-    return () => document.removeEventListener("selectionchange", selectionChanged);
-  }, []);
+  useDismissBlockSelection(() => setSelected(null));
   const refresh = useCallback(async () => {
     if (refreshing.current) return;
     refreshing.current = true;
@@ -106,7 +113,8 @@ export function usePaperBlocks(
           previousJob.current?.id === value.job?.id &&
           busy(previousJob.current?.status) &&
           value.job?.status === "done" &&
-          value.job?.phase === "完成"
+          value.job?.phase === "完成" &&
+          !value.job.repair_revision
         ) {
           announce.current?.("块翻译已完成，译文已更新。");
         }
@@ -209,7 +217,6 @@ export function usePaperBlocks(
   const block = blocks.find((b) => b.id === selected?.id);
   const usage = usageText(jobs.full?.usage ?? status?.result?.usage);
   const issue = error || (dismissed === status?.job?.id ? "" : status?.job?.error?.message);
-  const fallbacks = fallbackMessages(status?.result || null, status?.job || null);
   return {
     layoutAligned: variant.selected === "layout",
     translated:
@@ -232,7 +239,14 @@ export function usePaperBlocks(
     inlineAvailable: Boolean(status?.has_translation && status.language === language),
     registerBlockNavigation: reading.registerNavigation,
     sidebar: reading.sidebar,
-    overlay: reading.overlay,
+    headings: aids.headings,
+    figures: aids.figures,
+    overlay: (page: number, interactive: boolean, inline = false, peek = false) => (
+      <>
+        {reading.overlay(page, interactive, inline, peek)}
+        {aids.termLayer(page, interactive, inline, peek)}
+      </>
+    ),
     tools: (
       <BlockTools
         status={status}
@@ -333,28 +347,6 @@ export function usePaperBlocks(
                 收起
               </Button>
             </div>
-          </div>
-        ) : null}
-        {enabled &&
-          status?.document?.warnings.map((w) => (
-            <p
-              key={w}
-              role="status"
-              className="absolute bottom-2 left-3 rounded-lg bg-wb-panel p-2 text-sm text-wb-text-3"
-            >
-              {w}
-            </p>
-          ))}
-        {fallbacks.length ? (
-          <div
-            role="status"
-            className="absolute bottom-2 left-3 max-w-lg space-y-1 rounded-lg bg-wb-panel p-2 text-sm text-wb-text-3"
-          >
-            {fallbacks.map((item) => (
-              <p className="m-0" key={item.kind} data-block-fallback={item.kind}>
-                {item.text}
-              </p>
-            ))}
           </div>
         ) : null}
       </>

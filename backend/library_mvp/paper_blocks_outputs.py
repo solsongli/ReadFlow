@@ -20,6 +20,7 @@ def render_outputs(
     density="balanced",
 ):
     root = storage.directory(entry)
+    repair = storage.repair_state(entry)
     update(phase="生成原版式译文 PDF", percent=86)
     layout = render_layout(
         storage.store.attachment_path(entry["id"]),
@@ -30,11 +31,13 @@ def render_outputs(
         fingerprint,
         check,
         image_text=image_text,
+        refresh_outline=repair.get("pending", False),
         density=density,
         progress=lambda done, total: update(percent=86 + round(8 * done / max(1, total))),
     )
     result = {
         **extra,
+        "marker_cleanup": {k: repair.get(k, 0) for k in ("tokens", "unresolved")},
         "language": language,
         "fingerprint": fingerprint,
         "image_text": image_text,
@@ -57,6 +60,7 @@ def render_outputs(
     check()
     result.update(warnings, reflow_ready=True)
     write_json(root / "result.json", result)
+    storage.finish_repair(entry, repair.get("revision"))
     return result
 
 

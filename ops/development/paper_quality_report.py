@@ -25,7 +25,7 @@ def measure(document, cache, language, fingerprint, terms=()):
         if not value:
             continue
         text = rich_text(value)
-        issues = checks(block, {'text': text}, language, terms)
+        issues = checks(block, value if isinstance(value, dict) else {'text': text}, language, terms)
         ratios.append(len(text) / max(1, len(block['text'])))
         untranslated += 'untranslated' in issues
         for key, fn in [('citations', citations), ('numbers', numbers)]:
@@ -39,7 +39,7 @@ def measure(document, cache, language, fingerprint, terms=()):
         rows.append({'id': block['id'], 'page': block['page'], 'issues': issues})
     ordered = sorted(ratios)
     percentile = lambda p: round(ordered[round((len(ordered) - 1) * p)], 3) if ordered else None
-    return {'blocks': len(rows), 'source_blocks': sum(b['type'] not in SKIP for b in units),
+    return {'internal_marker_blocks': sum('internal_markers' in r['issues'] for r in rows), 'blocks': len(rows), 'source_blocks': sum(b['type'] not in SKIP for b in units),
             'retention': {k: {'expected': expected[k], 'retained': retained[k],
                              'rate': retained[k] / expected[k] if expected[k] else None} for k in ('citations', 'numbers')},
             'untranslated_rate': untranslated / len(rows) if rows else None,

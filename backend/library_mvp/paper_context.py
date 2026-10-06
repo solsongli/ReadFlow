@@ -1,4 +1,4 @@
-"""Local document order, continuation context and run-in bold markers."""
+"""Local document order, continuation context and structured run-in labels."""
 import re
 from .paper_blocks_model import protect, SKIP
 
@@ -44,11 +44,19 @@ def contextualize(blocks, terms=()):
 
 
 def protected_text(block):
+    return protect(block)
+
+
+def protected_fields(block):
+    """Run-in label is a separate JSON field, never a magic string in model text."""
     text, mapping = protect(block)
-    lead = block.get("lead", "")
-    if lead and text.startswith(lead):
-        begin, end = f'__RF_{block["id"][:12]}_BOLD_START__', f'__RF_{block["id"][:12]}_BOLD_END__'
-        mapping[begin] = {"text": "", "format": "bold-start"}
-        mapping[end] = {"text": "", "format": "bold-end"}
-        text = begin + lead + end + text[len(lead) :]
-    return text, mapping
+    lead = leading(block)
+    head = lead
+    for marker, span in sorted(mapping.items(), key=lambda row: row[1]["start"], reverse=True):
+        if span["start"] < len(lead) < span["end"]:
+            return text, "", mapping
+        if span["end"] <= len(lead):
+            head = head[:span["start"]] + marker + head[span["end"]:]
+    if head and text.startswith(head) and text[len(head):].strip():
+        return text[len(head):].lstrip(), head, mapping
+    return text, "", mapping

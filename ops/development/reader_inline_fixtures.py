@@ -18,6 +18,7 @@ def crops(source, manifest, output):
                 page.show_pdf_page(page.rect, pdf, anchor["page"] - 1, clip=area)
                 page.set_rotation(pdf[anchor["page"] - 1].rotation)
                 cut.save(output / Path(block["asset"]).name, garbage=4, deflate=True)
+                page.get_pixmap(matrix=fitz.Matrix(0.7, 0.7)).save(output / Path(block["asset"]).with_suffix(".png").name)
 
 
 def fake(manifest):

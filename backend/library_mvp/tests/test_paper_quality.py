@@ -7,6 +7,8 @@ from backend.library_mvp.paper_terms import candidates, effective, relevant, pro
 from backend.library_mvp.paper_quality import checks, summary
 from backend.library_mvp.paper_context import contextualize, protected_text
 from backend.library_mvp.paper_blocks_inline import restore_rich
+from backend.library_mvp.paper_prompts import messages_for
+from backend.library_mvp.paper_translation_response import restore_fields
 from backend.library_mvp.paper_blocks_model import protected_ranges, cache_key
 from backend.library_mvp.paper_blocks_translate import translate_blocks
 from backend.library_mvp.layout_text import html_runs, allocate
@@ -90,8 +92,11 @@ class PaperQualityTests(unittest.TestCase):
         self.assertEqual(rows[0]["first_terms"], ["policy"])
         self.assertEqual(rows[1]["first_terms"], [])
         self.assertEqual(rows[1]["previous_sentence"], "The policy is robust.")
-        masked, mapping = protected_text(rows[0])
-        rich = restore_rich(masked.replace("Task.", "任务。"), mapping)
+        messages, mapping = messages_for([rows[0]], [], "zh-CN")
+        row = json.loads(messages[-1]["content"])["blocks"][0]
+        self.assertNotIn("BOLD", messages[0]["content"])
+        self.assertEqual(row["head"], "Task.")
+        rich = restore_fields(rows[0], {"text": "策略稳健。", "head": "任务。"}, mapping[rows[0]["id"]])
         self.assertTrue(next(r for r in rich["runs"] if r["text"] == "任务。")["bold"])
         self.assertIn("<strong>任务。</strong>", html_runs(rich["runs"]))
         self.assertTrue(any(r.get("bold") for p in allocate(rich["runs"], [1, 1]) for r in p))

@@ -16,6 +16,7 @@ export function useBlockReading(
   start: (id: string) => void,
   sending: boolean,
   terms?: ReactNode,
+  summary?: ReactNode,
 ) {
   const blocks = status?.document?.blocks || [];
   const [selected, setSelected] = useState<{ id: string; x: number; y: number } | null>(null);
@@ -44,6 +45,7 @@ export function useBlockReading(
   };
   const asset = blocks.find((b) => b.id === figure);
   return {
+    jump: (page: number, y: number) => navigation.current(page, y),
     selected,
     setSelected,
     open,
@@ -73,7 +75,7 @@ export function useBlockReading(
         translate={start}
         sending={sending}
         terms={terms}
-        qa={status?.qa}
+        summary={summary}
       />
     ),
     overlay: (page: number, interactive: boolean, inline = false, peek = false) => (

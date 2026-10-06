@@ -1,0 +1,34 @@
+import assert from 'node:assert/strict';
+import { mkdir } from 'node:fs/promises';
+import { readerBrowser } from '../paper-reader/browser.mjs';
+const output='/tmp/readflow-x9b/screenshots';
+await mkdir(output,{recursive:true});
+const env=await readerBrowser('?blocks&configured&x6&x8&summary','tests/paper-reader/integration-fixture.tsx');
+const {page}=env;
+try {
+  await page.getByRole('option',{name:'Paper a',exact:true}).dblclick();
+  assert.equal(await page.locator('[data-block-fallback]').count(),0);
+  await page.getByRole('tab',{name:'译文',exact:true}).click();
+  const summary=page.getByRole('region',{name:'翻译状态摘要',exact:true});
+  await summary.getByRole('button',{name:/翻译完成 · 6 块需核对/}).waitFor();
+  assert.equal(await page.locator('[data-block-fallback]').count(),0);
+  await summary.getByRole('button',{name:/翻译完成/}).click();
+  assert.equal(await summary.locator('[data-block-fallback]').count(),5);
+  assert.equal(await page.locator('[data-block-fallback]').count(),5);
+  const fixed=await summary.evaluate(e=>getComputedStyle(e).position);
+  assert.equal(fixed,'static');
+  await page.screenshot({path:`${output}/translation-summary-light.png`});
+  await page.evaluate(()=>window.fixture.wb.setPrefs({theme:'dark'}));
+  await page.screenshot({path:`${output}/translation-summary-dark.png`});
+  await summary.getByRole('button',{name:'关闭摘要',exact:true}).click();
+  assert.equal(await summary.getByRole('button',{name:/6 块需核对/}).count(),0);
+  await page.reload();
+  await page.getByRole('option',{name:'Paper a',exact:true}).dblclick();
+  await page.getByRole('tab',{name:'译文',exact:true}).click();
+  await summary.getByRole('button',{name:/翻译详情/}).waitFor();
+  assert.equal(await summary.getByRole('button',{name:'关闭摘要',exact:true}).count(),0);
+  assert.equal(await page.locator('[data-block-fallback]').count(),0);
+  assert.deepEqual(env.errors,[]);
+  assert.deepEqual(env.unexpected,[]);
+  console.log('PASS one in-sidebar summary, collapsed details, both themes, persistent per-paper dismissal; no overlay');
+} finally { await env.browser.close(); }

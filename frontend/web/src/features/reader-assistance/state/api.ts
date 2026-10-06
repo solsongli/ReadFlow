@@ -16,6 +16,8 @@ export function assistanceApi(item: string) {
     return response;
   }
   return {
+    overview: async (signal?: AbortSignal) =>
+      (await request(root + "/overview", "GET", undefined, signal)).json(),
     status: async (signal?: AbortSignal): Promise<AiStatus> =>
       (await request("/workbench/assistance/status", "GET", undefined, signal)).json(),
     load: async (signal?: AbortSignal): Promise<Conversation> =>
@@ -32,8 +34,9 @@ export function assistanceApi(item: string) {
       body: unknown,
       signal: AbortSignal,
       event: (value: { type: string; text?: string; code?: string }) => void,
+      path = "ask",
     ) => {
-      const response = await request(root + "/ask", "POST", body, signal);
+      const response = await request(root + "/" + path, "POST", body, signal);
       const reader = response.body!.getReader();
       const decoder = new TextDecoder();
       let buffer = "";

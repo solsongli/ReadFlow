@@ -62,6 +62,14 @@ def run(
             update(status="done", phase="已提取", percent=100)
             return
         if render_only:
+            old = self.storage.result(entry) or {}
+            with self.lock:
+                cached = self.storage.cache(entry)
+            extra = {key: old.get(key, default) for key, default in (
+                ("usage", token_usage({})), ("notices", []), ("translation_fallback", []))}
+            extra["qa"] = summary(cached.get(cache_key(b, language, fingerprint))
+                                  for b in translation_units(document["blocks"]))
+            update(qa=extra["qa"])
             render_snapshot(
                 self,
                 entry,
@@ -71,7 +79,7 @@ def run(
                 check,
                 update,
                 image_text,
-                {"usage": token_usage({}), "notices": [], "translation_fallback": []},
+                extra,
                 density,
                 metrics=metrics,
             )

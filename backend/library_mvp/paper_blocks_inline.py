@@ -1,6 +1,7 @@
 """Local, data-only inline scripts. Model output never supplies formatting instructions."""
 import re
 import statistics
+from .paper_markers import canonicalize, clean_rich
 
 
 def span_content(spans, size, math_font):
@@ -102,6 +103,7 @@ def source_runs(block, text=None):
 def restore_rich(text, mapping):
     if not isinstance(text, str) or not text.strip() or len(text) > 100000:
         return None
+    text = canonicalize(text, mapping)
     if any(text.count(marker) != 1 for marker in mapping):
         return None
     runs, cursor, bold = [], 0, False
@@ -133,6 +135,5 @@ def restore_rich(text, mapping):
         return None
     runs.append({"kind": "text", "text": text[cursor:]})
     value = "".join(r["text"] for r in runs)
-    if re.search(r"__RF_[A-Za-z0-9_]+__", value):
-        return None
-    return {"text": value, "runs": [r for r in runs if r["text"]]}
+    repaired, _ = clean_rich({"text": value, "runs": [r for r in runs if r["text"]]})
+    return repaired if repaired["text"].strip() else None

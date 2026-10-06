@@ -30,6 +30,8 @@ try {
   await card.getByText(/【首批译文】/).waitFor();
   blocks.publishBatch("【更新译文】");
   await card.getByText(/【更新译文】/).waitFor();
+  await page.getByRole("tab", { name: "译文", exact: true }).click();
+  await page.getByRole("button", { name: /翻译详情/ }).click();
   await page.locator('[data-block-fallback="thinking"]').waitFor();
   await page.screenshot({ path: `${output}/incremental-light.png` });
   blocks.rendering();

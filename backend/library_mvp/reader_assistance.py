@@ -127,7 +127,7 @@ class ReaderAssistance:
             question_record += '\n\n' + '\n'.join('> ' + line for line in supplied['selection'].splitlines())
         return config, messages, history['generation'], question_record, supplied['page']
 
-    def stream(self, item, prepared):
+    def stream(self, item, prepared, complete=None):
         config, messages, generation, question, page = prepared
         events = queue.Queue(maxsize=512)
         control = RequestControl(60)
@@ -140,7 +140,10 @@ class ReaderAssistance:
             try:
                 answer = self.chat(config, messages, delta=lambda part: put({'type': 'delta', 'text': part}), control=control)
                 control.raise_if_stopped()
-                self.conversations.append(item, generation, question, answer, page)
+                if complete:
+                    answer = complete(answer)
+                else:
+                    self.conversations.append(item, generation, question, answer, page)
                 put({'type': 'done', 'text': answer})
             except Exception as error:
                 try:
@@ -148,6 +151,7 @@ class ReaderAssistance:
                 except Exception:
                     pass
             finally:
+                config.clear()
                 with self.lock:
                     self.busy.discard(item)
                     self.workers.pop(item, None)

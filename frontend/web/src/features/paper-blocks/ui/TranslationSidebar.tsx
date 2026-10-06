@@ -11,7 +11,7 @@ import {
 } from "../domain/reading.js";
 import { InlineRuns } from "./InlineRuns.js";
 import type { ReactNode } from "react";
-import type { QualitySummary } from "../domain/model.js";
+
 export const TranslationSidebar = memo(function TranslationSidebar({
   blocks,
   page,
@@ -20,7 +20,7 @@ export const TranslationSidebar = memo(function TranslationSidebar({
   translate,
   sending,
   terms,
-  qa,
+  summary,
 }: {
   blocks: Block[];
   page: number;
@@ -29,7 +29,7 @@ export const TranslationSidebar = memo(function TranslationSidebar({
   translate: (id: string) => void;
   sending: boolean;
   terms?: ReactNode;
-  qa?: QualitySummary;
+  summary?: ReactNode;
 }) {
   const root = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -48,12 +48,8 @@ export const TranslationSidebar = memo(function TranslationSidebar({
   };
   return (
     <section ref={root} aria-label="本页译文" className="space-y-3 p-3">
+      {summary}
       {terms}
-      {qa?.checked ? (
-        <p role="status" className="text-xs text-wb-text-3">
-          质检：{qa.retried || 0} 块已自动重译，{qa.needs_review || 0} 块仍需核对
-        </p>
-      ) : null}
       <Button size="sm" aria-pressed={review} onClick={() => setReview(!review)}>
         需核对
       </Button>
@@ -125,7 +121,11 @@ export const TranslationSidebar = memo(function TranslationSidebar({
                 </Button>
               ) : null}
               {block.qa?.issues.length ? (
-                <span className="text-xs text-wb-text-3">需核对数字、引用或译法</span>
+                <span className="text-xs text-wb-text-3">
+                  {block.qa.issues.includes("internal_markers")
+                    ? "内部片段未能恢复，请核对原文"
+                    : "需核对数字、引用或译法"}
+                </span>
               ) : null}
             </div>
           </article>

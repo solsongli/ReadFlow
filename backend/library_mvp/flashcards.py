@@ -1,5 +1,7 @@
 """ReadFlow flashcards. Sources remain snapshots when an annotation is detached."""
 import json
+import re
+import unicodedata
 from .store import StoreError, new_id, now, text
 from .flashcard_schedule import schedule
 
@@ -17,6 +19,9 @@ CREATE TABLE IF NOT EXISTS flashcards (
  repetitions INTEGER NOT NULL DEFAULT 0, ease REAL NOT NULL DEFAULT 2.5,
  version INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
 );
+CREATE UNIQUE INDEX IF NOT EXISTS flashcards_term_unique
+ ON flashcards(item_id, json_extract(data, '$.term_key'))
+ WHERE json_extract(data, '$.term_key') IS NOT NULL;
 CREATE INDEX IF NOT EXISTS flashcards_annotation ON flashcards(annotation_id);
 CREATE TABLE IF NOT EXISTS card_reviews (
  id TEXT PRIMARY KEY, card_id TEXT NOT NULL REFERENCES flashcards(id) ON DELETE CASCADE,
@@ -91,6 +96,14 @@ class Flashcards:
                 if source['item_id'] != item:
                     raise StoreError('INVALID_CARD', '批注与文献不一致。')
                 content.update(quote=content['quote'] or source['quote'], page=source['page_index'] + 1)
+            if kind == 'term':
+                key = previous.get('term_key') or term_key(content['front'])
+                content['term_key'] = key
+                if not identity:
+                    for row in self.store.db.execute('SELECT id,data FROM flashcards WHERE item_id=?', (item,)):
+                        old = json.loads(row['data'])
+                        if old.get('kind') == 'term' and (old.get('term_key') or term_key(old.get('front', ''))) == key:
+                            return {**self.get(row['id']), 'duplicate': True}
             timestamp = now()
             if identity:
                 self.store.db.execute('UPDATE flashcards SET deck_id=?,annotation_id=?,data=?,suspended=?, '
@@ -142,3 +155,8 @@ class Flashcards:
                 value['orphaned'] = True
                 self.store.db.execute('UPDATE flashcards SET annotation_id=NULL,data=? WHERE id=?',
                                       (json.dumps(value), row['id']))
+
+
+def term_key(value):
+    value = unicodedata.normalize('NFKC', value).strip().casefold()
+    return re.sub(r'\s+', ' ', re.sub(r'[‐‑–—-]', ' ', value))

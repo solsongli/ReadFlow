@@ -3,6 +3,7 @@ from collections import Counter
 import re
 import unicodedata
 from .paper_terms import occurs, relevant
+from .paper_markers import has_markers
 from .paper_quality_text import quantities, paired_numbers, term_present, prose_pair
 
 
@@ -18,7 +19,7 @@ def checks(block, value, language="zh-CN", terms=()):
     if value is None:
         return ["placeholders"]
     source, translated = block["text"], value["text"]
-    issues = []
+    issues = ["internal_markers"] if value.get("marker_issues") or has_markers(value) else []
     if citations(source) != citations(translated):
         issues.append("citations")
     before, after = paired_numbers(block, value)

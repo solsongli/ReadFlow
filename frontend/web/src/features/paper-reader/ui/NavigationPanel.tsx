@@ -1,10 +1,12 @@
-import { Bookmark, ListTree, Search, Grid2X2, Trash2 } from "lucide-react";
+import type { ReactNode } from "react";
+import { Bookmark, ListTree, Search, Grid2X2, Trash2, Images } from "lucide-react";
 import { IconButton, Button } from "@/ui/wb/Button.js";
 import type { Bookmark as SavedBookmark, OutlineEntry, SearchHit } from "../domain/types.js";
 import type { PDFDocumentProxy, renderQueue } from "../state/document.js";
 import { Thumbnail } from "./Thumbnail.js";
-export type NavigationTab = "outline" | "thumbnails" | "bookmarks" | "search";
+export type NavigationTab = "outline" | "thumbnails" | "bookmarks" | "search" | "figures";
 export function NavigationPanel({
+  figures,
   tab,
   setTab,
   outline,
@@ -21,6 +23,7 @@ export function NavigationPanel({
   selectResult,
   indexed,
 }: {
+  figures?: ReactNode;
   tab: NavigationTab;
   setTab: (value: NavigationTab) => void;
   outline: OutlineEntry[];
@@ -39,6 +42,7 @@ export function NavigationPanel({
 }) {
   const tabs = [
     { id: "outline", label: "目录", icon: ListTree },
+    { id: "figures", label: "图表", icon: Images },
     { id: "thumbnails", label: "缩略图", icon: Grid2X2 },
     { id: "bookmarks", label: "书签", icon: Bookmark },
     { id: "search", label: "搜索", icon: Search },
@@ -67,6 +71,7 @@ export function NavigationPanel({
         ))}
       </div>
       <div className="wb-scroll min-h-0 flex-1 p-2">
+        {tab === "figures" ? figures : null}
         {tab === "outline" ? (
           <>
             {outline.length ? (
@@ -74,13 +79,18 @@ export function NavigationPanel({
                 <button
                   key={entry.id}
                   type="button"
-                  title={entry.title}
+                  title={[entry.title, entry.translation].filter(Boolean).join("\n")}
                   aria-current={current === entry.id ? "location" : undefined}
                   className={`mb-0.5 block w-full truncate rounded-lg border-0 py-2 pr-2 text-left text-[0.75rem] ${current === entry.id ? "bg-wb-selected font-semibold text-wb-link" : "bg-transparent text-wb-text-2 hover:bg-wb-hover"}`}
                   style={{ paddingLeft: entry.level * 10 }}
                   onClick={() => jump(entry.page, entry.y)}
                 >
-                  {entry.title}
+                  <span className="block truncate">{entry.title}</span>
+                  {entry.translation ? (
+                    <span className="mt-0.5 block truncate text-[0.6875rem] font-normal text-wb-text-3">
+                      {entry.translation}
+                    </span>
+                  ) : null}
                 </button>
               ))
             ) : (

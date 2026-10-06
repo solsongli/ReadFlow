@@ -1,3 +1,5 @@
+import { useOverview } from "@/features/reader-assistance/index.js";
+import { OverviewDialog } from "../../ui/assistance/OverviewDialog.js";
 import { useState } from "react";
 import { Button } from "@/ui/wb/Button.js";
 import type { AssistancePorts } from "../../domain/assistance.js";
@@ -26,6 +28,7 @@ export function useAssistance(
   const [quote, setQuote] = useState({ text: "", key: 0 });
   const [panelRequest, setPanelRequest] = useState(0);
   const translation = useSelectionTranslation(ports.metadata.id, actions, annotations.readSelection);
+  const overview = useOverview(ports.metadata.id, ports.attachmentId);
   const chat = useReaderChat(ports.metadata.id);
   function ask() {
     reveal();
@@ -52,6 +55,7 @@ export function useAssistance(
       .slice(0, 20000);
   }
   return {
+    overview: () => void overview.open(),
     existingTranslation: translation.existing,
     tools: ports.assistance ? (
       <>
@@ -82,6 +86,7 @@ export function useAssistance(
     panelRequest,
     panel: ports.assistance ? (
       <ChatPanel
+        overview={() => void overview.open()}
         chat={chat}
         ports={actions}
         quote={quote}
@@ -95,23 +100,33 @@ export function useAssistance(
       />
     ) : undefined,
     card: ports.assistance ? (
-      <TranslationCard
-        translation={translation}
-        ports={actions}
-        root={model.root}
-        save={(text, anchors) =>
-          annotations.c.createBatch(
-            anchors.map((anchor) => ({
-              type: "highlight",
-              color: annotations.c.color,
-              note: text,
-              quote: anchor.quote,
-              page_index: anchor.page,
-              rects: anchor.rects,
-            })),
-          )
-        }
-      />
+      <>
+        {overview.opened ? (
+          <OverviewDialog
+            overview={overview}
+            title={ports.metadata.title}
+            ports={actions}
+            jump={(page) => model.jump(page, 0, 0, "source")}
+          />
+        ) : null}
+        <TranslationCard
+          translation={translation}
+          ports={actions}
+          root={model.root}
+          save={(text, anchors) =>
+            annotations.c.createBatch(
+              anchors.map((anchor) => ({
+                type: "highlight",
+                color: annotations.c.color,
+                note: text,
+                quote: anchor.quote,
+                page_index: anchor.page,
+                rects: anchor.rects,
+              })),
+            )
+          }
+        />
+      </>
     ) : null,
   };
 }

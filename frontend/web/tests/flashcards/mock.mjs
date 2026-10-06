@@ -19,6 +19,9 @@ export function flashcardMock() {
         Object.assign(card,schedule(card,body.rating),{version:card.version+1,due:body.rating===1?body.day:'2099-01-01'});
         value=card;
       } else if(method==='POST') {
+        const key = s => s.toLowerCase().replace(/[‐‑–—-]/g, " ").replace(/\s+/g, " ").trim();
+        const prior = body.kind === 'term' && cards.find(c => c.item_id === body.item_id && c.kind === 'term' && key(c.front) === key(body.front));
+        if (prior) { await route.fulfill({ json: { ...prior, duplicate: true } }); return true; }
         value={interval:0,repetitions:0,ease:2.5,due:'0001-01-01',version:0,suspended:false,
           item_title:'Paper a',...body,id:'card-'+cards.length}; cards.push(value);
       } else if(method==='PATCH') {

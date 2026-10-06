@@ -60,6 +60,8 @@ export function assistanceError(value: unknown, ai = false): AssistanceError {
   }
   const known: Record<string, string> = {
     glossary_unavailable: "当前术语表无法读取，请在设置中检查启用的术语表。",
+    overview_format: "导读格式不完整，请重新生成。",
+    overview_empty: "尚未识别到论文文字，请先进行本地 OCR。",
     reader_busy: "已有回答正在生成，请稍后重试。",
     INVALID_FIELD: "选中内容或问题过长，请缩短后重试。",
     ai_config_error: "AI 运行时设置读取失败，请重试。",
@@ -67,7 +69,7 @@ export function assistanceError(value: unknown, ai = false): AssistanceError {
     credentials: "模型服务的 Key 无效或没有访问权限。",
     quota: "服务额度不足或请求过于频繁，请稍后重试。",
     model: "所选模型不存在或当前服务不支持它。",
-    network: "无法连接模型服务或请求超时，请检查服务地址。",
+    network: "无法连接模型服务或请求超时，请检查网络连接和服务地址。",
     external_disabled: "本机服务未启用外部模型调用。",
     consent_changed: "服务配置已变化，请重新确认发送范围。",
     consent_required: "发送前需要确认上下文范围。",

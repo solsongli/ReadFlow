@@ -17,6 +17,7 @@ export interface TextLine {
   size: number;
 }
 export interface OutlineEntry {
+  translation?: string;
   id: string;
   title: string;
   page: number;
@@ -66,6 +67,8 @@ export interface PaperMetadata {
   citekey: string;
 }
 export interface ReaderPorts {
+  blockHeadings?: OutlineEntry[];
+  bilingualOutline?: boolean;
   inlineAvailable?: boolean;
   layoutAligned?: boolean;
   registerBlockNavigation?: (jump: (page: number, offset: number) => void) => (() => void);

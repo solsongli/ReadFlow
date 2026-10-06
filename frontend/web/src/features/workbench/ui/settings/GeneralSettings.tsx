@@ -1,3 +1,4 @@
+import { ReaderSettings } from "./ReaderSettings.js";
 import { AnnotationSettings } from "./AnnotationSettings.js";
 import { cn } from "@/ui/lib/utils.js";
 import type { Density, ThemePreference } from "../../domain/workbench-store.js";
@@ -33,6 +34,7 @@ export function GeneralSettings() {
       </div>
     </SettingsCard>
     <TypographySettings />
+    <ReaderSettings />
     <AnnotationSettings />
     <SettingsCard title="闪卡复习" description="按本地时间凌晨 4 点切换学习日。">
       <SettingsRow label="每日新卡上限"><input type="number" min="0" max="1000" aria-label="每日新卡上限"

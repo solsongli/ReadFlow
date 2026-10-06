@@ -65,6 +65,7 @@ def mapped_error(error, secret=''):
     detail = getattr(error, 'safe_error', None)
     if detail:
         return detail
-    result = translation_error(str(error), secrets=[secret])
+    # Transport exceptions such as httpx.ConnectTimeout stringify to ''; the class name carries the cause.
+    result = translation_error(f'{type(error).__name__}: {error}', secrets=[secret])
     # Provider bodies and exception details can echo source text; never expose them.
     return {'code': result['code'], 'message': result['message'].replace('翻译服务', '模型服务').replace('翻译未能完成', '请求未能完成')}

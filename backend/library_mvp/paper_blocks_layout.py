@@ -108,6 +108,7 @@ def render_layout(
     check=lambda: None,
     *,
     image_text=True,
+    refresh_outline=False,
     density="balanced",
     progress=lambda *_: None,
 ):
@@ -132,7 +133,7 @@ def render_layout(
         if prior:
             resources.enter_context(prior[0])
             graft = fitz.Graftmap(pdf)
-            if signatures == prior[1]:
+            if signatures == prior[1] and not refresh_outline:
                 audit = {
                     **prior[2],
                     "rendered_pages": [],

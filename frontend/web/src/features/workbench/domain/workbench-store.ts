@@ -58,6 +58,8 @@ export interface Prefs extends TypographyPrefs {
   blockModeDisabled: boolean;
   blockModeHintDismissed: boolean;
   annotationSemantics: Semantics;
+  termHover: boolean;
+  bilingualOutline: boolean;
   paperTone: "auto" | "white" | "sepia" | "night";
   sort: WorkbenchSort;
   order: SortOrder;
@@ -113,6 +115,8 @@ export const DEFAULT_PREFS: Prefs = {
   translationDisableThinking: true,
   blockModeDisabled: false,
   blockModeHintDismissed: false,
+  termHover: true,
+  bilingualOutline: true,
   paperTone: "auto",
   annotationSemantics: { ...DEFAULT_SEMANTICS },
   ...DEFAULT_TYPOGRAPHY,
@@ -233,6 +237,6 @@ export function createWorkbenchStore(prefs: Partial<Prefs> = {}) {
 export type WorkbenchStore = ReturnType<typeof createWorkbenchStore>;
 
 export function prefsOf(state: S): Prefs {
-  const { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit, blockLanguage, blockImageText, autoTranslateImports, layoutDensity, translationFormat, translationDisableThinking, blockModeDisabled, blockModeHintDismissed } = state;
-  return { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit, blockLanguage, blockImageText, autoTranslateImports, layoutDensity, translationFormat, translationDisableThinking, blockModeDisabled, blockModeHintDismissed };
+  const { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit, blockLanguage, blockImageText, autoTranslateImports, layoutDensity, translationFormat, termHover, bilingualOutline, translationDisableThinking, blockModeDisabled, blockModeHintDismissed } = state;
+  return { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit, blockLanguage, blockImageText, autoTranslateImports, layoutDensity, translationFormat, termHover, bilingualOutline, translationDisableThinking, blockModeDisabled, blockModeHintDismissed };
 }
