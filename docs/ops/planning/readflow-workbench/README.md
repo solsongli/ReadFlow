@@ -801,5 +801,45 @@ X1b 最终包：224,542,336 字节，SHA-256 `e98831473b752c3373bfacc121bbe9cf1d
 - 双击任一侧时，用块模型 `view_bbox` 选择面积最小的命中段落，两侧同时标出 1.5 秒。
 - 「对齐辅助线」默认开启，位于阅读器更多菜单和阅读设置；继续经工作台偏好存储与多窗口同步。
 - SAM 2/4/8 页与 OpenVLA 3/5/10 页在 100%、150%、适合宽度下共 18 个样本，左右横带屏幕 y 坐标差均为 0px。黑暗/夜间截图和数据在 `readflow-maint/out/x15/`。
+
+## X16：阅读器对标 Zotero 7，第二轮
+
+差距审计以 Zotero 7 的纯 PDF 阅读行为为基准，不比较文献管理、同步或插件。「部分 → 有」表示本轮补齐。
+
+| 能力 | Zotero 7 行为 | ReadFlow 现状与代码位置 | 价值 | 成本 |
+| --- | --- | --- | --- | --- |
+| 页面缩略图 | 左侧页面缩略图，点击跳转 | **有**；`NavigationPanel.tsx` + `Thumbnail.tsx`，懒加载且离屏释放 | 高 | 已完成 |
+| 单页、双页、奇偶跨页 | 单页或书籍式展开 | **部分**；`PdfPane.tsx` 仅单页连续，对照是两份 PDF 而非双页 | 中 | 高 |
+| 垂直、水平、包裹滚动 | 三种页面排列 | **部分**；`PdfPane.tsx` 仅垂直虚拟滚动 | 中 | 高 |
+| 页面旋转 | 90° 逐步旋转 | **无**；当前 viewport 使用 PDF 固有旋转 | 中 | 中 |
+| 适合页面、适合宽度、实际大小 | 工具条选择 | **有**；`Toolbar.tsx` / `PdfPane.tsx`，100% 即实际大小 | 高 | 已完成 |
+| Ctrl+滚轮、Ctrl +/-/0 | 指针锚定缩放与重置 | **有**；`PdfPane.tsx` / `useReaderKeys.ts` | 高 | 已完成 |
+| 返回/前进阅读位置 | 内部链接、引用、目录、查找后可返回 | **有**；`navigation.ts` 历史栈和 `useReaderModel.ts::navigate`，Alt+方向键/鼠标侧键 | 高 | 已完成 |
+| 页码输入 | 输入页码跳转 | **有**；`Toolbar.tsx` | 高 | 已完成 |
+| Home/End、Space/Shift+Space | 首尾页和视口翻页 | **有**；`useReaderKeys.ts` | 高 | 已完成 |
+| 全文查找、全部高亮、计数 | 结果计数，Enter/Shift+Enter 循环 | **部分 → 有**；`useReaderSearch.ts`、`NavigationPanel.tsx`、`PdfPage.tsx` | 高 | 中 |
+| 区分大小写、全词 | 查找选项 | **无 → 有**；`analysis.ts::searchRanges` | 中 | 低 |
+| 内部链接/引用目标预览 | 显示目标页局部画面 | **部分 → 有**；`useHover.ts` + `Preview.tsx`，保留引用条目并增加目标页裁图 | 高 | 中 |
+| 高亮/下划线/文字/矩形/手绘/橡皮 | 页面批注工具 | **有**；`annotations/Tools.tsx`、`Layer.tsx`、`useAnnotationReader.ts` | 高 | 已完成 |
+| 批注颜色和标签 | 颜色与自定义标签 | **部分**；有 5 色及可改语义名，无独立多标签字段 | 中 | 中 |
+| 批注侧栏筛选 | 颜色、标签等筛选 | **部分**；`annotations/Panel.tsx` 支持颜色/类型/本页/说明，无独立标签筛选 | 中 | 低 |
+| 拖出批注生成引文 | 从批注组织写作材料 | **部分**；可拖入画布、整理为笔记/导出，无通用跨应用拖出 | 中 | 中 |
+| 恢复上次位置和缩放 | 按文献记忆页码、位置、缩放 | **部分 → 有**；页码已由 `useReadingData.ts` 保存，X16 新增 `reader-zoom.ts` 的每文献缩放 | 高 | 低 |
+| 全屏/专注模式 | 减少界面干扰 | **部分**；`PaperReader.tsx` 的 F 专注模式，无阅读器独立系统全屏 | 中 | 低 |
+
+本轮选择查找、目标页局部预览和每文献缩放：三项都是高频阅读动作，能复用现有文本层、导航栈和偏好同步，不需要改写虚拟页面骨架。双页、水平/包裹滚动和旋转需要重做页面几何、虚拟窗口和对照同步，留待下轮。
+
+- 查找现在按真实出现次数计数，可区分大小写或全词；Enter/Shift+Enter、n/N 均循环前后结果，可见页的全部匹配同时高亮。
+- 引用和普通内部链接都使用 PDF 目标坐标渲染 140pt 高的局部预览，不影响原条目文本、复制和文献库查找操作。
+- 缩放按文献 ID 保留最近 100 条，命名适配与 0.2–4 的数值缩放都会安全恢复；继续通过工作台偏好跨窗口同步。
+- OpenVLA 37 页稳态滚动 239 帧：P50 16.7ms、P95 50.0ms，未劣于 0.9.19 的 16.7/50.1ms。截图与性能 JSON 位于 `readflow-maint/out/x16/`。
+
+## X16b：精确查找高亮
+
+- 不改写 pdf.js 文本层。`search-highlight.ts` 将全文匹配区间映射回每个 span 的局部字符偏移；跨 span 单词依据字形间距判断是连续还是含空格。`PdfPage.tsx` 用 DOM Range 取得精确字符矩形，在不接收指针的独立层上绘制。
+- 当前命中使用独立主题令牌，其他命中保留原黄色。覆盖层不修改文本节点，选字、复制、批注、块模式和对齐辅助线仍由原层处理。
+- 新查询按当前页旋转结果顺序，首个可用命中立即成为 `1 / N`；Enter/Shift+Enter 循环，无匹配显示「无结果」，当前列表项保持在侧栏视口内。
+- 对照查找新增「原文（左侧）/译文（右侧）」范围选择；结果项同时标明所在侧，中文逐行 PDF 可直接搜索。
+- OpenVLA 的「策略」命中矩形与 DOM Range 宽度一致（误差 0px），浅色/深色截图在 `readflow-maint/out/x16b/`。
 - 验收补充（维护者）：`paper_blocks_aligned._summary` 对 `aligned_fill_ratios` 和 `aligned_before_fill_ratios` 调用 `statistics.fmean` 时未处理空列表，没有逐行块的文档整份渲染失败（StatisticsError）。包内服务二次启动检查发现了这个问题，已修复并补单测。0.9.22 安装包 SHA-256 `cf84abd6b453e470b1312334c7dd4b3431414210fb144942d897251e67a8084a`。
 - 验收补充（维护者，0.9.23）：`paper_blocks_aligned.ALIGNED_REVISION = 2`，写入 `result.aligned_revision`；`paper_cache_repair.aligned_stale` 对「有原版式但逐行版缺失，或逐行版版本较旧、缺失」的结果安排一次本地重排（`aligned-layout-v2`）。以后排版器有可见变化时，同时递增这个常量和 `layout_incremental.VERSION`。

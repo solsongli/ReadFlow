@@ -4,7 +4,7 @@ import { useReferenceLookup } from "./useReferenceLookup.js";
 import { copySelection } from "./copySelection.js";
 import { useReaderDialogFocus } from "./useReaderDialogFocus.js";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { figureTargets, parseReferences, searchLines } from "../domain/analysis.js";
+import { figureTargets, parseReferences } from "../domain/analysis.js";
 import {
   correspondingPage,
   externalLink,
@@ -21,6 +21,7 @@ import { useHover } from "./useHover.js";
 import type { PaneHandle, Zoom } from "../ui/PdfPane.js";
 import type { LinkBox } from "../ui/PdfPage.js";
 import type { NavigationTab } from "../ui/NavigationPanel.js";
+import { useReaderSearch } from "./useReaderSearch.js";
 export function useReaderModel(ports: ReaderPorts) {
   const root = useRef<HTMLDivElement>(null),
     primary = useRef<PaneHandle>(null),
@@ -37,18 +38,20 @@ export function useReaderModel(ports: ReaderPorts) {
       translatedRetry,
     );
   const comparison = ports.compareTranslated ? compareTranslated : translated;
-  const [zoom, setZoom] = useState<Zoom>("width"),
+  const [zoom, setZoomState] = useState<Zoom>(ports.initialZoom ?? "width"),
     [mode, setMode] = useState<Mode>("source"),
     [focus, setFocus] = useState(false);
+  const setZoom = (value: Zoom) => {
+    setZoomState(value);
+    ports.onZoomChange?.(value);
+  };
   const [left, setLeft] = useState(true),
     [right, setRight] = useState(() => window.innerWidth >= 1200),
     [nav, setNav] = useState<NavigationTab>("outline"),
     [sync, setSync] = useState(true);
   const [position, setPosition] = useState<Position>({ page: ports.resumePage || 1, offset: 0 }),
     [history, setHistory] = useState(initialHistory);
-  const [query, setQuery] = useState(""),
-    [resultIndex, setResult] = useState(-1),
-    [external, setExternal] = useState<string | null>(null);
+  const [external, setExternal] = useState<string | null>(null);
   const [bookmark, setBookmark] = useState<string | null>(null),
     [notice, setNotice] = useState("");
   const queue = useMemo(renderQueue, []),
@@ -64,7 +67,6 @@ export function useReaderModel(ports: ReaderPorts) {
     [source.lines, source.sizes],
   );
   const headings = useOutline(main, mode, ports);
-  const hits = useMemo(() => searchLines(main.lines, query), [main.lines, query]);
   const hovered = useHover(main.pdf, references, figures, source.pdf);
   const saveTime = useRef(0),
     progressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -113,6 +115,19 @@ export function useReaderModel(ports: ReaderPorts) {
       offset:
         offset ?? y / ((targetMode === "translated" ? translated : source).sizes[page - 1]?.height || 842),
     });
+  const searcher = useReaderSearch(
+    source.lines,
+    mode === "compare" ? comparison.lines : translated.lines,
+    mode,
+    position.page,
+    (page, y) => jump(page, y),
+    () => {
+      setFocus(false);
+      setLeft(true);
+      setNav("search");
+      setTimeout(() => root.current?.querySelector<HTMLInputElement>("[data-paper-search]")?.focus(), 0);
+    },
+  );
   useBlockNavigation(ports, mode, setMode, navigate);
   const travel = (direction: -1 | 1) => {
     const result = moveHistory(
@@ -222,20 +237,6 @@ export function useReaderModel(ports: ReaderPorts) {
     const timer = setTimeout(() => setNotice(""), 2500);
     return () => clearTimeout(timer);
   }, [notice]);
-  const search = () => {
-    setFocus(false);
-    setLeft(true);
-    setNav("search");
-    setTimeout(() => root.current?.querySelector<HTMLInputElement>("[data-paper-search]")?.focus(), 0);
-  };
-  const selectResult = (index: number) => {
-    if (!hits.length) {
-      return;
-    }
-    const next = (index + hits.length) % hits.length;
-    setResult(next);
-    jump(hits[next].page, hits[next].y);
-  };
   const currentHeading = [...headings]
     .reverse()
     .find(
@@ -262,8 +263,8 @@ export function useReaderModel(ports: ReaderPorts) {
     height: () => primary.current?.element()?.clientHeight ?? 700,
     back: () => travel(-1),
     forward: () => travel(1),
-    search,
-    result: (direction) => selectResult(resultIndex + direction),
+    search: searcher.open,
+    result: searcher.next,
     section,
     focus: () => setFocus((f) => !f),
     copy: () => void copy("author"),
@@ -307,7 +308,12 @@ export function useReaderModel(ports: ReaderPorts) {
     zoom,
     setZoom,
     queue,
-    query,
+    search: {
+      query: searcher.query,
+      ...searcher.options,
+      currentPage: searcher.current?.page,
+      currentOccurrence: searcher.currentOccurrence,
+    },
     active: ports.active,
     onLink: link,
     onTextClick: (event: React.MouseEvent) => {
@@ -344,9 +350,7 @@ export function useReaderModel(ports: ReaderPorts) {
     setSync,
     position,
     history,
-    query,
-    setQuery,
-    resultIndex,
+    searcher,
     external,
     setExternal,
     bookmark,
@@ -359,14 +363,11 @@ export function useReaderModel(ports: ReaderPorts) {
     main,
     references,
     headings,
-    hits,
     hovered,
     navigate,
     jump,
     travel,
     report,
-    search,
-    selectResult,
     currentHeading,
     copy,
     link,

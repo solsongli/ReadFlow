@@ -108,9 +108,7 @@ export function PaperReader(ports: PaperReaderProps) {
     setSync,
     position,
     history,
-    query,
-    setQuery,
-    resultIndex,
+    searcher,
     external,
     setExternal,
     bookmark,
@@ -123,14 +121,11 @@ export function PaperReader(ports: PaperReaderProps) {
     main,
     references,
     headings,
-    hits,
     hovered,
     navigate,
     jump,
     travel,
     report,
-    search,
-    selectResult,
     currentHeading,
     copy,
     link,
@@ -180,7 +175,7 @@ export function PaperReader(ports: PaperReaderProps) {
         toggleFocus={() => setFocus(!focus)}
         toggleLeft={() => setLeft(!left)}
         toggleRight={() => setRight(!right)}
-        search={search}
+        search={searcher.open}
         bookmark={() => setBookmark(`第 ${position.page} 页`)}
         tools={
           <>
@@ -258,12 +253,23 @@ export function PaperReader(ports: PaperReaderProps) {
             bookmarks={reading.bookmarks}
             remove={(id) => void reading.remove(id)}
             jump={jump}
-            query={query}
-            setQuery={setQuery}
-            hits={hits}
-            resultIndex={resultIndex}
-            selectResult={selectResult}
-            indexed={main.indexed}
+            query={searcher.query}
+            setQuery={searcher.setQuery}
+            searchOptions={searcher.options}
+            setSearchOptions={searcher.setOptions}
+            hits={searcher.hits}
+            resultIndex={searcher.resultIndex}
+            selectResult={searcher.selectResult}
+            compare={mode === "compare"}
+            searchScope={searcher.scope}
+            setSearchScope={searcher.setCompareScope}
+            indexed={
+              searcher.scope === "source"
+                ? source.indexed
+                : mode === "compare"
+                  ? comparison.indexed
+                  : translated.indexed
+            }
           />
         ) : null}
         <ReaderPages

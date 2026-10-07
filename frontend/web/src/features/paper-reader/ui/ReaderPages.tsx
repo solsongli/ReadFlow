@@ -11,6 +11,7 @@ import { useMemo, useRef } from "react";
 import type { MarginEntry } from "@/ui/wb/PageMargins.js";
 import type { useAlignmentGuide } from "../state/useAlignmentGuide.js";
 import { AlignmentOverlay } from "./AlignmentOverlay.js";
+const NO_SEARCH = { query: "", caseSensitive: false, wholeWord: false };
 export function ReaderPages({
   model,
   ports,
@@ -37,6 +38,9 @@ export function ReaderPages({
     link,
   } = model;
   const { c, byPage } = annotations;
+  const primarySearch =
+    mode === "compare" && model.searcher.scope === "translated" ? NO_SEARCH : common.search;
+  const secondarySearch = model.searcher.scope === "translated" ? common.search : NO_SEARCH;
   const readingGuide = {
     move: alignment.move,
     leave: alignment.leave,
@@ -100,6 +104,7 @@ export function ReaderPages({
           pdf={main.pdf}
           sizes={main.sizes}
           {...common}
+          search={primarySearch}
           label={mode === "translated" ? "译文页面" : "原文页面"}
           marginSide={ports.marginPreferences?.side || "auto"}
           paragraphMargins={ports.blockMarginWide}
@@ -132,6 +137,7 @@ export function ReaderPages({
           pdf={comparison.pdf}
           sizes={comparison.sizes}
           {...common}
+          search={secondarySearch}
           label="译文页面"
           readingOverlay={readingOverlay}
           readingGuide={readingGuide}

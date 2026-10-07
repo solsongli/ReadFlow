@@ -48,6 +48,11 @@ export interface SearchHit {
   page: number;
   text: string;
   y: number;
+  start?: number;
+}
+export interface SearchOptions {
+  caseSensitive: boolean;
+  wholeWord: boolean;
 }
 export interface Bookmark {
   id: string;
@@ -77,6 +82,8 @@ export interface ReaderPorts {
   alignmentGuide?: boolean;
   setAlignmentGuide?: (enabled: boolean) => void;
   paragraphs?: ParagraphBox[];
+  initialZoom?: "width" | "page" | number;
+  onZoomChange?: (zoom: "width" | "page" | number) => void;
   registerBlockNavigation?: (jump: (page: number, offset: number) => void) => () => void;
   assistance?: AssistancePorts;
   canvasLinks?: Array<{ canvas_id: string; node_id: string; annotation_id: string; name: string }>;

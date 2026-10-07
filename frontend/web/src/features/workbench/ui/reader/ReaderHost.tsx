@@ -9,6 +9,7 @@ import { buildApiHeaders, buildApiUrl } from "@/platform/config/runtime.js";
 import { cn } from "@/ui/lib/utils.js";
 import type { ReaderTab } from "../../domain/workbench-store.js";
 import { formatGbt7714 } from "../../domain/citation.js";
+import { rememberReaderZoom } from "../../domain/reader-zoom.js";
 import { useWb, useWorkbench } from "../context.js";
 export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean }) {
   const wb = useWorkbench();
@@ -19,6 +20,7 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
   const marginSide = useWb((s) => s.marginSide);
   const marginTranslations = useWb((s) => s.marginTranslations);
   const alignmentGuide = useWb((s) => s.alignmentGuide);
+  const readerZooms = useWb((s) => s.readerZooms);
   const tone = useWb((state) => state.paperTone);
   const language = useWb((state) => state.blockLanguage);
   const format = useWb((state) => state.translationFormat);
@@ -82,6 +84,8 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
         alignmentGuide={alignmentGuide}
         setAlignmentGuide={(enabled) => wb.setPrefs({ alignmentGuide: enabled })}
         paragraphs={blocks.paragraphs}
+        initialZoom={readerZooms[tab.itemId] ?? "width"}
+        onZoomChange={(zoom) => wb.setPrefs({ readerZooms: rememberReaderZoom(readerZooms, tab.itemId, zoom) })}
         registerBlockNavigation={blocks.registerBlockNavigation}
         translationPanel={blocks.sidebar}
         {...canvas.ports}

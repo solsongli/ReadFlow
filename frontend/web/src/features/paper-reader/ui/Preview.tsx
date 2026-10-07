@@ -2,11 +2,13 @@ import { useEffect, useRef } from "react";
 import type { FigureTarget, Reference } from "../domain/types.js";
 import type { PDFDocumentProxy, renderQueue } from "../state/document.js";
 import { Button } from "@/ui/wb/Button.js";
+import { previewRegion } from "../domain/navigation.js";
 export interface HoverPreview {
   x: number;
   y: number;
   references?: Reference[];
   figure?: FigureTarget;
+  target?: { page: number; y: number };
   pdf: PDFDocumentProxy;
 }
 export function Preview({
@@ -28,7 +30,7 @@ export function Preview({
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
-    if (!preview.figure) {
+    if (!preview.figure && !preview.target) {
       return;
     }
     let gone = false;
@@ -40,18 +42,23 @@ export function Preview({
         return;
       }
       try {
-        const page = await preview.pdf.getPage(figure.page);
+        const pageNumber = figure?.page ?? preview.target!.page;
+        const page = await preview.pdf.getPage(pageNumber);
         if (gone) {
           return;
         }
-        const scale = 380 / page.getViewport({ scale: 1 }).width,
+        const native = page.getViewport({ scale: 1 });
+        const region = figure
+          ? { top: figure.top, bottom: figure.bottom }
+          : previewRegion(preview.target!.y, native.height);
+        const scale = 380 / native.width,
           viewport = page.getViewport({ scale });
         target.width = viewport.width * 2;
-        target.height = (figure.bottom - figure.top) * scale * 2;
+        target.height = (region.bottom - region.top) * scale * 2;
         const render = page.render({
           canvasContext: target.getContext("2d")!,
           viewport,
-          transform: [2, 0, 0, 2, 0, -figure.top * scale * 2],
+          transform: [2, 0, 0, 2, 0, -region.top * scale * 2],
         });
         task = render;
         await render.promise;
@@ -68,7 +75,7 @@ export function Preview({
   return (
     <aside
       role="dialog"
-      aria-label={preview.figure ? "图表预览" : "引用预览"}
+      aria-label={preview.figure ? "图表预览" : preview.references?.length ? "引用预览" : "链接预览"}
       className="fixed z-50 max-h-[60vh] w-[410px] max-w-[calc(100vw-24px)] overflow-auto rounded-xl border border-wb-line-soft bg-wb-panel p-4 text-wb-text shadow-wb-pop"
       style={{
         left: Math.max(12, Math.min(preview.x, innerWidth - 430)),
@@ -93,7 +100,18 @@ export function Preview({
           </Button>
         </>
       ) : (
-        preview.references?.map((reference) => (
+        <>
+          {preview.target ? (
+            <button
+              type="button"
+              aria-label="跳到链接目标"
+              className="mb-3 block w-full border-0 bg-transparent p-0"
+              onClick={() => jump(preview.target!.page, preview.target!.y)}
+            >
+              <canvas ref={canvas} className="w-full" />
+            </button>
+          ) : null}
+          {preview.references?.map((reference) => (
           <div key={reference.id} className="mb-3 last:mb-0">
             <p className="m-0 mb-3 font-wb-serif text-[0.875rem] leading-relaxed">
               {reference.number ? `[${reference.number}] ` : ""}
@@ -111,7 +129,13 @@ export function Preview({
               </Button>
             </div>
           </div>
-        ))
+          ))}
+          {!preview.references?.length && preview.target ? (
+            <Button size="sm" onClick={() => jump(preview.target!.page, preview.target!.y)}>
+              跳到目标位置 · 第 {preview.target.page} 页
+            </Button>
+          ) : null}
+        </>
       )}
       {matches.length ? (
         <p className="mb-0 text-[0.75rem] text-wb-link">

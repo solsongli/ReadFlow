@@ -32,7 +32,7 @@ export const SHORTCUTS = [
   { id: "reader-scroll", group: "阅读", keys: "J / K · 空格 / Shift 空格", label: "连续滚动论文" },
   { id: "reader-ends", group: "阅读", keys: "gg / G · Home / End", label: "首页 / 末页" },
   { id: "reader-page", group: "阅读", keys: "数字 + Enter", label: "跳到指定页" },
-  { id: "reader-search", group: "阅读", keys: "Ctrl F · n / N", label: "搜索及下一个 / 上一个结果（搜索栏有查询时）" },
+  { id: "reader-search", group: "阅读", keys: "Ctrl F · Enter / Shift Enter · n / N", label: "搜索及下一个 / 上一个结果（搜索栏有查询时）" },
   { id: "reader-sections", group: "阅读", keys: "[ / ]", label: "上一节 / 下一节" },
   { id: "reader-history", group: "阅读", keys: "Alt ← / Alt → · 鼠标侧键", label: "返回 / 前进到阅读位置" },
   { id: "reader-focus", group: "阅读", keys: "F", label: "切换专注模式" },

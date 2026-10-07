@@ -5,11 +5,36 @@ import { TextLayer, type PDFDocumentProxy, type PageSize, type renderQueue } fro
 import { PageMargins, type MarginEntry } from "@/ui/wb/PageMargins.js";
 import type { MarginSide } from "@/ui/wb/margin-layout.js";
 import type { PagePoint } from "../domain/alignment.js";
+import type { SearchOptions } from "../domain/types.js";
+import { searchRanges } from "../domain/analysis.js";
+import { joinedSearchText, spanSeparator, splitSearchMatches } from "../domain/search-highlight.js";
 export interface LinkBox {
   rect: number[];
   dest?: unknown;
   url?: string;
   text?: string;
+}
+function textRange(element: Element, start: number, end: number) {
+  const nodes: Text[] = [];
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) nodes.push(node as Text);
+  const locate = (offset: number) => {
+    let cursor = 0;
+    for (const node of nodes) {
+      const length = node.data.length;
+      if (offset <= cursor + length) return { node, offset: Math.max(0, offset - cursor) };
+      cursor += length;
+    }
+    const node = nodes.at(-1);
+    return node ? { node, offset: node.data.length } : null;
+  };
+  const from = locate(start),
+    to = locate(end);
+  if (!from || !to) return null;
+  const range = document.createRange();
+  range.setStart(from.node, from.offset);
+  range.setEnd(to.node, to.offset);
+  return range;
 }
 export function PdfPage({
   pdf,
@@ -17,7 +42,7 @@ export function PdfPage({
   scale,
   size,
   queue,
-  query,
+  search,
   onLink,
   onHover,
   onTextClick,
@@ -36,7 +61,7 @@ export function PdfPage({
   scale: number;
   size: PageSize;
   queue: ReturnType<typeof renderQueue>;
-  query: string;
+  search: SearchOptions & { query: string; currentPage?: number; currentOccurrence?: number };
   onLink: (link: LinkBox) => void;
   onTextClick: (event: React.MouseEvent) => void;
   onHover: (event: React.MouseEvent, link?: LinkBox) => void;
@@ -59,6 +84,9 @@ export function PdfPage({
   const canvas = useRef<HTMLCanvasElement>(null),
     text = useRef<HTMLDivElement>(null);
   const [links, setLinks] = useState<LinkBox[]>([]),
+    [highlights, setHighlights] = useState<
+      Array<{ left: number; top: number; width: number; height: number; current: boolean }>
+    >([]),
     [version, setVersion] = useState(0),
     [error, setError] = useState("");
   const gesture = useRef<{ x: number; y: number; moved: number } | undefined>(undefined);
@@ -180,27 +208,51 @@ export function PdfPage({
   }, []);
   useEffect(() => {
     const spans = [...(text.current?.querySelectorAll("span") ?? [])];
-    const joined = spans
-        .map((span) => span.textContent || "")
-        .join(" ")
-        .toLowerCase(),
-      term = query.trim().toLowerCase();
-    const matches: number[] = [];
-    if (term) {
-      for (let at = joined.indexOf(term); at >= 0; at = joined.indexOf(term, at + term.length)) {
-        matches.push(at);
-      }
-    }
-    let offset = 0;
-    for (const span of spans) {
-      const end = offset + (span.textContent?.length ?? 0);
-      span.classList.toggle(
-        "pr-search-hit",
-        matches.some((at) => at < end && at + term.length > offset),
-      );
-      offset = end + 1;
-    }
-  }, [query, version]);
+    const texts = spans.map((span) => span.textContent || ""),
+      boxes = spans.map((span) => span.getBoundingClientRect()),
+      separators = spans.map((span, index) => {
+        const next = spans[index + 1];
+        if (!next) return "";
+        const left = boxes[index],
+          right = boxes[index + 1];
+        return spanSeparator(
+          span.textContent || "",
+          next.textContent || "",
+          right.left - left.right,
+          Math.max(left.height, right.height),
+          Math.abs(left.top - right.top) < Math.min(left.height, right.height) * 0.5,
+        );
+      }),
+      joined = joinedSearchText(texts, separators),
+      term = search.query.trim();
+    const matches = searchRanges(joined, term, search);
+    const page = text.current?.closest("[data-paper-page]")?.getBoundingClientRect();
+    if (!page) return setHighlights([]);
+    setHighlights(
+      splitSearchMatches(texts, matches, separators).flatMap((part) => {
+        const range = textRange(spans[part.span], part.start, part.end);
+        return range
+          ? [...range.getClientRects()]
+              .filter((rect) => rect.width > 0 && rect.height > 0)
+              .map((rect) => ({
+                left: rect.left - page.left,
+                top: rect.top - page.top,
+                width: rect.width,
+                height: rect.height,
+                current:
+                  number === search.currentPage && part.match === search.currentOccurrence,
+              }))
+          : [];
+      }),
+    );
+  }, [
+    search.query,
+    search.caseSensitive,
+    search.wholeWord,
+    search.currentPage,
+    search.currentOccurrence,
+    version,
+  ]);
   return (
     <div
       className="pr-page relative shrink-0"
@@ -257,6 +309,22 @@ export function PdfPage({
         className="pr-image-colors pointer-events-none absolute inset-0 h-full w-full"
       />
       {readingOverlay}
+      <div data-search-highlights className="pointer-events-none absolute inset-0 z-[1]" aria-hidden="true">
+        {highlights.map((highlight, index) => (
+          <div
+            key={index}
+            className="pr-search-hit absolute rounded-[2px]"
+            data-search-current={highlight.current}
+            style={{
+              left: highlight.left,
+              top: highlight.top,
+              width: highlight.width,
+              height: highlight.height,
+              background: highlight.current ? "var(--pr-search-current)" : "var(--pr-search)",
+            }}
+          />
+        ))}
+      </div>
       <div ref={text} className="pr-text-layer" style={{ "--scale-factor": scale } as React.CSSProperties} />
       {links.map((link, index) => {
         const [x1, y1, x2, y2] = link.rect;

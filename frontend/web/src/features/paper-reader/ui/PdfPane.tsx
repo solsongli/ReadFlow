@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import { offsets, pageAt, visiblePages } from "../domain/navigation.js";
-import type { Position } from "../domain/types.js";
+import type { Position, SearchOptions } from "../domain/types.js";
 import type { PagePoint } from "../domain/alignment.js";
 import type { PDFDocumentProxy, PageSize, renderQueue } from "../state/document.js";
 import { PdfPage, type LinkBox } from "./PdfPage.js";
@@ -30,7 +30,7 @@ export const PdfPane = forwardRef<
     zoom: Zoom;
     setZoom: (zoom: Zoom) => void;
     queue: ReturnType<typeof renderQueue>;
-    query: string;
+    search: SearchOptions & { query: string; currentPage?: number; currentOccurrence?: number };
     active: boolean;
     label: string;
     onPosition: (position: Position, programmatic: boolean) => void;
@@ -59,7 +59,7 @@ export const PdfPane = forwardRef<
     zoom,
     setZoom,
     queue,
-    query,
+    search,
     active,
     label,
     onPosition,
@@ -259,7 +259,7 @@ export const PdfPane = forwardRef<
               scale={scale}
               size={sizes[index]}
               queue={queue}
-              query={query}
+              search={search}
               onLink={onLink}
               onTextClick={onTextClick}
               onHover={onHover}

@@ -1,6 +1,7 @@
 import { normalizeSemantics } from "@/features/paper-reader/domain.js";
 import { DEFAULT_PREFS, type Prefs } from "./workbench-store.js";
 import { normalizeTypography } from "./typography.js";
+import { normalizeReaderZooms } from "./reader-zoom.js";
 export const PREFS_KEY = "readflow.workbench.prefs.v1";
 
 export function parseWorkbenchPrefs(raw: string | null | undefined): Partial<Prefs> {
@@ -26,6 +27,7 @@ export function parseWorkbenchPrefs(raw: string | null | undefined): Partial<Pre
     prefs.reviewLimit = Number.isFinite(prefs.reviewLimit)
       ? Math.max(0, Math.min(5000, Math.floor(prefs.reviewLimit!)))
       : 200;
+    prefs.readerZooms = normalizeReaderZooms(value.readerZooms);
     return {
       ...prefs,
       annotationSemantics: normalizeSemantics(prefs.annotationSemantics),

@@ -155,7 +155,7 @@ export function useAnnotationReader(ports: ReaderPorts, model: ReturnType<typeof
       c.setColor((["yellow", "blue", "green", "red", "purple"] as const)[Number(key) - 1]);
       return false; // Preserve R1's numeric page buffer; Enter still jumps.
     }
-    if (key === "n" && model.nav === "search" && model.query) {
+    if (key === "n" && model.nav === "search" && model.searcher.query) {
       return false;
     }
     const tools: Record<string, Tool> = {

@@ -182,13 +182,32 @@ export function heuristicOutline(lines: TextLine[]): OutlineEntry[] {
       level: Math.min(4, (line.text.match(/^\d+(\.\d+)*/)?.[0].match(/\./g)?.length ?? 0) + 1),
     }));
 }
-export function searchLines(lines: TextLine[], query: string) {
-  const needle = query.trim().toLocaleLowerCase();
-  return needle
-    ? lines
-        .filter((line) => line.text.toLocaleLowerCase().includes(needle))
-        .map(({ page, text, y }) => ({ page, text, y }))
-    : [];
+export function searchRanges(
+  text: string,
+  query: string,
+  options = { caseSensitive: false, wholeWord: false },
+) {
+  const needle = query.trim();
+  if (!needle) return [];
+  const source = options.caseSensitive ? text : text.toLocaleLowerCase();
+  const match = options.caseSensitive ? needle : needle.toLocaleLowerCase();
+  const word = (value: string | undefined) => Boolean(value && /[\p{L}\p{N}_]/u.test(value));
+  const ranges: Array<[number, number]> = [];
+  for (let at = source.indexOf(match); at >= 0; at = source.indexOf(match, at + Math.max(1, match.length))) {
+    const end = at + match.length;
+    if (!options.wholeWord || (!word(text[at - 1]) && !word(text[end]))) ranges.push([at, end]);
+  }
+  return ranges;
+}
+
+export function searchLines(
+  lines: TextLine[],
+  query: string,
+  options = { caseSensitive: false, wholeWord: false },
+) {
+  return lines.flatMap(({ page, text, y }) =>
+    searchRanges(text, query, options).map(([start]) => ({ page, text, y, start })),
+  );
 }
 export function quoteReference(
   text: string,

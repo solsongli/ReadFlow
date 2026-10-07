@@ -13,6 +13,7 @@ import type {
   WorkbenchRow,
   WorkbenchView,
 } from "@/platform/contracts/workbench.js";
+import type { ReaderZoomPreference } from "./reader-zoom.js";
 
 export type MainView = "desk" | "library" | "notes" | "settings" | "review";
 export type ListLayout = "list" | "grouped";
@@ -51,6 +52,7 @@ export interface Prefs extends TypographyPrefs {
   marginSide: "auto" | "right";
   marginTranslations: boolean;
   alignmentGuide: boolean;
+  readerZooms: Record<string, ReaderZoomPreference>;
   reviewNewLimit: number;
   reviewLimit: number;
   blockLanguage: string;
@@ -113,6 +115,7 @@ export const DEFAULT_PREFS: Prefs = {
   marginSide: "auto",
   marginTranslations: false,
   alignmentGuide: true,
+  readerZooms: {},
   reviewNewLimit: 20,
   reviewLimit: 200,
   blockLanguage: "zh-CN",
@@ -295,6 +298,7 @@ export function prefsOf(state: S): Prefs {
     marginSide,
     marginTranslations,
     alignmentGuide,
+    readerZooms,
   } = state;
   return {
     sort,
@@ -327,5 +331,6 @@ export function prefsOf(state: S): Prefs {
     marginSide,
     marginTranslations,
     alignmentGuide,
+    readerZooms,
   };
 }

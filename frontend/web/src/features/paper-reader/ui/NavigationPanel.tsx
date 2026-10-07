@@ -1,7 +1,12 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Bookmark, ListTree, Search, Grid2X2, Trash2, Images } from "lucide-react";
 import { IconButton, Button } from "@/ui/wb/Button.js";
-import type { Bookmark as SavedBookmark, OutlineEntry, SearchHit } from "../domain/types.js";
+import type {
+  Bookmark as SavedBookmark,
+  OutlineEntry,
+  SearchHit,
+  SearchOptions,
+} from "../domain/types.js";
 import type { PDFDocumentProxy, renderQueue } from "../state/document.js";
 import { Thumbnail } from "./Thumbnail.js";
 export type NavigationTab = "outline" | "thumbnails" | "bookmarks" | "search" | "figures";
@@ -18,10 +23,15 @@ export function NavigationPanel({
   jump,
   query,
   setQuery,
+  searchOptions,
+  setSearchOptions,
   hits,
   resultIndex,
   selectResult,
   indexed,
+  compare,
+  searchScope,
+  setSearchScope,
 }: {
   figures?: ReactNode;
   tab: NavigationTab;
@@ -35,11 +45,23 @@ export function NavigationPanel({
   jump: (page: number, y?: number, offset?: number, mode?: "source" | "translated") => void;
   query: string;
   setQuery: (value: string) => void;
+  searchOptions: SearchOptions;
+  setSearchOptions: (value: Partial<SearchOptions>) => void;
   hits: SearchHit[];
   resultIndex: number;
   selectResult: (index: number) => void;
   indexed: boolean;
+  compare: boolean;
+  searchScope: "source" | "translated";
+  setSearchScope: (scope: "source" | "translated") => void;
 }) {
+  const scroll = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (tab === "search" && resultIndex >= 0)
+      scroll.current
+        ?.querySelector(`[data-search-result="${resultIndex}"]`)
+        ?.scrollIntoView({ block: "nearest" });
+  }, [tab, resultIndex]);
   const tabs = [
     { id: "outline", label: "目录", icon: ListTree },
     { id: "figures", label: "图表", icon: Images },
@@ -70,7 +92,7 @@ export function NavigationPanel({
           </IconButton>
         ))}
       </div>
-      <div className="wb-scroll min-h-0 flex-1 p-2">
+      <div ref={scroll} className="wb-scroll min-h-0 flex-1 p-2">
         {tab === "figures" ? figures : null}
         {tab === "outline" ? (
           <>
@@ -137,6 +159,30 @@ export function NavigationPanel({
         ) : null}
         {tab === "search" ? (
           <>
+            {compare ? (
+              <div role="group" aria-label="对照查找范围" className="mb-2 grid grid-cols-2 gap-1">
+                <Button
+                  size="sm"
+                  variant={searchScope === "source" ? "secondary" : "ghost"}
+                  aria-pressed={searchScope === "source"}
+                  onClick={() => setSearchScope("source")}
+                >
+                  原文（左侧）
+                </Button>
+                <Button
+                  size="sm"
+                  variant={searchScope === "translated" ? "secondary" : "ghost"}
+                  aria-pressed={searchScope === "translated"}
+                  onClick={() => setSearchScope("translated")}
+                >
+                  译文（右侧）
+                </Button>
+              </div>
+            ) : (
+              <p className="mb-2 text-[0.6875rem] text-wb-text-3">
+                搜索范围：{searchScope === "translated" ? "译文" : "原文"}
+              </p>
+            )}
             <input
               autoFocus
               data-paper-search
@@ -145,18 +191,49 @@ export function NavigationPanel({
               className="mb-2 w-full rounded-lg border-0 bg-wb-fill p-2 text-[0.8125rem]"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && hits.length) {
+                  event.preventDefault();
+                  selectResult(
+                    resultIndex < 0 ? (event.shiftKey ? -1 : 0) : resultIndex + (event.shiftKey ? -1 : 1),
+                  );
+                }
+              }}
             />
-            <p className="text-[0.75rem] text-wb-text-3">
-              {hits.length} 处{indexed ? "" : " · 索引中"}
+            <div role="group" aria-label="查找选项" className="mb-2 flex flex-wrap gap-2 text-[0.6875rem]">
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={searchOptions.caseSensitive}
+                  onChange={(event) => setSearchOptions({ caseSensitive: event.target.checked })}
+                />
+                区分大小写
+              </label>
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={searchOptions.wholeWord}
+                  onChange={(event) => setSearchOptions({ wholeWord: event.target.checked })}
+                />
+                全词匹配
+              </label>
+            </div>
+            <p aria-live="polite" className="text-[0.75rem] text-wb-text-3">
+              {query.trim() && indexed && !hits.length
+                ? "无结果"
+                : `${resultIndex >= 0 ? resultIndex + 1 : 0} / ${hits.length} 处${indexed ? "" : " · 索引中"}`}
             </p>
             {hits.map((hit, index) => (
               <Button
                 key={index}
+                data-search-result={index}
                 className={`mb-1 h-auto w-full flex-col items-start whitespace-normal text-left ${index === resultIndex ? "bg-wb-selected" : ""}`}
                 variant="ghost"
                 onClick={() => selectResult(index)}
               >
-                <span className="text-[0.6875rem] text-wb-text-3">第 {hit.page} 页</span>
+                <span className="text-[0.6875rem] text-wb-text-3">
+                  第 {hit.page} 页{compare ? ` · ${searchScope === "source" ? "原文左侧" : "译文右侧"}` : ""}
+                </span>
                 <span className="line-clamp-3 text-[0.75rem]">{hit.text}</span>
               </Button>
             ))}

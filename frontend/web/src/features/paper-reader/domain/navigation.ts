@@ -86,3 +86,8 @@ export function rasterDimensions(width: number, height: number, deviceRatio: num
   }
   return { width: pixelsWide, height: pixelsHigh, ratio };
 }
+export function previewRegion(y: number, pageHeight: number, radius = 70) {
+  const height = Math.min(pageHeight, radius * 2);
+  const top = Math.max(0, Math.min(pageHeight - height, y - radius));
+  return { top, bottom: top + height };
+}

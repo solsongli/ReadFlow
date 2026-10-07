@@ -218,16 +218,16 @@
 }
 
 /* Native paper reader: PDF filters affect only page canvases, never interface text. */
-.pr-reader { --pr-desk: #eeeef0; --pr-paper: #fff; --pr-page-filter: none; --pr-page-blend: normal; --pr-search: rgba(255, 204, 0, .38); --pr-shadow: 0 1px 5px rgba(0, 0, 0, .12); --pr-selection: rgba(0, 113, 227, .30); --pr-alignment-guide: rgba(0, 113, 227, .10); --pr-paragraph-guide: rgba(0, 113, 227, .055); }
+.pr-reader { --pr-desk: #eeeef0; --pr-paper: #fff; --pr-page-filter: none; --pr-page-blend: normal; --pr-search: rgba(255, 204, 0, .38); --pr-search-current: rgba(255, 149, 0, .62); --pr-shadow: 0 1px 5px rgba(0, 0, 0, .12); --pr-selection: rgba(0, 113, 227, .30); --pr-alignment-guide: rgba(0, 113, 227, .10); --pr-paragraph-guide: rgba(0, 113, 227, .055); }
 .pr-reader[data-tone="night"], [data-wb-theme="dark"] .pr-reader { --pr-selection: rgba(80, 164, 255, .45); }
 [data-wb-theme="dark"] .pr-reader { --pr-desk: #19191b; }
 .pr-reader[data-tone="sepia"] { --pr-paper: #f7f0de; --pr-page-filter: none; --pr-page-blend: multiply; --pr-alignment-guide: rgba(151, 104, 36, .13); --pr-paragraph-guide: rgba(151, 104, 36, .07); }
 .pr-reader[data-tone="night"], [data-wb-theme="dark"] .pr-reader[data-tone="auto"] { --pr-desk: #19191b; --pr-paper: #141416; --pr-page-filter: invert(.9) hue-rotate(180deg); --pr-image-display: block; }
-.pr-reader[data-tone="night"], [data-wb-theme="dark"] .pr-reader[data-tone="auto"] { --pr-alignment-guide: rgba(10, 132, 255, .18); --pr-paragraph-guide: rgba(10, 132, 255, .10); }
+.pr-reader[data-tone="night"], [data-wb-theme="dark"] .pr-reader[data-tone="auto"] { --pr-search-current: rgba(255, 159, 10, .66); --pr-alignment-guide: rgba(10, 132, 255, .18); --pr-paragraph-guide: rgba(10, 132, 255, .10); }
 @media (prefers-color-scheme: dark) {
   :root:not([data-wb-theme="light"]) .pr-reader { --pr-desk: #19191b; }
   :root:not([data-wb-theme="light"]) .pr-reader[data-tone="auto"] { --pr-paper: #141416; --pr-page-filter: invert(.9) hue-rotate(180deg); --pr-image-display: block; }
-  :root:not([data-wb-theme="light"]) .pr-reader[data-tone="auto"] { --pr-alignment-guide: rgba(10, 132, 255, .18); --pr-paragraph-guide: rgba(10, 132, 255, .10); }
+  :root:not([data-wb-theme="light"]) .pr-reader[data-tone="auto"] { --pr-search-current: rgba(255, 159, 10, .66); --pr-alignment-guide: rgba(10, 132, 255, .18); --pr-paragraph-guide: rgba(10, 132, 255, .10); }
 }
 
 /* Annotation hues are semantic and independent from the PDF inversion filter. */

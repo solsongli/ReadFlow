@@ -51,8 +51,12 @@ const smokeFiles = files(path.join(web, "tests"))
     const priority = (file) =>
       file.endsWith("paper-reader/alignment-smoke.mjs")
         ? 2
-        : file.endsWith("paper-blocks/inline-corpus-smoke.mjs")
+        : file.endsWith("paper-reader/x16-smoke.mjs")
           ? 3
+        : file.endsWith("paper-reader/x16b-smoke.mjs")
+          ? 4
+        : file.endsWith("paper-blocks/inline-corpus-smoke.mjs")
+          ? 5
           : 1;
     return priority(left) - priority(right) || left.localeCompare(right);
   });

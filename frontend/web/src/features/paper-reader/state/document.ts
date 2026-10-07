@@ -1,6 +1,7 @@
 import { getDocument, GlobalWorkerOptions, TextLayer } from "pdfjs-dist";
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
 import type { OutlineEntry, TextLine } from "../domain/types.js";
+import { spanSeparator } from "../domain/search-highlight.js";
 export { TextLayer };
 export type { PDFDocumentProxy, PDFPageProxy };
 export interface PageSize {
@@ -77,7 +78,8 @@ export async function pageLines(page: PDFPageProxy): Promise<TextLine[]> {
       fragment.x >= last.x &&
       fragment.x - (last.x + last.width) < 35
     ) {
-      last.text += " " + fragment.text;
+      const gap = fragment.x - (last.x + last.width);
+      last.text += spanSeparator(last.text, fragment.text, gap, Math.max(last.size, fragment.size)) + fragment.text;
       last.width = fragment.x + fragment.width - last.x;
       last.size = Math.max(last.size, fragment.size);
     } else {

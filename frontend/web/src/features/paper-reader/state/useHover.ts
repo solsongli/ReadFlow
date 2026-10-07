@@ -88,8 +88,8 @@ export function useHover(
     }
     if (figure) {
       setPreview({ x: current.x, y: current.y, figure, pdf: imagePdf ?? current.pdf });
-    } else if (matches.length) {
-      setPreview({ x: current.x, y: current.y, references: matches, pdf: current.pdf });
+    } else if (matches.length || target) {
+      setPreview({ x: current.x, y: current.y, references: matches, target: target ?? undefined, pdf: current.pdf });
     }
   };
   useEffect(() => {
