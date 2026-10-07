@@ -73,7 +73,7 @@ export interface ReaderPorts {
   bilingualOutline?: boolean;
   inlineAvailable?: boolean;
   layoutAligned?: boolean;
-  registerBlockNavigation?: (jump: (page: number, offset: number) => void) => (() => void);
+  registerBlockNavigation?: (jump: (page: number, offset: number) => void) => () => void;
   assistance?: AssistancePorts;
   canvasLinks?: Array<{ canvas_id: string; node_id: string; annotation_id: string; name: string }>;
   openCanvasLink?: (canvas: string, name: string, node: string) => void;
@@ -87,6 +87,7 @@ export interface ReaderPorts {
   annotationKeys?: (event: KeyboardEvent) => boolean;
   source: { url: string; headers: Record<string, string> };
   translated?: { url: string; headers: Record<string, string> };
+  compareTranslated?: { url: string; headers: Record<string, string> };
   metadata: PaperMetadata;
   lastReadPage?: number | null;
   resumePage?: number | null;

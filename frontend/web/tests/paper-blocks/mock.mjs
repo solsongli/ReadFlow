@@ -51,7 +51,13 @@ export async function blocksMock(query, suppliedManifest) {
       });
   }
   if (query.includes("x7")) {
-    result = { revision: "layout-test", language, layout_ready: true, reflow_ready: true };
+    result = {
+      revision: "layout-test",
+      language,
+      layout_ready: true,
+      aligned_ready: true,
+      reflow_ready: true,
+    };
     const label = document?.blocks.find((b) => b.type === "figure" && b.figure_text?.length)?.figure_text[0];
     if (label) label.translation = "这是用于检查自动缩小和完整悬停提示的较长图内标签";
   }
@@ -101,6 +107,7 @@ export async function blocksMock(query, suppliedManifest) {
       revision: "summary",
       language,
       layout_ready: true,
+      aligned_ready: true,
       reflow_ready: true,
       qa,
       layout_overflow: ["a"],
@@ -120,6 +127,7 @@ export async function blocksMock(query, suppliedManifest) {
       revision: "diagnostics",
       language,
       layout_ready: true,
+      aligned_ready: true,
       reflow_ready: true,
       error: { code: "network", message: "无法连接模型服务或请求超时", details: detail },
       diagnostics: [detail],
@@ -267,7 +275,12 @@ export async function blocksMock(query, suppliedManifest) {
         });
       } else if (path.endsWith("/files/translated-layout.pdf")) {
         await route.fulfill({
-          body: await readFile("/tmp/readflow-x7/fixture/translated-layout.pdf"),
+          body: await readFile("tests/fixtures/blocks/translated.pdf"),
+          contentType: "application/pdf",
+        });
+      } else if (path.endsWith("/files/translated-aligned.pdf")) {
+        await route.fulfill({
+          body: await readFile("tests/fixtures/blocks/translated.pdf"),
           contentType: "application/pdf",
         });
       } else if (path.endsWith("/files/translated.pdf")) {
@@ -300,7 +313,13 @@ export async function blocksMock(query, suppliedManifest) {
         await route.fulfill({ json: { qa, model_requests: 0 } });
       } else if (path.endsWith("/render")) {
         requests.push({ render_only: true, ...route.request().postDataJSON() });
-        result = { revision: "local-render", language, layout_ready: true, reflow_ready: true };
+        result = {
+          revision: "local-render",
+          language,
+          layout_ready: true,
+          aligned_ready: true,
+          reflow_ready: true,
+        };
         const job = { id: "local-render", scope: "full", phase: "完成", status: "done", percent: 100 };
         jobs.push(job);
         await route.fulfill({ status: 202, json: job });

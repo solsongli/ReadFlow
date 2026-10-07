@@ -112,8 +112,9 @@ class MarkerRepairJobs(unittest.IsolatedAsyncioTestCase):
                     self.assertFalse(service.storage.repair_state(entry)["pending"])
                     self.assertEqual(state["result"]["usage"]["total_tokens"], 100)
                     self.assertEqual(state["result"]["qa"]["retried"], 2)
+                    self.assertTrue(state["result"]["aligned_ready"])
                     self.assertNotIn("BOLD", (folder / "translations.json").read_text())
-                    for name in ("translated-layout.pdf", "translated.pdf"):
+                    for name in ("translated-layout.pdf", "translated-aligned.pdf", "translated.pdf"):
                         with fitz.open(folder / name) as pdf:
                             self.assertNotIn("BOLD", "".join(page.get_text() for page in pdf).upper())
                             self.assertNotIn("BOLD", str(pdf.get_toc()).upper())

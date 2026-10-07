@@ -2,11 +2,18 @@ import type { WorkbenchView } from "@/platform/contracts/workbench.js";
 
 type LibraryContext = { view: WorkbenchView; group?: string | null; tag?: string | null; query?: string };
 
-export function librarySubtitle({ view, group, tag, query, total, unread }: LibraryContext & { total?: number; unread?: number }): string {
+/** Filters in effect; the count itself lives in the header badge (libraryCount). */
+export function librarySubtitle({ view, group, tag, query, unread }: LibraryContext & { total?: number; unread?: number }): string {
   const filters = [group && `分组 ${group}`, tag && `标签 ${tag}`, query && `搜索「${query}」`].filter(Boolean);
-  const count = `${total ?? "…"} 篇`;
-  if (filters.length) return [...filters, count].join(" · ");
-  return view === "all" ? `${count} · ${unread ?? "…"} 篇待读` : count;
+  if (filters.length) return filters.join(" · ");
+  return view === "all" ? `${unread ?? "…"} 篇待读` : "";
+}
+
+/** "共 N 篇" for the whole library or the trash, "N / 总数 篇" for any subset of the live library. */
+export function libraryCount({ view, group, tag, query, total, all }: LibraryContext & { total?: number; all?: number }): string {
+  const shown = total ?? "…";
+  const subset = view !== "trash" && (view !== "all" || Boolean(group || tag || query));
+  return subset && all != null ? `${shown} / ${all} 篇` : `共 ${shown} 篇`;
 }
 
 const EMPTY_VIEWS = {

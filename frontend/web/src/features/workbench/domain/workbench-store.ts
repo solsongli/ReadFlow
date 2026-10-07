@@ -55,7 +55,7 @@ export interface Prefs extends TypographyPrefs {
   blockLanguage: string;
   blockImageText: boolean;
   autoTranslateImports: boolean;
-  layoutDensity: "balanced" | "compact";
+  layoutDensity: "balanced" | "compact" | "aligned";
   translationFormat: "layout" | "reflow";
   translationDisableThinking: boolean;
   blockModeDisabled: boolean;
@@ -197,23 +197,38 @@ export const workbenchActions = {
   },
   listFailed: (state: S, error: string): S => ({ ...state, list: { ...state.list, status: "error", error } }),
   deskLoading: (state: S): S => ({ ...state, desk: { ...state.desk, status: "loading", error: null } }),
-  deskLoaded: (state: S, data: WorkbenchDesk): S => ({ ...state, desk: { status: "ready", data, error: null } }),
+  deskLoaded: (state: S, data: WorkbenchDesk): S => ({
+    ...state,
+    desk: { status: "ready", data, error: null },
+  }),
   deskFailed: (state: S, error: string): S => ({ ...state, desk: { ...state.desk, status: "error", error } }),
   detailLoading: (state: S): S => ({ ...state, detail: { ...state.detail, status: "loading", error: null } }),
-  detailLoaded: (state: S, item: PaperItem | null): S => ({ ...state, detail: { status: "ready", item, error: null } }),
-  detailFailed: (state: S, error: string): S => ({ ...state, detail: { ...state.detail, status: "error", error } }),
+  detailLoaded: (state: S, item: PaperItem | null): S => ({
+    ...state,
+    detail: { status: "ready", item, error: null },
+  }),
+  detailFailed: (state: S, error: string): S => ({
+    ...state,
+    detail: { ...state.detail, status: "error", error },
+  }),
   select: (state: S, id: string, mode: "single" | "toggle" | "range" = "single"): S => {
     const order = state.list.result?.items.map((row) => row.id) ?? [];
     if (mode === "toggle") {
       const has = state.selectedIds.includes(id);
-      return { ...state, selectedIds: has ? state.selectedIds.filter((value) => value !== id) : [...state.selectedIds, id], anchorId: id };
+      return {
+        ...state,
+        selectedIds: has ? state.selectedIds.filter((value) => value !== id) : [...state.selectedIds, id],
+        anchorId: id,
+      };
     }
     if (mode === "range") return { ...state, selectedIds: rangeSelection(order, state.anchorId, id) };
     return { ...state, selectedIds: [id], anchorId: id };
   },
   openTab: (state: S, tab: ReaderTab): S => {
     const exists = state.tabs.some((entry) => entry.id === tab.id);
-    const tabs = exists ? state.tabs.map((entry) => (entry.id === tab.id ? { ...entry, ...tab } : entry)) : [...state.tabs, tab];
+    const tabs = exists
+      ? state.tabs.map((entry) => (entry.id === tab.id ? { ...entry, ...tab } : entry))
+      : [...state.tabs, tab];
     return { ...state, tabs, activeTab: tab.id };
   },
   updateTab: (state: S, id: string, changes: Partial<ReaderTab>): S => ({
@@ -237,12 +252,76 @@ export const workbenchActions = {
 };
 
 export function createWorkbenchStore(prefs: Partial<Prefs> = {}) {
-  return createStore({ name: "readflow-workbench", initialState: initialWorkbenchState(prefs), actions: workbenchActions });
+  return createStore({
+    name: "readflow-workbench",
+    initialState: initialWorkbenchState(prefs),
+    actions: workbenchActions,
+  });
 }
 
 export type WorkbenchStore = ReturnType<typeof createWorkbenchStore>;
 
 export function prefsOf(state: S): Prefs {
-  const { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit, blockLanguage, blockImageText, autoTranslateImports, layoutDensity, translationFormat, termHover, bilingualOutline, translationDisableThinking, blockModeDisabled, blockModeHintDismissed, marginNotes, marginSide, marginTranslations } = state;
-  return { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit, blockLanguage, blockImageText, autoTranslateImports, layoutDensity, translationFormat, termHover, bilingualOutline, translationDisableThinking, blockModeDisabled, blockModeHintDismissed, marginNotes, marginSide, marginTranslations };
+  const {
+    sort,
+    order,
+    layout,
+    density,
+    theme,
+    expandedGroups,
+    sidebarCollapsed,
+    startView,
+    uiFont,
+    customFont,
+    textScale,
+    noteFont,
+    paperTone,
+    annotationSemantics,
+    reviewNewLimit,
+    reviewLimit,
+    blockLanguage,
+    blockImageText,
+    autoTranslateImports,
+    layoutDensity,
+    translationFormat,
+    termHover,
+    bilingualOutline,
+    translationDisableThinking,
+    blockModeDisabled,
+    blockModeHintDismissed,
+    marginNotes,
+    marginSide,
+    marginTranslations,
+  } = state;
+  return {
+    sort,
+    order,
+    layout,
+    density,
+    theme,
+    expandedGroups,
+    sidebarCollapsed,
+    startView,
+    uiFont,
+    customFont,
+    textScale,
+    noteFont,
+    paperTone,
+    annotationSemantics,
+    reviewNewLimit,
+    reviewLimit,
+    blockLanguage,
+    blockImageText,
+    autoTranslateImports,
+    layoutDensity,
+    translationFormat,
+    termHover,
+    bilingualOutline,
+    translationDisableThinking,
+    blockModeDisabled,
+    blockModeHintDismissed,
+    marginNotes,
+    marginSide,
+    marginTranslations,
+  };
 }

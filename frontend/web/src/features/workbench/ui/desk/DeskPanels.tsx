@@ -21,7 +21,7 @@ export function EmptyLine({ children }: { children: ReactNode }) {
 export function ContinueReading({ rows }: { rows: WorkbenchRow[] }) {
   const wb = useWorkbench();
   return (
-    <Panel title="继续阅读" className="col-span-12 @min-[850px]:col-span-8" aside={<button type="button" onClick={() => wb.browse({ view: "recent", query: "" })} className="text-[0.75rem] text-wb-text-3 hover:text-wb-text">全部</button>}>
+    <Panel title="继续阅读" className="col-span-12" aside={<button type="button" onClick={() => wb.browse({ view: "recent", query: "" })} className="text-[0.75rem] text-wb-text-3 hover:text-wb-text">全部</button>}>
       {rows.length ? <div className="grid gap-3 @min-[650px]:grid-cols-3">
         {rows.slice(0, 3).map((row) => {
           const percent = readingPercent(row);
@@ -46,7 +46,7 @@ export function ContinueReading({ rows }: { rows: WorkbenchRow[] }) {
 export function RecentAnnotations({ notes }: { notes: WorkbenchNote[] }) {
   const wb = useWorkbench();
   return (
-    <Panel title="最近批注" className="col-span-12 @min-[650px]:col-span-6" aside={<button type="button" onClick={() => void wb.notes.open()} className="text-[0.75rem] text-wb-text-3 hover:text-wb-text">全部</button>}>
+    <Panel title="最近批注" className="col-span-12 @min-[650px]:col-span-6 @min-[850px]:col-span-5" aside={<button type="button" onClick={() => void wb.notes.open()} className="text-[0.75rem] text-wb-text-3 hover:text-wb-text">全部</button>}>
       {notes.length ? <div className="flex flex-col">
         {notes.slice(0, 3).map((note) => (
           <button key={note.id} type="button" onClick={() => void wb.openReader(note.item_id, { attachmentId: note.attachment_id ?? undefined, page: note.page_idx == null ? undefined : note.page_idx + 1 })} className="wb-transition flex gap-2.5 border-0 border-t border-wb-line-soft bg-transparent py-2.5 text-left first:border-0 hover:bg-wb-hover">
@@ -65,7 +65,7 @@ export function RecentAnnotations({ notes }: { notes: WorkbenchNote[] }) {
 export function ToRead({ rows, count, total }: { rows: WorkbenchRow[]; count?: number; total?: number }) {
   const wb = useWorkbench();
   return (
-    <Panel title="待读" className="col-span-12 @min-[650px]:col-span-6 @min-[850px]:col-span-3" aside={<button type="button" onClick={() => wb.browse({ view: "unread", query: "" })} className="text-[0.75rem] text-wb-text-3 hover:text-wb-text">{count == null ? "全部" : `${count} 篇`}</button>}>
+    <Panel title="待读" className="col-span-12 @min-[650px]:col-span-6 @min-[850px]:col-span-4" aside={<button type="button" onClick={() => wb.browse({ view: "unread", query: "" })} className="text-[0.75rem] text-wb-text-3 hover:text-wb-text">{count == null ? "全部" : `${count} 篇`}</button>}>
       {rows.length ? <div className="flex flex-col">
         {rows.slice(0, 4).map((row) => (
           <button key={row.id} type="button" onClick={() => void wb.openReader(row.id)} className="wb-transition flex min-w-0 flex-col gap-1 border-0 border-t border-wb-line-soft bg-transparent py-2 text-left first:border-0 hover:bg-wb-hover">

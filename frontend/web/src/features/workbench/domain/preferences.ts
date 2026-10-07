@@ -9,16 +9,30 @@ export function parseWorkbenchPrefs(raw: string | null | undefined): Partial<Pre
     if (!value || typeof value !== "object" || Array.isArray(value)) return {};
     const prefs: Partial<Prefs> = {};
     for (const key of Object.keys(DEFAULT_PREFS) as Array<keyof Prefs>) {
-      if (key in value && typeof value[key] === typeof DEFAULT_PREFS[key]) (prefs as Record<string, unknown>)[key] = value[key];
+      if (key in value && typeof value[key] === typeof DEFAULT_PREFS[key])
+        (prefs as Record<string, unknown>)[key] = value[key];
     }
     prefs.marginSide = prefs.marginSide === "right" ? "right" : "auto";
     prefs.translationFormat = prefs.translationFormat === "reflow" ? "reflow" : "layout";
-    prefs.layoutDensity = prefs.layoutDensity === "compact" ? "compact" : "balanced";
-    prefs.blockLanguage = ["zh-CN", "en", "ja", "de", "fr"].includes(prefs.blockLanguage || "") ? prefs.blockLanguage : "zh-CN";
+    prefs.layoutDensity = ["compact", "aligned"].includes(prefs.layoutDensity || "")
+      ? prefs.layoutDensity
+      : "balanced";
+    prefs.blockLanguage = ["zh-CN", "en", "ja", "de", "fr"].includes(prefs.blockLanguage || "")
+      ? prefs.blockLanguage
+      : "zh-CN";
     prefs.reviewNewLimit = Number.isFinite(prefs.reviewNewLimit)
-      ? Math.max(0, Math.min(1000, Math.floor(prefs.reviewNewLimit!))) : 20;
+      ? Math.max(0, Math.min(1000, Math.floor(prefs.reviewNewLimit!)))
+      : 20;
     prefs.reviewLimit = Number.isFinite(prefs.reviewLimit)
-      ? Math.max(0, Math.min(5000, Math.floor(prefs.reviewLimit!))) : 200;
-    return { ...prefs, annotationSemantics: normalizeSemantics(prefs.annotationSemantics), paperTone: ["auto", "white", "sepia", "night"].includes(prefs.paperTone) ? prefs.paperTone : "auto", ...normalizeTypography(prefs) };
-  } catch { return {}; }
+      ? Math.max(0, Math.min(5000, Math.floor(prefs.reviewLimit!)))
+      : 200;
+    return {
+      ...prefs,
+      annotationSemantics: normalizeSemantics(prefs.annotationSemantics),
+      paperTone: ["auto", "white", "sepia", "night"].includes(prefs.paperTone) ? prefs.paperTone : "auto",
+      ...normalizeTypography(prefs),
+    };
+  } catch {
+    return {};
+  }
 }

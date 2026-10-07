@@ -16,6 +16,7 @@ try {
     assert.match(await nav("笔记").textContent(), /4/);
     assert.match(await nav("有笔记的文献").textContent(), /2/);
     await nav("书桌").click();
+    if ((await page.getByRole("button", { name: /^更多：/ }).getAttribute("aria-expanded")) !== "true") await page.getByRole("button", { name: /^更多：/ }).click();
     await page.getByRole("region", { name: "文献库概览" }).getByText("笔记 2 条 · 批注 2 条", { exact: true }).waitFor();
     await nav("笔记").click();
     await page.getByRole("main", { name: "笔记空间" }).waitFor();

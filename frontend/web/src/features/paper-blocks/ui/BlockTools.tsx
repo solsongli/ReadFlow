@@ -101,6 +101,17 @@ export function BlockTools({
             原版式 PDF（推荐）
           </MenuItem>
           <MenuItem
+            disabled={!variants.aligned || running}
+            onSelect={() =>
+              void api
+                .pdf("aligned")
+                .then((blob) => downloadBlob(blob, "ReadFlow-逐行对齐译文.pdf"))
+                .catch(() => error("译文下载失败，请重试。"))
+            }
+          >
+            逐行对齐 PDF
+          </MenuItem>
+          <MenuItem
             disabled={!variants.reflow || running}
             onSelect={() =>
               void api

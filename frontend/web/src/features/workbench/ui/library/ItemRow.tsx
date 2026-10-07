@@ -38,7 +38,13 @@ export const ItemRow = memo(function ItemRow({ id, position, total, row, density
       }}
       onClick={(event) => onSelect(row.id, event)}
       onDoubleClick={() => onOpen(row.id)}
-      className={cn("wb-transition flex h-full cursor-default select-none gap-2.5 rounded-[10px] px-3 pl-2", compact ? "items-center py-2" : "py-2.5", selected ? "bg-wb-accent-soft" : "hover:bg-wb-hover")}
+      className={cn(
+        "wb-transition relative flex h-full cursor-default select-none gap-2.5 rounded-[10px] px-3 pl-2",
+        // A hairline between rows (macOS list style); hidden where the row already has a fill.
+        "after:pointer-events-none after:absolute after:-bottom-px after:left-7 after:right-3 after:h-px after:bg-wb-line-strong",
+        compact ? "items-center py-2" : "py-2.5",
+        selected ? "bg-wb-accent-soft after:hidden" : "hover:bg-wb-hover hover:after:hidden",
+      )}
     >
       <span className={cn("flex w-2 shrink-0 justify-center", !compact && "pt-1.5")}>
         <span aria-label={row.read_status === "unread" ? "未读" : undefined} className={cn("h-2 w-2 rounded-full", row.read_status === "unread" ? "bg-wb-accent" : "bg-transparent")} />

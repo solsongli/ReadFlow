@@ -91,12 +91,24 @@ export interface BlockStatus {
     marker_cleanup?: { tokens: number; unresolved: number };
     revision: string;
     layout_ready?: boolean;
+    aligned_ready?: boolean;
     reflow_ready?: boolean;
     layout_overflow?: string[];
     layout_truncated?: string[];
     layout_render_fallback?: string[];
     layout_label_fallback?: string[];
     layout_seconds?: number;
+    aligned_seconds?: number;
+    aligned_overflow?: string[];
+    aligned_shrunk?: string[];
+    aligned_metrics?: {
+      baseline_p50: number;
+      baseline_p95: number;
+      line_count_rate: number;
+      overflow_blocks: number;
+      shrunk_blocks: number;
+      mean_font_ratio: number;
+    };
     language: string;
     fallback_blocks?: string[];
     render_fallback?: string[];

@@ -39,6 +39,7 @@ async def seed(resources, root):
             'rects': [{'x': .1, 'y': .1, 'width': .2, 'height': .2}],
             'image': base64.b64encode(pixels.tobytes('png')).decode(),
         })
+        store.todos.create({'title': 'Restart to-do', 'item_id': imported['item']['id'], 'due': '2026-10-09'})
         canvas = store.canvases.create({'name': 'Restart fixture'})
         store.canvases.patch(canvas['id'], {'nodes': [{'id': 'image', 'type': 'image',
             'annotation_id': annotation['id'], 'x': 0, 'y': 0, 'width': 200, 'height': 160}]})
@@ -129,9 +130,11 @@ def check(unpacked, home):
             assert len(get('/api/research/workbench/flashcards')['items']) == 2
             overview = get('/api/research/workbench/items/' + items[0]['id'] + '/assistance/overview')
             assert overview['result']['target'] == 'restart-fixture'
+            todos = get('/api/research/workbench/todos')['items']
+            assert [(t['title'], t['item_id'], t['due']) for t in todos] == [('Restart to-do', items[0]['id'], '2026-10-09')]
             status = get('/api/research/connector/status')
             assert status['status'] == 'disabled' and status['client'] == 'ReadFlow'
-            results.append({'run': number + 1, 'health': True, 'persistent_items': 1, 'overview_cache': True, 'term_cards': True, 'marker_repair': True,
+            results.append({'run': number + 1, 'health': True, 'persistent_items': 1, 'overview_cache': True, 'term_cards': True, 'marker_repair': True, 'todos': True,
                             'blocks_cache': True, 'layout_cache': True, 'ocr_cache': True, 'layout_pdf': True, 'connector': 'disabled'})
         finally:
             child.terminate()

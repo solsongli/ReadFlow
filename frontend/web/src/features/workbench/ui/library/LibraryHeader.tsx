@@ -7,7 +7,7 @@ import { IconButton } from "@/ui/wb/Button.js";
 import { MenuContent, MenuLabel, MenuRadioGroup, MenuRadioItem, MenuRoot, MenuSeparator, MenuTrigger } from "@/ui/wb/Menu.js";
 import { groupLabel } from "../../domain/groups.js";
 import { SORT_OPTIONS, sortLabel } from "../../domain/presentation.js";
-import { librarySubtitle } from "../../domain/library-presentation.js";
+import { libraryCount, librarySubtitle } from "../../domain/library-presentation.js";
 import type { Density, ListLayout } from "../../domain/workbench-store.js";
 import { useWb, useWorkbench } from "../context.js";
 import { ImportMenu } from "../import/ImportMenu.js";
@@ -80,12 +80,17 @@ export function LibraryHeader() {
   useEffect(() => setSearch(query), [query]);
   useEffect(() => { if (search === query || composing) return; const timer = setTimeout(() => wb.setQuery(search), 180); return () => clearTimeout(timer); }, [search, query, composing, wb]);
   const filtered = Boolean(groupId || tag || query);
+  const total = list.result?.total ?? (view === "all" && !filtered ? state.desk.data?.total : undefined);
   const subtitle = librarySubtitle({ view, group: groupId ? groupLabel(list.result?.groups ?? [], groupId) : null, tag, query,
-    total: list.result?.total ?? (view === "all" && !filtered ? state.desk.data?.total : undefined), unread: list.result?.counts.unread });
+    total, unread: list.result?.counts.unread });
+  const count = libraryCount({ view, group: groupId, tag, query, total, all: list.result?.counts.all });
   return (
     <><header className={cn("flex h-[3.25rem] shrink-0 items-center gap-1.5 px-4 pl-[1.375rem]", desk ? "bg-wb-desk-bg" : "border-b border-wb-line-soft")} aria-label="工作台工具栏">
       <div className="flex min-w-0 flex-1 flex-col">{!desk ? <>
-        <h1 className="m-0 wb-truncate text-[0.9375rem] font-semibold">{desk ? "书桌" : groupId || tag ? "文献库" : VIEW_TITLE[view]}</h1>
+        <div className="flex min-w-0 items-center gap-2">
+          <h1 className="m-0 wb-truncate text-[0.9375rem] font-semibold">{desk ? "书桌" : groupId || tag ? "文献库" : VIEW_TITLE[view]}</h1>
+          <span data-library-count className="shrink-0 rounded-full bg-wb-fill px-2 py-px text-[0.71875rem] font-medium tabular-nums text-wb-text-2">{count}</span>
+        </div>
         <div className="flex min-w-0 items-center gap-1 text-[0.71875rem] text-wb-text-3">
           <span className="wb-truncate" title={subtitle || undefined}>
             {subtitle}

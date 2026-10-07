@@ -50,6 +50,22 @@ class ConcurrentBlocks(unittest.TestCase):
                     "seconds": 0,
                 },
             ),
+            patch(
+                "backend.library_mvp.paper_blocks_outputs.render_aligned",
+                return_value={
+                    "aligned_overflow": [],
+                    "aligned_shrunk": [],
+                    "metrics": {
+                        "baseline_p50": 0,
+                        "baseline_p95": 0,
+                        "line_count_rate": 1,
+                        "overflow_blocks": 0,
+                        "shrunk_blocks": 0,
+                        "mean_font_ratio": 1,
+                    },
+                    "seconds": 0,
+                },
+            ),
         ]
         for p in self.patches:
             p.start()
@@ -109,9 +125,11 @@ class ConcurrentBlocks(unittest.TestCase):
         self.service.merge_cache = save
         reads = []
         original_cache = self.service.storage.cache
+
         def counted_cache(entry):
             reads.append(1)
             return original_cache(entry)
+
         self.service.storage.cache = counted_cache
         job = self.service.start(self.item, {"translation": self.config})
         barrier.wait(timeout=4)
@@ -129,7 +147,9 @@ class ConcurrentBlocks(unittest.TestCase):
         self.assertEqual(len(writes), len(calls))
         self.assertEqual(sum(map(len, writes)), 26)
         self.assertEqual(len(self.service.storage.cache(self.entry)), 26)
-        self.assertLessEqual(len(reads), len(writes) * 2 + 3, "QA must read the cache once, not once per block")
+        self.assertLessEqual(
+            len(reads), len(writes) * 2 + 3, "QA must read the cache once, not once per block"
+        )
         self.assertIn("main_batches_wall", result["performance"]["timings_s"])
         self.assertGreater(result["performance"]["batches"]["main_batches"]["count"], 0)
 
@@ -148,7 +168,9 @@ class ConcurrentBlocks(unittest.TestCase):
             return json.dumps({"blocks": [{"id": r["id"], "text": r["text"]} for r in rows]})
 
         self.service.assistance.chat = fake
-        single = self.service.start(self.item, {"translation": self.config, "block_id": "0", "language": "en"})
+        single = self.service.start(
+            self.item, {"translation": self.config, "block_id": "0", "language": "en"}
+        )
         full = self.service.start(self.item, {"translation": self.config})
         self.assertNotEqual(single["id"], full["id"])
         same = self.service.start(self.item, {"translation": self.config})

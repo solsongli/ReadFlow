@@ -23,7 +23,7 @@ export function ReaderPages({
     mode,
     primary,
     secondary,
-    translated,
+    comparison,
     common,
     report,
     position,
@@ -106,11 +106,11 @@ export function ReaderPages({
           正在打开论文…
         </p>
       )}
-      {mode === "compare" && translated.pdf ? (
+      {mode === "compare" && comparison.pdf ? (
         <PdfPane
           ref={secondary}
-          pdf={translated.pdf}
-          sizes={translated.sizes}
+          pdf={comparison.pdf}
+          sizes={comparison.sizes}
           {...common}
           label="译文页面"
           onLink={(value) => void link(value, true)}

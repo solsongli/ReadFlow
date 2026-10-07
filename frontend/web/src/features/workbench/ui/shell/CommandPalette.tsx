@@ -1,13 +1,14 @@
 import { SHORTCUTS, shortcutKeys } from "../../domain/shortcuts.js";
 import { stepTextScale } from "../../domain/typography.js";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { Armchair, BookOpen, Bookmark, FileQuestion, FileUp, Folder, FolderPlus, Languages, Library, Link2, Monitor, NotebookPen, PanelTop, ScanText, Search, Settings, Star, Trash2, Type, X } from "lucide-react";
+import { Armchair, BookOpen, Bookmark, FileQuestion, FileUp, Folder, FolderPlus, Languages, Library, Link2, ListTodo, Monitor, NotebookPen, PanelTop, ScanText, Search, Settings, Star, Trash2, Type, X } from "lucide-react";
 import type { WorkbenchRow } from "@/platform/contracts/workbench.js";
 import { cn } from "@/ui/lib/utils.js";
 import { IconButton } from "@/ui/wb/Button.js";
 import { groupLabel } from "../../domain/groups.js";
 import type { Workbench } from "../../state/controller.js";
 import { openPdfPicker } from "../import/pdf-picker.js";
+import { requestNewTodo } from "@/features/todos/index.js";
 import { useWb, useWorkbench } from "../context.js";
 
 interface Entry {
@@ -23,6 +24,7 @@ function commands(wb: Workbench): Array<Omit<Entry, "kind"> & { words: string }>
     { key: "shortcuts", label: "键盘快捷键", hint: shortcutKeys("shortcuts"), words: "shortcuts kuaijiejian 键盘", run: () => wb.setShortcuts(true) },
     { key: "notes-space", label: "打开笔记", words: "notes biji 批注", run: () => void wb.notes.open() },
     { key: "new-note", label: "新建笔记", hint: shortcutKeys("new-note"), words: "new note xinjian biji", run: () => void wb.notes.create() },
+    { key: "new-todo", label: "新建待办", words: "todo daiban 待办 任务 task", run: () => { wb.setMain("desk"); requestNewTodo(); } },
     { key: "translate", label: "翻译所选文献", words: "translate fanyi", run: () => void wb.translations.start(wb.store.getSnapshot().selectedIds) },
     { key: "settings", label: "打开设置…", hint: shortcutKeys("settings"), words: "settings shezhi", run: () => wb.openSettings() },
     { key: "glossaries", label: "管理术语表", words: "glossary shuyubiao", run: () => wb.openSettings("glossaries") },
@@ -153,7 +155,7 @@ export function CommandPalette() {
   const COMMAND_ICON = { translate: Languages, shortcuts: PanelTop, settings: Settings, glossaries: BookOpen, desk: Armchair, library: Library, unread: Bookmark, starred: Star, unfiled: FileQuestion,
     "text-larger": Type, "text-smaller": Type, "text-reset": Type,
     trash: Trash2, import: FileUp, group: FolderPlus, theme: Monitor,
-    notes: NotebookPen, "notes-space": NotebookPen, "new-note": NotebookPen, needs_ocr: ScanText, missing_doi: Link2, no_zh_title: Languages };
+    notes: NotebookPen, "notes-space": NotebookPen, "new-note": NotebookPen, "new-todo": ListTodo, needs_ocr: ScanText, missing_doi: Link2, no_zh_title: Languages };
 
 
   return (

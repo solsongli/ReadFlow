@@ -16,6 +16,10 @@ test("layout is the persistent default; legacy reflow and intermediate generatio
   );
   assert.equal(pdfFormats({ layout_ready: true, reflow_ready: true }, "reflow").filename, "translated.pdf");
 });
+test("aligned density is accepted without changing the default", () => {
+  assert.equal(parseWorkbenchPrefs("{}").layoutDensity, "balanced");
+  assert.equal(parseWorkbenchPrefs('{"layoutDensity":"aligned"}').layoutDensity, "aligned");
+});
 test("long figure labels shrink further before ellipsis and hover exposes the full translation", () => {
   const normal = fitTypography("长标签译文", 24, 10, 10);
   const label = fitTypography("长标签译文", 24, 10, 10, undefined, 0.35);

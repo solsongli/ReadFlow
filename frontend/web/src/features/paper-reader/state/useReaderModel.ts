@@ -30,7 +30,13 @@ export function useReaderModel(ports: ReaderPorts) {
   const pendingJump = useRef<Position | null>(null);
   const navigationSeen = useRef(ports.navigationKey);
   const source = useDocument(ports.source.url, ports.source.headers, sourceRetry),
-    translated = useDocument(ports.translated?.url, ports.translated?.headers ?? {}, translatedRetry);
+    translated = useDocument(ports.translated?.url, ports.translated?.headers ?? {}, translatedRetry),
+    compareTranslated = useDocument(
+      ports.compareTranslated?.url,
+      ports.compareTranslated?.headers ?? {},
+      translatedRetry,
+    );
+  const comparison = ports.compareTranslated ? compareTranslated : translated;
   const [zoom, setZoom] = useState<Zoom>("width"),
     [mode, setMode] = useState<Mode>("source"),
     [focus, setFocus] = useState(false);
@@ -94,7 +100,7 @@ export function useReaderModel(ports: ReaderPorts) {
     primary.current?.jump(bounded);
     if (mode === "compare" && (target.other || sync)) {
       secondary.current?.jump(
-        target.other ?? { ...bounded, page: correspondingPage(bounded.page, translated.pdf?.numPages ?? 1) },
+        target.other ?? { ...bounded, page: correspondingPage(bounded.page, comparison.pdf?.numPages ?? 1) },
       );
     }
     setPosition(bounded);
@@ -129,7 +135,7 @@ export function useReaderModel(ports: ReaderPorts) {
     if (mode === "compare" && sync && !programmatic) {
       (fromSecondary ? primary : secondary).current?.jump({
         ...value,
-        page: correspondingPage(value.page, fromSecondary ? source.pdf!.numPages : translated.pdf!.numPages),
+        page: correspondingPage(value.page, fromSecondary ? source.pdf!.numPages : comparison.pdf!.numPages),
       });
     }
     if (fromSecondary && !sync) {
@@ -183,13 +189,13 @@ export function useReaderModel(ports: ReaderPorts) {
     const target = pendingJump.current ?? position;
     primary.current?.jump(target);
     secondary.current?.jump(
-      target.other ?? { ...target, page: correspondingPage(target.page, translated.pdf?.numPages ?? 1) },
+      target.other ?? { ...target, page: correspondingPage(target.page, comparison.pdf?.numPages ?? 1) },
     );
     if (pendingJump.current && main.pdf) {
       setPosition(target);
       pendingJump.current = null;
     }
-  }, [mode, main.pdf, translated.pdf, ports.active]);
+  }, [mode, main.pdf, comparison.pdf, ports.active]);
   useEffect(
     () => () => {
       clearTimeout(progressTimer.current);
@@ -265,7 +271,7 @@ export function useReaderModel(ports: ReaderPorts) {
     setZoom,
   });
   const link = async (value: LinkBox, secondaryLink = false) => {
-    const document = secondaryLink ? translated : main;
+    const document = secondaryLink ? comparison : main;
     if (value.dest && document.pdf) {
       const target = await destination(document.pdf, value.dest);
       if (target) {
@@ -321,6 +327,7 @@ export function useReaderModel(ports: ReaderPorts) {
     secondary,
     source,
     translated,
+    comparison,
     zoom,
     setZoom,
     mode,

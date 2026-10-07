@@ -197,7 +197,8 @@ try {
     await screenshot("about");
   });
   await check("desk shortcuts and the command palette open settings categories without navigation", async () => {
-    await button("完成").click(); await button("书桌").click(); await button("术语表").click();
+    await button("完成").click(); await button("书桌").click();
+    await page.keyboard.press("Control+k"); await page.getByRole("dialog", { name: "命令与搜索" }).getByRole("combobox").fill("管理术语表"); await page.keyboard.press("Enter");
     await page.getByRole("main", { name: "术语表", exact: true }).waitFor();
     await button("完成").click();
     await page.keyboard.press("Control+k");

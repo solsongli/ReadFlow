@@ -55,6 +55,7 @@ class BlockService:
             cache = self.storage.cache(entry)
             jobs = [dict(j) for j in self.jobs.values() if j["sha256"] == entry["sha256"]]
         from .paper_cache_repair import schedule_repair
+
         schedule_repair(self, item, entry)
         with self.lock:
             jobs = [dict(j) for j in self.jobs.values() if j["sha256"] == entry["sha256"]]
@@ -112,7 +113,13 @@ class BlockService:
             renderer = False
         result = self.storage.result(entry)
         if result and self.storage.repair_state(entry).get("pending"):
-            result = {**result, "layout_ready": False, "reflow_ready": False, "repair_pending": True}
+            result = {
+                **result,
+                "layout_ready": False,
+                "aligned_ready": False,
+                "reflow_ready": False,
+                "repair_pending": True,
+            }
         return {
             "document": document,
             "job": job,
@@ -139,7 +146,9 @@ class BlockService:
         rows = body.get("entries")
         if not isinstance(rows, list) or len(rows) > 100 or len(json.dumps(rows)) > 50000:
             raise StoreError("INVALID_TERMS", "术语表格式无效。")
-        entries = paper_terms.normalize([{**r, "automatic": False} if isinstance(r, dict) else r for r in rows])
+        entries = paper_terms.normalize(
+            [{**r, "automatic": False} if isinstance(r, dict) else r for r in rows]
+        )
         if len(entries) != len(rows):
             raise StoreError("INVALID_TERMS", "术语不能为空、重复或过长。")
         entry = self.storage.attachment(item, body.get("attachment_id"))
@@ -168,7 +177,7 @@ class BlockService:
 
     def start(self, item, body, *, extraction=False, render_only=False):
         density = body.get("density", "balanced")
-        if density not in {"balanced", "compact"}:
+        if density not in {"balanced", "compact", "aligned"}:
             raise StoreError("INVALID_DENSITY", "排版密度无效。")
         if self.closed:
             raise StoreError("service_closed", "文献服务正在关闭。", 503)

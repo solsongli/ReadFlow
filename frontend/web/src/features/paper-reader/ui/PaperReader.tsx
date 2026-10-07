@@ -79,6 +79,7 @@ export function PaperReader(ports: PaperReaderProps) {
     secondary,
     source,
     translated,
+    comparison,
     zoom,
     setZoom,
     mode,
@@ -161,8 +162,8 @@ export function PaperReader(ports: PaperReaderProps) {
         scale={() => primary.current?.scale() ?? 1}
         mode={mode}
         setMode={setMode}
-        translated={Boolean(ports.translated)}
-        translatedReady={Boolean(translated.pdf)}
+        translated={Boolean(ports.translated || ports.compareTranslated)}
+        translatedReady={Boolean(translated.pdf || comparison.pdf)}
         focus={focus}
         toggleFocus={() => setFocus(!focus)}
         toggleLeft={() => setLeft(!left)}
@@ -220,7 +221,11 @@ export function PaperReader(ports: PaperReaderProps) {
       {mode === "compare" ? (
         <div className="flex justify-between border-b border-wb-line-soft px-4 py-1 text-[0.6875rem] text-wb-text-3">
           <span>
-            {ports.layoutAligned ? "原版式译文 · 同页同位置对齐" : "重排译文 · 同页号对应，缺页停在末页"}
+            {ports.compareTranslated
+              ? "逐行对齐译文 · 同页同行对齐"
+              : ports.layoutAligned
+                ? "原版式译文 · 同页同位置对齐"
+                : "重排译文 · 同页号对应，缺页停在末页"}
           </span>
           <label>
             <input type="checkbox" checked={sync} onChange={(event) => setSync(event.target.checked)} />{" "}

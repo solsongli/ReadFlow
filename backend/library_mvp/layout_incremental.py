@@ -4,7 +4,7 @@ from pathlib import Path
 import pymupdf as fitz
 from .paper_blocks_model import digest
 
-VERSION = "layout-x10c-2"
+VERSION = "layout-x13-1"
 LISTS = ("layout_overflow", "layout_truncated", "render_fallback", "label_fallback")
 COUNTS = (
     "residual_source_chars",
@@ -30,14 +30,22 @@ def signatures(source, count, tasks, regions, density, policies=None):
     ]
 
 
-def previous(root, expected):
+def previous(
+    root,
+    expected,
+    *,
+    pdf_name="translated-layout.pdf",
+    audit_name="layout-audit.json",
+    pages_name="layout-pages.json",
+    version=VERSION,
+):
     root = Path(root)
     try:
-        value = json.loads((root / "layout-pages.json").read_text())
-        audit = json.loads((root / "layout-audit.json").read_text())
-        path = root / "translated-layout.pdf"
+        value = json.loads((root / pages_name).read_text())
+        audit = json.loads((root / audit_name).read_text())
+        path = root / pdf_name
         if (
-            value["version"] != VERSION
+            value["version"] != version
             or value["file_size"] != path.stat().st_size
             or value.get("mtime_ns") != path.stat().st_mtime_ns
         ):

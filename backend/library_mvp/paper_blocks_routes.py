@@ -45,7 +45,7 @@ def register_paper_blocks(app, store, json_body):
 
     @app.get(root + "/files/{name}")
     def file(item_id: str, name: str, attachment_id: str | None = None):
-        if name not in {"translated.pdf", "translated-layout.pdf"} and not re.fullmatch(
+        if name not in {"translated.pdf", "translated-layout.pdf", "translated-aligned.pdf"} and not re.fullmatch(
             r"[a-f0-9]{24}\.(?:pdf|png)", name
         ):
             raise StoreError("NOT_FOUND", "文件不存在。", 404)

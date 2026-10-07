@@ -2,6 +2,7 @@
 from datetime import datetime, timezone
 from contextlib import nullcontext
 from .paper_blocks_layout import render_layout
+from .paper_blocks_aligned import render_aligned
 from .paper_blocks_render import render
 from .paper_blocks_storage import write_json
 
@@ -21,8 +22,8 @@ def render_outputs(
 ):
     root = storage.directory(entry)
     repair = storage.repair_state(entry)
-    update(phase="生成原版式译文 PDF", percent=86)
-    layout = render_layout(
+    update(phase="生成逐行对齐译文 PDF", percent=84)
+    aligned = render_aligned(
         storage.store.attachment_path(entry["id"]),
         root,
         document,
@@ -32,9 +33,32 @@ def render_outputs(
         check,
         image_text=image_text,
         refresh_outline=repair.get("pending", False),
-        density=density,
-        progress=lambda done, total: update(percent=86 + round(8 * done / max(1, total))),
+        progress=lambda done, total: update(percent=84 + round(5 * done / max(1, total))),
     )
+    update(phase="生成原版式译文 PDF", percent=89)
+    layout = (
+        aligned
+        if density == "aligned"
+        else render_layout(
+            storage.store.attachment_path(entry["id"]),
+            root,
+            document,
+            cache,
+            language,
+            fingerprint,
+            check,
+            image_text=image_text,
+            refresh_outline=repair.get("pending", False),
+            density=density,
+            progress=lambda done, total: update(percent=89 + round(5 * done / max(1, total))),
+        )
+    )
+    if density == "aligned":
+        from shutil import copyfile
+
+        copyfile(root / "translated-aligned.pdf", root / "translated-layout.pdf")
+        copyfile(root / "layout-aligned-audit.json", root / "layout-audit.json")
+        copyfile(root / "layout-aligned-pages.json", root / "layout-pages.json")
     result = {
         **extra,
         "marker_cleanup": {k: repair.get(k, 0) for k in ("tokens", "unresolved")},
@@ -43,6 +67,7 @@ def render_outputs(
         "image_text": image_text,
         "revision": datetime.now(timezone.utc).isoformat(),
         "layout_ready": True,
+        "aligned_ready": True,
         "reflow_ready": False,
         "layout_overflow": layout["layout_overflow"],
         "layout_truncated": layout["layout_truncated"],
@@ -52,6 +77,10 @@ def render_outputs(
         "layout_rendered_pages": layout.get("rendered_pages", []),
         "layout_reused_pages": layout.get("reused_pages", []),
         "layout_density": density,
+        "aligned_seconds": aligned["seconds"],
+        "aligned_metrics": aligned["metrics"],
+        "aligned_overflow": aligned["aligned_overflow"],
+        "aligned_shrunk": aligned["aligned_shrunk"],
     }
     check()
     write_json(root / "result.json", result)

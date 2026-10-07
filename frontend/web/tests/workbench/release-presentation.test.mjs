@@ -1,21 +1,28 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { libraryEmptyState, librarySubtitle } from "@/features/workbench/domain/library-presentation.js";
+import { libraryCount, libraryEmptyState, librarySubtitle } from "@/features/workbench/domain/library-presentation.js";
 import { createSettingsServices } from "@/features/workbench/state/settings-services.js";
 
 test("only the unfiltered whole library shows the library unread count", () => {
-  assert.equal(librarySubtitle({ view: "all", total: 12, unread: 7 }), "12 篇 · 7 篇待读");
+  assert.equal(librarySubtitle({ view: "all", total: 12, unread: 7 }), "7 篇待读");
   for (const view of ["trash", "recent", "unread", "starred", "notes", "unfiled", "needs_ocr", "missing_doi", "no_zh_title"]) {
-    assert.equal(librarySubtitle({ view, total: 0, unread: 7 }), "0 篇");
-    assert.equal(librarySubtitle({ view }), "… 篇");
+    assert.equal(librarySubtitle({ view, total: 0, unread: 7 }), "");
   }
 });
 
-test("group, tag and search subtitles describe the current result, including zero", () => {
-  assert.equal(librarySubtitle({ view: "all", group: "机器学习", total: 3, unread: 7 }), "分组 机器学习 · 3 篇");
-  assert.equal(librarySubtitle({ view: "all", tag: "重要", total: 1, unread: 7 }), "标签 重要 · 1 篇");
-  assert.equal(librarySubtitle({ view: "notes", query: "不存在", total: 0, unread: 7 }), "搜索「不存在」 · 0 篇");
-  assert.equal(librarySubtitle({ view: "all", group: "机器学习", tag: "重要", query: "PDF", total: 2 }), "分组 机器学习 · 标签 重要 · 搜索「PDF」 · 2 篇");
+test("group, tag and search subtitles describe the active filters", () => {
+  assert.equal(librarySubtitle({ view: "all", group: "机器学习", total: 3, unread: 7 }), "分组 机器学习");
+  assert.equal(librarySubtitle({ view: "notes", query: "不存在", total: 0, unread: 7 }), "搜索「不存在」");
+  assert.equal(librarySubtitle({ view: "all", group: "机器学习", tag: "重要", query: "PDF", total: 2 }), "分组 机器学习 · 标签 重要 · 搜索「PDF」");
+});
+
+test("the header badge shows the total, or the subset against the whole library", () => {
+  assert.equal(libraryCount({ view: "all", total: 10, all: 10 }), "共 10 篇");
+  assert.equal(libraryCount({ view: "all" }), "共 … 篇");
+  assert.equal(libraryCount({ view: "all", query: "VLA", total: 3, all: 10 }), "3 / 10 篇");
+  assert.equal(libraryCount({ view: "unread", total: 0, all: 10 }), "0 / 10 篇");
+  assert.equal(libraryCount({ view: "all", group: "g", total: 4 }), "共 4 篇");
+  assert.equal(libraryCount({ view: "trash", total: 2, all: 10 }), "共 2 篇");
 });
 
 test("empty views use their own meaning rather than an upload icon", () => {

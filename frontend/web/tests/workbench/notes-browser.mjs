@@ -2,6 +2,7 @@ import { readFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { build } from "esbuild";
 import { chromium } from "playwright";
+import { createTodoRoutes } from "./todo-routes.mjs";
 
 export async function notesBrowser() {
   const root = process.cwd(), output = "/tmp/readflow-t5/screenshots";
@@ -17,8 +18,10 @@ export async function notesBrowser() {
   const page = await context.newPage(); page.setDefaultTimeout(10000);
   const errors = [], unexpected = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  const todos = createTodoRoutes();
   await context.route("**/*", async (route) => {
     const url = new URL(route.request().url()), path = url.pathname;
+    if (await todos.handle(route)) return;
     if (url.origin !== "http://notes.test") { unexpected.push(url.origin); return route.abort(); }
     if (path === "/workbench.html") return route.fulfill({ contentType: "text/html; charset=utf-8", body: '<!doctype html><html lang="zh-CN"><link rel="stylesheet" href="/dist/css/workbench.css"><body><div id="workbench-root"></div><script type="module" src="/fixture.js"></script></body></html>' });
     if (path === "/fixture.js") return route.fulfill({ contentType: "text/javascript", body: built.outputFiles[0].text });

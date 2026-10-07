@@ -32,12 +32,14 @@ def schedule_repair(service, item, entry):
     with service.lock:
         state = service.storage.repair_state(entry)
         result = service.storage.result(entry)
-        if not state.get("pending") or not result or service.closed:
+        aligned_missing = bool(result and result.get("layout_ready") and not result.get("aligned_ready"))
+        if (not state.get("pending") and not aligned_missing) or not result or service.closed:
             return
+        revision = state["revision"] if state.get("pending") else "aligned-layout-v1"
         jobs = [j for j in service.jobs.values() if j["sha256"] == entry["sha256"]]
         if any(j["status"] in ("queued", "running", "cancelling") for j in jobs):
             return
-        if any(j.get("repair_revision") == state["revision"] for j in jobs):
+        if any(j.get("repair_revision") == revision for j in jobs):
             return
         body = {
             "attachment_id": entry["id"],
@@ -46,4 +48,4 @@ def schedule_repair(service, item, entry):
             "density": result.get("layout_density", "balanced"),
         }
         job = service.start(item, body, render_only=True)
-        service.jobs[job["id"]]["repair_revision"] = state["revision"]
+        service.jobs[job["id"]]["repair_revision"] = revision

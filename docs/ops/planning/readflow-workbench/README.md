@@ -747,4 +747,33 @@ X1b 最终包：224,542,336 字节，SHA-256 `e98831473b752c3373bfacc121bbe9cf1d
 - 全部旁排使用轻量卡片：正文占位，标题与操作悬停/聚焦浮现；固定行高区域用渐隐和展开提示。选中单块独立于普通防重叠队列，使用锚点到可视区底部的空间，可覆盖同侧卡片但不覆盖原文。
 - 批注编辑浮层在可见页边卡片存在时自动抑制，并聚焦同一批注的说明输入框；收起或窄窗口时恢复原浮层。现有批注表仍是唯一数据源。
 - 真实缓存的结构化粗体 runs 直接呈现；旧缓存缺 runs 粗体时，依据源块起始字体边界恢复段首粗体，不改缓存、不调用模型。
+
+## X13：对照阅读逐行对齐（0.9.21，与 X12 合并发布）
+
+- 新增 `layout_aligned.py` 的纯规划层：结构化 runs 令牌化后，以原行宽比例分配断点；禁则阻止闭标点出现在行首、开标点出现在行尾，西文单词、数字、网址、引用和保护片段不可拆。
+- 每块统一字号从原字号向下适配至 70%；仍不足时增加最后一行并审计。除末行外，将可分断片段均匀定位到原行左右边界；上下标、粗体和颜色随片段写入。
+- `paper_blocks_aligned.py` 直接用思源宋体子集逐片段定位，不经 HTML/Story；原行基线、缩进和可用宽度来自文字层。输出 `translated-aligned.pdf`、逐页缓存和独立审计。
+- 对照视图单独加载逐行 PDF，译文视图继续加载原版式或重排版。链接、装饰线、红删、图形保护、目录和按页增量沿用原版式提交链；翻译菜单增加逐行版导出。
+- 离线工具 `layout_aligned_corpus.py` 只读固定语料并在独立目录渲染，核对输入哈希、页面几何、图片/矢量不退化、链接、残留原文和二次渲染页复用；没有语料时明确跳过。
+- SAM/OpenVLA/Diffusion Policy/ACT 共 983 块：基线偏差 P50/P95 0/0pt，964 块原行数一致（98.07%），18 块增加一行，170 块缩字号，平均字号比 97.73%。104 页第二次全部增量复用；拼图、PDF、逐篇指标在 `readflow-maint/out/x13/`。
 - 验收补充（维护者）：`packMargins` 支持 `grow`。全部旁排卡片的位置不变，在不移动相邻卡片的前提下延伸到同侧下一张卡片之前；PageMargins 测量正文自然高度。0.9.20 改前偏差中位数 126–160px，改后 OpenVLA 为 0px、SAM 为 0px（最大 54px）。安装包 SHA-256 `819d1f01580fb7f758d5893ff948dc9ee41acc998919081286455b0f8047251f`。
+
+## X12：文献库分隔与篇数、书桌重构与待办（0.9.21，维护者实现）
+
+- 文献库行（`ItemRow`）用 `::after` 画 `wb-line-strong` 细分隔线，选中或悬停时隐藏。`libraryCount` 生成标题旁的「共 N 篇」或「结果数 / 全部篇数」，回收站始终显示「共 N 篇」；`librarySubtitle` 只保留筛选条件和待读数。
+- 书桌：`QuickStart` 删除，`TranslationPanel` 改名为「翻译 PDF」，主按钮放在面板顶部。布局为「翻译 PDF | 待办」并排，下面是继续阅读、今日复习，以及默认折叠的「更多」（最近批注、待读、文献库概览），展开状态存在 localStorage。本地 OCR 批量入口移到文献库概览中。
+- 待办，独立特性 `features/todos`：
+  - `domain/model.ts`：日期标签、逾期判断、排序和分区，均为纯函数；
+  - `state/api.ts`、`state/useTodos.ts`：乐观更新，保存失败时重载；
+  - `ui/TodoPanel`、`TodoRow`、`PaperPicker`：文献搜索与打开通过 props 注入，不依赖 workbench；
+  - 命令面板「新建待办」通过 `state/focus.ts` 的挂起请求在书桌挂载后聚焦输入框。
+- 后端 `todos.py` 和 `todo_routes.py`：
+  - 表 `todos(id,title,done,position,due,item_id→items ON DELETE SET NULL,created_at,updated_at,done_at)`，首次启动 `CREATE TABLE IF NOT EXISTS`；
+  - 路由 `GET/POST /workbench/todos`、`PATCH/DELETE /todos/{id}`、`POST /todos/reorder`、`POST /todos/clear-done`；
+  - 标题不超过 500 字，最多 2000 项，日期须为 YYYY-MM-DD；
+  - 不新增数据目录。
+- 测试：
+  - `tests/test_todos.py`：CRUD、排序、完成与恢复、校验、文献删除后待办保留；
+  - `tests/workbench/todos.test.mjs` 和 `release-presentation.test.mjs`：日期、分区、移动、篇数；
+  - `desk-smoke.mjs` 共 17 个场景，覆盖待办交互、命令面板、深浅色截图、文献库分隔与篇数。夹具新增内存版待办路由 `todo-routes.mjs`，并对闪卡和画布请求返回空数据。
+- 已知：`hardening-smoke`、`notes-smoke`、`settings-smoke` 仍等待旧版 iframe 阅读器，在打开阅读器的场景处失败。原生阅读器上线后就已如此，与本项无关，留待整理冒烟脚本时处理。

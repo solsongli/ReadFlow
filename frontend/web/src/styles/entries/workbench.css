@@ -11,6 +11,7 @@
 @source "../../features/paper-reader/**/*.{ts,tsx}";
 @source "../../features/paper-blocks/**/*.{ts,tsx}";
 @source "../../features/flashcards/**/*.{ts,tsx}";
+@source "../../features/todos/**/*.{ts,tsx}";
 @source "../../features/reader-assistance/**/*.{ts,tsx}";
 @source "../../ui/wb/**/*.{ts,tsx}";
 

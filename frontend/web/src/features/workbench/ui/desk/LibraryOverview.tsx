@@ -1,6 +1,7 @@
 import type { WorkbenchDesk, WorkbenchView } from "@/platform/contracts/workbench.js";
 import { useWorkbench } from "../context.js";
 import { Panel } from "./DeskPanels.js";
+import { OcrLauncher } from "./OcrLauncher.js";
 
 export function LibraryOverview({ desk }: { desk: WorkbenchDesk | null }) {
   const wb = useWorkbench();
@@ -21,6 +22,7 @@ export function LibraryOverview({ desk }: { desk: WorkbenchDesk | null }) {
       <div className="mt-auto flex flex-col gap-2 border-t border-wb-line-soft pt-2.5">
         {links.every((entry) => entry.count === 0) ? <p className="m-0 text-[0.75rem] text-wb-text-3">一切就绪</p> : links.map((entry) => entry.count > 0 ? <button key={entry.view} type="button" onClick={() => wb.browse({ view: entry.view, query: "" })} className="wb-transition flex justify-between gap-1 rounded-md text-left text-[0.75rem] hover:bg-wb-hover"><span>{entry.count} 篇{entry.label}</span><span className="text-wb-text-3">查看</span></button> : <p key={entry.view} className="m-0 text-[0.75rem] text-wb-text-3">0 篇{entry.label}</p>)}
       </div>
+      <OcrLauncher><button type="button" className="text-left text-[0.75rem] text-wb-text-3 hover:text-wb-link">本地 OCR…</button></OcrLauncher>
     </Panel>
   );
 }

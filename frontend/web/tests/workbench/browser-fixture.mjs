@@ -3,6 +3,7 @@ import { readFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { build } from "esbuild";
 import { chromium } from "playwright";
+import { createTodoRoutes } from "./todo-routes.mjs";
 
 export async function openDeskFixture() {
   const root = process.cwd();
@@ -15,9 +16,13 @@ export async function openDeskFixture() {
   const page = await context.newPage();
   page.setDefaultTimeout(8000);
   const errors = [];
+  const todoRoutes = createTodoRoutes({ 2: "OpenVLA: An Open-Source Vision-Language-Action Model" });
   page.on("pageerror", (error) => errors.push(error.message));
   await page.route("**/*", async (route) => {
     const path = new URL(route.request().url()).pathname;
+    if (await todoRoutes.handle(route)) return;
+    // Review widget and canvas lists: empty data keeps the desk offline and deterministic.
+    if (/^\/api\/research\/workbench\/(flashcards|decks|card-reviews|canvases)$/.test(path)) return route.fulfill({ contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify({ items: [] }) });
     if (path === "/workbench.html") return route.fulfill({ contentType: "text/html; charset=utf-8", body: '<!doctype html><html lang="zh-CN"><link rel="stylesheet" href="/dist/css/workbench.css"><body><div id="workbench-root"></div><script type="module" src="/fixture.js"></script></body></html>' });
     if (path === "/fixture.js") return route.fulfill({ contentType: "text/javascript", body: bundle.outputFiles[0].text });
     if (path === "/dist/css/workbench.css") return route.fulfill({ contentType: "text/css", body: css });
@@ -27,7 +32,7 @@ export async function openDeskFixture() {
     throw new Error(`Unexpected offline request: ${path}`);
   });
   await page.goto("http://readflow.test/workbench.html?desk");
-  await page.getByRole("region", { name: "快速开始", exact: true }).waitFor();
+  await page.getByRole("region", { name: "翻译 PDF", exact: true }).waitFor();
   await page.waitForFunction(() => window.fixture.wb.store.getSnapshot().desk.status === "ready");
-  return { browser, page, output, errors };
+  return { browser, page, output, errors, todos: todoRoutes.todos };
 }

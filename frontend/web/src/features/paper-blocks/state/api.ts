@@ -29,7 +29,11 @@ export function blocksApi(item: string, attachment: string, language = "zh-CN") 
       (await request("/terms", "PATCH", { ...(body as object), attachment_id: attachment, language })).json(),
     cancel: async (id: string) => request(`/jobs/${encodeURIComponent(id)}/cancel`, "POST", {}),
     latex: async () => (await request("/latex")).blob(),
-    pdf: async (format: "layout" | "reflow" = "layout") =>
-      (await request(`/files/${format === "layout" ? "translated-layout.pdf" : "translated.pdf"}`)).blob(),
+    pdf: async (format: "layout" | "aligned" | "reflow" = "layout") =>
+      (
+        await request(
+          `/files/${format === "layout" ? "translated-layout.pdf" : format === "aligned" ? "translated-aligned.pdf" : "translated.pdf"}`,
+        )
+      ).blob(),
   };
 }

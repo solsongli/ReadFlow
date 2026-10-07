@@ -35,7 +35,7 @@ export function usePaperBlocks(
     termHover?: boolean;
     currentPage?: () => number;
     format?: TranslationFormat;
-    density?: "balanced" | "compact";
+    density?: "balanced" | "compact" | "aligned";
     setFormat?: (format: TranslationFormat) => void;
   } = { imageText: true },
 ) {
@@ -228,6 +228,9 @@ export function usePaperBlocks(
       status?.result && variant.selected
         ? api.url(`/files/${variant.filename}?revision=${encodeURIComponent(status.result.revision)}`)
         : undefined,
+    compareTranslated: status?.result?.aligned_ready
+      ? api.url(`/files/translated-aligned.pdf?revision=${encodeURIComponent(status.result.revision)}`)
+      : undefined,
     translation: {
       running,
       label: jobs.full ? `${jobs.full.phase} ${jobs.full.percent}%` : "翻译全文",

@@ -27,7 +27,9 @@ class LayoutJobs(unittest.IsolatedAsyncioTestCase):
                 service = app.state.paper_blocks
                 with fitz.open() as pdf:
                     page = pdf.new_page()
-                    page.insert_text((50, 150), "A paragraph with reproducible scientific evidence.", fontsize=12)
+                    page.insert_text(
+                        (50, 150), "A paragraph with reproducible scientific evidence.", fontsize=12
+                    )
                     item = app.state.store.add_pdf(pdf.tobytes(), filename="layout-test.pdf")
                 entry = item["attachment"]
                 document = service.storage.extract(entry)
@@ -48,7 +50,9 @@ class LayoutJobs(unittest.IsolatedAsyncioTestCase):
                         if service.jobs[identity]["status"] in {"done", "failed"}:
                             break
                         await asyncio.sleep(0.02)
-                    self.assertEqual(service.jobs[identity]["status"], "done", service.jobs[identity].get("error"))
+                    self.assertEqual(
+                        service.jobs[identity]["status"], "done", service.jobs[identity].get("error")
+                    )
                     status = (await client.get(url)).json()
                     self.assertTrue(status["result"]["layout_ready"])
                     self.assertTrue(status["result"]["reflow_ready"])
@@ -56,7 +60,9 @@ class LayoutJobs(unittest.IsolatedAsyncioTestCase):
                     self.assertGreater(performance["timings_s"]["render"], 0)
                     self.assertGreaterEqual(performance["timings_s"]["extraction"], 0)
                     self.assertEqual(performance["requests"]["count"], 0)
-                    for name in ("translated-layout.pdf", "translated.pdf"):
+                    self.assertTrue(status["result"]["aligned_ready"])
+                    self.assertLess(status["result"]["aligned_metrics"]["baseline_p95"], 1)
+                    for name in ("translated-layout.pdf", "translated-aligned.pdf", "translated.pdf"):
                         file = await client.get(url + "/files/" + name)
                         self.assertEqual(file.status_code, 200)
                         self.assertTrue(file.content.startswith(b"%PDF"))
@@ -64,8 +70,26 @@ class LayoutJobs(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(
                         (await client.post(url + "/render", json={"block_id": "bad"})).status_code, 400
                     )
-                    proposal = {"language": "zh-CN", "revision": 0,
-                                "entries": [{"source": "paragraph", "target": "段落"}]}
+                    aligned = await client.post(
+                        url + "/render", json={"language": "zh-CN", "density": "aligned"}
+                    )
+                    self.assertEqual(aligned.status_code, 202)
+                    aligned_id = aligned.json()["id"]
+                    for _ in range(300):
+                        if service.jobs[aligned_id]["status"] in {"done", "failed"}:
+                            break
+                        await asyncio.sleep(0.02)
+                    self.assertEqual(service.jobs[aligned_id]["status"], "done")
+                    self.assertEqual(
+                        (folder / "translated-layout.pdf").read_bytes(),
+                        (folder / "translated-aligned.pdf").read_bytes(),
+                    )
+                    self.assertEqual(service.storage.result(entry)["layout_density"], "aligned")
+                    proposal = {
+                        "language": "zh-CN",
+                        "revision": 0,
+                        "entries": [{"source": "paragraph", "target": "段落"}],
+                    }
                     edited = await client.patch(url + "/terms", json=proposal)
                     self.assertEqual(edited.status_code, 200)
                     self.assertTrue(edited.json()["affected"])

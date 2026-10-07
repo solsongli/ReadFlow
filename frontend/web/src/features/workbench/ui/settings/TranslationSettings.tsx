@@ -23,10 +23,13 @@ export function TranslationSettings() {
             aria-label="原版式排版密度"
             className={SETTINGS_INPUT}
             value={density}
-            onChange={(event) => wb.setPrefs({ layoutDensity: event.target.value as "balanced" | "compact" })}
+            onChange={(event) =>
+              wb.setPrefs({ layoutDensity: event.target.value as "balanced" | "compact" | "aligned" })
+            }
           >
             <option value="balanced">均衡</option>
             <option value="compact">紧凑</option>
+            <option value="aligned">逐行对齐</option>
           </select>
         </SettingsRow>
         <SettingsRow label="目标语言">

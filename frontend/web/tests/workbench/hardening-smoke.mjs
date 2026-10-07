@@ -100,6 +100,7 @@ try {
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     assert.deepEqual(await contrastAudit(page), []); assert.deepEqual(await iconLabelAudit(page), []); await screenshot("desk-dark");
     await page.evaluate(async () => { for (const row of window.fixture.rows) { row.doi = "synthetic"; row.title_translated = "合成题名"; row.text_status = "native_text"; } await window.fixture.wb.refreshDesk(); });
+    if ((await page.getByRole("button", { name: /^更多：/ }).getAttribute("aria-expanded")) !== "true") await page.getByRole("button", { name: /^更多：/ }).click();
     await page.getByRole("region", { name: "文献库概览" }).getByText("一切就绪", { exact: true }).waitFor();
     await button("全部文献").click(); assert.deepEqual(await contrastAudit(page), []); assert.deepEqual(await iconLabelAudit(page), []);
     await page.keyboard.press("Control+/"); await page.getByRole("dialog", { name: "键盘快捷键" }).waitFor();

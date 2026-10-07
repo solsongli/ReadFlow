@@ -121,6 +121,7 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
                 }
               : undefined
         }
+        compareTranslated={blocks.compareTranslated ? { url: blocks.compareTranslated, headers } : undefined}
         onPageChange={(page) => {
           currentPage.current = page;
         }}
