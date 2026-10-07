@@ -1,16 +1,25 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { MessageSquare, Languages, X } from "lucide-react";
-import { marginSide, packMargins, floatingMargin, type MarginSide } from "./margin-layout.js";
+import {
+  assignMarginSides,
+  floatingMargin,
+  leaderEndpoint,
+  marginSide,
+  packMargins,
+  type MarginSide,
+} from "./margin-layout.js";
 import { IconButton } from "./Button.js";
 export interface MarginEntry {
   id: string;
   kind: "annotation" | "translation";
   x: number;
+  right?: number;
   y: number;
   bottom?: number;
   active?: boolean;
   selected?: boolean;
+  compact?: boolean;
   color?: string;
   height: number;
   width?: number;
@@ -38,24 +47,72 @@ export const PageMargins = memo(function PageMargins({
 }) {
   const root = useRef<HTMLDivElement>(null);
   const [sizes, setSizes] = useState<Record<string, number>>({});
+  const [grows, setGrows] = useState<Record<string, number>>({});
   const [expanded, setExpanded] = useState<string>();
   const [floating, setFloating] = useState<React.CSSProperties>();
+  const [viewportBottom, setViewportBottom] = useState(height);
   const groups = { left: [] as MarginEntry[], right: [] as MarginEntry[] };
-  entries.forEach((entry) => groups[marginSide(entry.x, left, right, side)].push(entry));
+  const assigned = assignMarginSides(
+    entries.map((entry) => ({ ...entry, height: sizes[entry.id] || entry.height })),
+    height,
+    left,
+    right,
+    side,
+  );
+  entries.forEach((entry) => {
+    const placement = assigned.find((value) => value.id === entry.id);
+    groups[placement?.side || marginSide(entry.x, left, right, side)].push(entry);
+  });
   useLayoutEffect(() => {
     const node = root.current;
     if (!node) return;
     const frame = requestAnimationFrame(() => {
       const measured: Record<string, number> = {};
+      const natural: Record<string, number> = {};
       node.querySelectorAll<HTMLElement>("[data-margin-content]").forEach((card) => {
-        measured[card.dataset.marginContent!] = Math.min(360, card.scrollHeight + 12);
+        const entry = entries.find((value) => value.id === card.dataset.marginContent);
+        const body = card.querySelector<HTMLElement>("[data-margin-body]");
+        const shell = card.closest<HTMLElement>(".pr-margin-card");
+        if (entry?.compact && body && shell)
+          natural[entry.id] = Math.ceil(body.scrollHeight + shell.offsetHeight - body.clientHeight);
+        const block = card.querySelector<HTMLElement>("[data-block-card]");
+        const naturalBlockHeight = block
+          ? [...block.children].reduce((sum, child) => {
+              const element = child as HTMLElement;
+              const body = element.querySelector<HTMLElement>("[data-margin-body]");
+              return sum + (body?.scrollHeight || element.scrollHeight);
+            }, 28)
+          : card.scrollHeight + 12;
+        measured[card.dataset.marginContent!] = entry?.compact
+          ? entry.height
+          : entry?.selected
+            ? naturalBlockHeight
+            : Math.min(360, card.scrollHeight + 12);
       });
-      setSizes((old) =>
-        Object.keys(measured).some((id) => Math.abs((old[id] || 0) - measured[id]) > 2) ? measured : old,
-      );
+      const changed = (old: Record<string, number>, next: Record<string, number>) =>
+        Object.keys(next).length !== Object.keys(old).length ||
+        Object.keys(next).some((id) => Math.abs((old[id] || 0) - next[id]) > 2);
+      setSizes((old) => (changed(old, measured) ? measured : old));
+      setGrows((old) => (changed(old, natural) ? natural : old));
     });
     return () => cancelAnimationFrame(frame);
   }, [entries]);
+  useEffect(() => {
+    const page = root.current?.closest<HTMLElement>("[data-paper-page]");
+    const update = () => {
+      if (!page) return;
+      const rect = page.getBoundingClientRect();
+      setViewportBottom(Math.max(0, Math.min(height, innerHeight - rect.top - 12)));
+    };
+    update();
+    const pane = page?.closest("[data-pdf-pane]");
+    pane?.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      pane?.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [height]);
   const narrowSelected = entries.find(
     (entry) => entry.selected && (marginSide(entry.x, left, right, side) === "left" ? left : right) < 180,
   );
@@ -93,15 +150,35 @@ export const PageMargins = memo(function PageMargins({
         const room = edge === "left" ? left : right;
         const collapsed = room < 180;
         const column = groups[edge];
-        const packed = packMargins(
-          column.map((entry) => ({
-            id: entry.id,
-            x: entry.x,
-            y: entry.y,
-            height: collapsed ? 28 : sizes[entry.id] || entry.height,
-          })),
-          height,
-        );
+        const packed = [
+          ...packMargins(
+            column
+              .filter((entry) => !entry.selected)
+              .map((entry) => ({
+                id: entry.id,
+                x: entry.x,
+                right: entry.right,
+                y: entry.y,
+                height: collapsed ? 28 : sizes[entry.id] || entry.height,
+                grow: collapsed ? undefined : grows[entry.id],
+              })),
+            height,
+          ),
+          ...column
+            .filter((entry) => entry.selected)
+            .map((entry) => {
+              const top = entry.y * height;
+              const available = Math.max(96, Math.min(height - top, viewportBottom - top));
+              return {
+                id: entry.id,
+                x: entry.x,
+                right: entry.right,
+                y: entry.y,
+                top,
+                height: collapsed ? 28 : Math.min(sizes[entry.id] || entry.height, available),
+              };
+            }),
+        ];
         return packed.map((position) => {
           const entry = column.find((value) => value.id === position.id)!;
           const cardWidth = collapsed
@@ -166,7 +243,7 @@ export const PageMargins = memo(function PageMargins({
                   <line
                     x1={edge === "left" ? -12 : width + 12}
                     y1={position.top + Math.min(18, position.height / 2)}
-                    x2={entry.x * width}
+                    x2={leaderEndpoint(edge, entry, width)}
                     y2={entry.y * height}
                   />
                 </svg>

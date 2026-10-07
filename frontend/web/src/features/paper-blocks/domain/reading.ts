@@ -41,10 +41,23 @@ export function sliceRuns(runs: InlineRun[], start: number, end: number) {
     return text ? [{ ...run, text }] : [];
   });
 }
-export function translatedParts(block: Block) {
+export function displayTranslationRuns(block: Block): InlineRun[] {
   const runs = block.translation_runs?.length
     ? block.translation_runs
     : [{ kind: "text" as const, text: block.translation || "" }];
+  if (runs.some((run) => run.bold) || !["text", "abstract", "list"].includes(block.type)) return runs;
+  const font = block.start_font || "";
+  const startsBold = /(?:bold|semi|demi|medi)/iu.test(font) && font !== block.text_font;
+  const text = runs.map((run) => run.text).join("");
+  const boundary = text.search(/\s/u);
+  if (!startsBold || boundary < 2 || boundary > 40) return runs;
+  return [
+    ...sliceRuns(runs, 0, boundary).map((run) => ({ ...run, bold: true })),
+    ...sliceRuns(runs, boundary, Array.from(text).length),
+  ];
+}
+export function translatedParts(block: Block) {
+  const runs = displayTranslationRuns(block);
   const points = Array.from(runs.map((r) => r.text).join(""));
   const weights = block.anchors.map((a) => Math.max(1, (a.bbox[2] - a.bbox[0]) * (a.bbox[3] - a.bbox[1])));
   const total = weights.reduce((a, b) => a + b, 0);

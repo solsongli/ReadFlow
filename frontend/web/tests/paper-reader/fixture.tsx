@@ -30,6 +30,7 @@ function Fixture() {
       }}
     >
       <PaperReader
+        marginPreferences={{ notes: false, side: "auto", translations: false }}
         attachmentId="attachment"
         metadata={metadata}
         active={active}

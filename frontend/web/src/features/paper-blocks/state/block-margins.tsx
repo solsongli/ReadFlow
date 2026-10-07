@@ -54,11 +54,13 @@ export function blockMargins({
         id: `block-${block.id}`,
         kind: "translation",
         x: anchor.view_bbox[0],
+        right: anchor.view_bbox[2],
         y: anchor.view_bbox[1],
         bottom: anchor.view_bbox[3],
         selected: isSelected,
+        compact: all && !isSelected,
         width: Math.max(220, anchor.bbox[2] - anchor.bbox[0]),
-        height: 220,
+        height: isSelected ? 220 : ["title", "heading"].includes(block.type) ? 68 : 104,
         label: `块译文 · 第 ${page} 页`,
         activate: () => {},
         content: (width, scale) => (
@@ -74,7 +76,7 @@ export function blockMargins({
             move={move}
             enlarge={() => enlarge(block)}
             close={close}
-            margin={{ width, scale, selected: isSelected }}
+            margin={{ width, scale, selected: isSelected, compact: all && !isSelected }}
           />
         ),
       },

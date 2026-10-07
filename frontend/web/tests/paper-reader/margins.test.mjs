@@ -1,8 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { marginSpace, marginSide, packMargins, floatingMargin } from "../../src/ui/wb/margin-layout.js";
+import {
+  assignMarginSides,
+  floatingMargin,
+  leaderEndpoint,
+  marginSide,
+  marginSpace,
+  packMargins,
+} from "../../src/ui/wb/margin-layout.js";
 import { rasterRatio, rasterDimensions } from "../../src/features/paper-reader/domain/navigation.js";
 import { marginTypography } from "../../src/features/paper-blocks/domain/margin-typography.js";
+import { displayTranslationRuns } from "../../src/features/paper-blocks/domain/reading.js";
 import { parseWorkbenchPrefs } from "../../src/features/workbench/domain/preferences.js";
 import { initialWorkbenchState, prefsOf } from "../../src/features/workbench/domain/workbench-store.js";
 test("reader oversamples DPR 1, retains native DPR and bounds all zoom levels", () => {
@@ -37,6 +45,25 @@ test("mixed translation and annotation cards retain anchor order without overlap
   for (let i = 1; i < placed.length; i++)
     assert.ok(placed[i].top >= placed[i - 1].top + placed[i - 1].height + 7.9);
   assert.ok(placed.at(-1).top + placed.at(-1).height <= 1100);
+});
+test("compact cards grow into the free rail below without moving neighbours", () => {
+  const placed = packMargins(
+    [
+      { id: "a", x: 0.2, y: 0.1, height: 104, grow: 400 },
+      { id: "b", x: 0.2, y: 0.4, height: 104, grow: 60 },
+      { id: "c", x: 0.2, y: 0.9, height: 104, grow: 500 },
+    ],
+    1000,
+  );
+  assert.deepEqual(
+    placed.map((p) => p.top),
+    [100, 400, 896],
+  );
+  // a stops one gap short of b; b keeps its minimum; c is bounded by the page bottom.
+  assert.deepEqual(
+    placed.map((p) => p.height),
+    [292, 104, 104],
+  );
 });
 test("narrow fallback card never covers its original block", () => {
   for (const anchor of [
@@ -78,4 +105,49 @@ test("paragraph gutters scale with the page while small viewports retain the nar
   const page = 1680 - plan.left - plan.right;
   assert.ok(Math.abs(plan.left - 24 - page * 0.4) < 55);
   assert.deepEqual(marginSpace(780, true, "auto", true), { left: 20, right: 20 });
+});
+test("wide single-column blocks greedily use both rails while real columns keep their side", () => {
+  const wide = Array.from({ length: 6 }, (_, index) => ({
+    id: `wide-${index}`,
+    x: 0.12,
+    right: 0.88,
+    y: 0.08 + index * 0.1,
+    height: 180,
+  }));
+  const assigned = assignMarginSides(wide, 1000, 300, 300, "auto");
+  assert.deepEqual(new Set(assigned.map((entry) => entry.side)), new Set(["left", "right"]));
+  const columns = assignMarginSides(
+    [
+      { id: "left", x: 0.08, right: 0.44, y: 0.2, height: 90 },
+      { id: "right", x: 0.56, right: 0.92, y: 0.2, height: 90 },
+    ],
+    1000,
+    300,
+    300,
+    "auto",
+  );
+  assert.deepEqual(
+    columns.map((entry) => entry.side),
+    ["left", "right"],
+  );
+  assert.ok(assignMarginSides(wide, 1000, 300, 300, "right").every((entry) => entry.side === "right"));
+});
+test("leader ends at the block edge nearest its rail", () => {
+  const entry = { x: 0.16, right: 0.84 };
+  assert.equal(leaderEndpoint("left", entry, 1000), 160);
+  assert.equal(leaderEndpoint("right", entry, 1000), 840);
+});
+test("legacy translated paragraphs recover a bold lead from the real block font boundary", () => {
+  const block = {
+    type: "text",
+    text: "Generalist Robot Policies A recent trend",
+    translation: "通用机器人策略 机器人学最近的趋势",
+    translation_runs: [{ kind: "text", text: "通用机器人策略 机器人学最近的趋势" }],
+    start_font: "NimbusRomNo9L-Medi",
+    text_font: "NimbusRomNo9L-Regu",
+  };
+  const runs = displayTranslationRuns(block);
+  assert.equal(runs[0].text, "通用机器人策略");
+  assert.equal(runs[0].bold, true);
+  assert.equal(runs.map((run) => run.text).join(""), block.translation);
 });

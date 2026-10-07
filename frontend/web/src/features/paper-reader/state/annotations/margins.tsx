@@ -13,6 +13,7 @@ export function annotationMargins(
       id: `note-${row.id}`,
       kind: "annotation",
       x: point.x,
+      right: row.rects[0] ? row.rects[0].x + row.rects[0].width : point.x,
       y: point.y,
       bottom: point.y + (row.rects[0]?.height || 0.03),
       color: row.color,

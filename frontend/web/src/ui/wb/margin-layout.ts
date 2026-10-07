@@ -2,8 +2,14 @@ export type MarginSide = "auto" | "right";
 export interface MarginAnchor {
   id: string;
   x: number;
+  right?: number;
   y: number;
   height: number;
+  /** Natural height a card may grow to when the rail below it is free. */
+  grow?: number;
+}
+export interface AssignedMargin extends MarginAnchor {
+  side: "left" | "right";
 }
 export function marginSpace(width: number, enabled: boolean, side: MarginSide = "auto", paragraphs = false) {
   if (!enabled || width < 820) return { left: 20, right: 20 };
@@ -33,6 +39,12 @@ export function packMargins(entries: MarginAnchor[], pageHeight: number, gap = 8
     entry.top = Math.min(entry.top, bottom - entry.height);
     bottom = entry.top - gap;
   }
+  // Use the free rail below a card, up to its natural height, without moving any neighbour.
+  packed.forEach((entry, index) => {
+    if (!entry.grow || entry.grow <= entry.height) return;
+    const limit = (packed[index + 1]?.top ?? pageHeight + gap) - gap - entry.top;
+    entry.height = Math.max(entry.height, Math.min(entry.grow, limit));
+  });
   return packed;
 }
 export function marginSide(x: number, left: number, right: number, side: MarginSide) {
@@ -40,6 +52,48 @@ export function marginSide(x: number, left: number, right: number, side: MarginS
   if (right >= 180) return "right";
   if (left >= 180) return "left";
   return side === "right" || x >= 0.5 ? "right" : "left";
+}
+export function assignMarginSides(
+  entries: MarginAnchor[],
+  pageHeight: number,
+  left: number,
+  right: number,
+  side: MarginSide,
+  gap = 8,
+): AssignedMargin[] {
+  const cursors = { left: 0, right: 0 };
+  return [...entries]
+    .sort((a, b) => a.y - b.y || a.id.localeCompare(b.id))
+    .map((entry) => {
+      const edge = entry.right ?? entry.x;
+      let assigned: "left" | "right";
+      if (side !== "auto" || left < 180 || right < 180 || entry.x >= 0.45 || edge <= 0.55) {
+        assigned = marginSide(entry.x, left, right, side);
+      } else {
+        const anchor = entry.y * pageHeight;
+        const costs = {
+          left: Math.abs(Math.max(cursors.left, anchor) - anchor),
+          right: Math.abs(Math.max(cursors.right, anchor) - anchor),
+        };
+        assigned =
+          costs.left === costs.right
+            ? entry.x <= 1 - edge
+              ? "left"
+              : "right"
+            : costs.left < costs.right
+              ? "left"
+              : "right";
+      }
+      cursors[assigned] = Math.max(cursors[assigned], entry.y * pageHeight) + entry.height + gap;
+      return { ...entry, side: assigned };
+    });
+}
+export function leaderEndpoint(
+  side: "left" | "right",
+  entry: Pick<MarginAnchor, "x" | "right">,
+  width: number,
+) {
+  return (side === "right" ? (entry.right ?? entry.x) : entry.x) * width;
 }
 export function floatingMargin(
   anchor: { top: number; bottom: number; left: number; right: number },

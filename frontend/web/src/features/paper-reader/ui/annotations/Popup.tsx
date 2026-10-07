@@ -1,5 +1,5 @@
 import { useAnnotationAnchor } from "../../state/annotations/useAnnotationAnchor.js";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "@/ui/wb/Button.js";
 import type { AnnotationController } from "../../state/annotations/useAnnotations.js";
 import type { Semantics } from "../../domain/annotations/types.js";
@@ -16,11 +16,42 @@ export function AnnotationPopup({
   const anchor = useAnnotationAnchor(row?.id, () => c.setEditingId(null));
   const [note, setNote] = useState("");
   const [confirm, setConfirm] = useState(false);
+  const [inMargin, setInMargin] = useState(false);
+  const focused = useRef("");
   useEffect(() => {
     setNote(row?.note ?? "");
     setConfirm(false);
   }, [row?.id, row?.note]);
-  if (!row) {
+  useLayoutEffect(() => {
+    const reader = document.querySelector<HTMLElement>("[data-paper-reader]");
+    if (!row || !reader) {
+      setInMargin(false);
+      return;
+    }
+    const update = () => {
+      const input = reader.querySelector<HTMLTextAreaElement>(
+        `[data-margin-note="${CSS.escape(row.id)}"] [aria-label="页边批注说明"]`,
+      );
+      const visible = Boolean(input?.closest('[data-margin-collapsed="false"]'));
+      setInMargin(visible);
+      if (visible && focused.current !== row.id) {
+        focused.current = row.id;
+        input!.focus({ preventScroll: true });
+      } else if (!visible && focused.current === row.id) {
+        focused.current = "";
+      }
+    };
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(reader, { childList: true, subtree: true, attributes: true });
+    const resize = new ResizeObserver(update);
+    resize.observe(reader);
+    return () => {
+      observer.disconnect();
+      resize.disconnect();
+    };
+  }, [row?.id]);
+  if (!row || inMargin) {
     return null;
   }
   return (

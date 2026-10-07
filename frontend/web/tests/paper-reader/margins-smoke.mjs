@@ -76,10 +76,11 @@ try {
       .getByRole("button", { name: "重要", exact: true })
       .click();
     await page.locator("[data-margin-note]").first().waitFor();
-    await page
-      .getByRole("region", { name: "编辑批注" })
-      .getByRole("button", { name: "收起", exact: true })
-      .click();
+    const marginInput = page.locator("[data-margin-note]").first().getByRole("textbox");
+    await marginInput.waitFor();
+    assert.equal(await marginInput.evaluate((element) => element === document.activeElement), true);
+    assert.equal(await page.getByRole("region", { name: "编辑批注" }).count(), 0);
+    await page.screenshot({ path: output + "/annotation-margin.png" });
   });
   await check("margin note editing and original hover correspondence", async () => {
     const note = page.locator("[data-margin-note]").first();
@@ -155,6 +156,11 @@ try {
     await page.mouse.click(point.x, point.y);
     const card = page.getByRole("dialog", { name: "块译文", exact: true });
     await card.waitFor();
+    assert.ok(
+      await card
+        .locator("[data-margin-body]")
+        .evaluate((element) => element.scrollHeight <= element.clientHeight + 2),
+    );
     const a = await card.boundingBox(),
       b = await page.locator('[data-paper-page="1"]').boundingBox();
     assert.ok(a.x >= b.x + b.width || a.x + a.width <= b.x);
@@ -170,6 +176,18 @@ try {
   await check("all translations share a non-overlapping rail", async () => {
     await page.evaluate(() => window.fixture.wb.setPrefs({ marginTranslations: true }));
     await page.locator('[data-margin-kind="translation"]').first().waitFor();
+    const compact = page.locator('[data-block-card][data-compact="true"]').first();
+    await page.mouse.move(0, 0);
+    await page.waitForTimeout(180);
+    assert.equal(
+      await compact.locator(".pr-margin-header").evaluate((node) => getComputedStyle(node).opacity),
+      "0",
+    );
+    await compact.hover();
+    await page.waitForFunction(
+      (element) => getComputedStyle(element).opacity === "1",
+      await compact.locator(".pr-margin-header").elementHandle(),
+    );
     const cards = await page.locator('[data-paper-page="1"] [data-margin-entry]').evaluateAll((nodes) =>
       nodes.map((n) => {
         const b = n.getBoundingClientRect();
@@ -191,6 +209,24 @@ try {
     await page.setViewportSize({ width: 850, height: 850 });
     await jump(1);
     await page.locator('[data-margin-kind="annotation"][data-margin-collapsed="true"]').first().waitFor();
+    await page
+      .locator('[data-paper-page="1"] .pr-text-layer span')
+      .filter({ hasText: "Block translation" })
+      .first()
+      .evaluate((span) => {
+        const range = document.createRange();
+        range.selectNodeContents(span);
+        const selection = getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+      });
+    await page.getByRole("toolbar", { name: "选中文字工具条" }).waitFor();
+    await page
+      .getByRole("toolbar", { name: "选中文字工具条" })
+      .getByRole("button", { name: "方法", exact: true })
+      .click();
+    await page.getByRole("region", { name: "编辑批注" }).waitFor();
+    await page.getByRole("region", { name: "编辑批注" }).getByRole("button", { name: "收起" }).click();
     await page.getByRole("tab", { name: "译文", exact: true }).click();
     await page.locator("[data-sidebar-block]").last().locator("button").first().click();
     await page.locator("[data-margin-floating]").waitFor();

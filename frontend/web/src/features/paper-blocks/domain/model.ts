@@ -44,6 +44,8 @@ export interface Block {
   text: string;
   size?: number;
   text_size?: number;
+  start_font?: string;
+  text_font?: string;
   bbox?: number[];
   anchors: Anchor[];
   continuations?: Array<{ source_start?: string }>;
