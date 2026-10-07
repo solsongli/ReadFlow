@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import { readerBrowser } from "../paper-reader/browser.mjs";
+import { translationAction } from "../paper-reader/controls.mjs";
 const output = "/tmp/readflow-x3/screenshots";
 await mkdir(output, { recursive: true });
 const env = await readerBrowser("?blocks&configured&x3", "tests/paper-reader/integration-fixture.tsx");
@@ -38,7 +39,7 @@ try {
   await page.getByText("正在排版译文 PDF 90%", { exact: true }).first().waitFor();
   await page.evaluate(() => window.fixture.wb.setPrefs({ theme: "dark" }));
   await page.screenshot({ path: `${output}/rendering-dark.png` });
-  await card.getByRole("button", { name: "关闭", exact: true }).click();
+  await card.getByRole("button", { name: "关闭块译文", exact: true }).click();
   blocks.finish();
   await button("译文").waitFor();
   await button("译文").click();
@@ -57,12 +58,14 @@ try {
   await page.evaluate(() => window.fixture.wb.setPrefs({ theme: "light" }));
   await page.screenshot({ path: `${output}/settings-light.png` });
   await button("完成").click();
-  await button("补翻／重新排版").click();
+  await translationAction(page, "补翻／重新排版");
   await page.getByText("翻译 35%", { exact: true }).first().waitFor();
   assert.equal(blocks.requests().at(-1).translation.disable_thinking, false);
   assert.equal(blocks.requests().at(-1).translation.workers, 8);
   await button("取消翻译").click();
-  await button("补翻／重新排版").waitFor();
+  await button("翻译菜单").click();
+  await page.getByRole("menuitem", { name: "补翻／重新排版", exact: true }).waitFor();
+  await page.keyboard.press("Escape");
   assert.deepEqual(env.errors, []);
   assert.deepEqual(env.unexpected, []);
   console.log("PASS: current-page payload, live batches/card refresh, compatibility notice, rendering, PDF, settings, cancellation");

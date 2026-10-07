@@ -2,30 +2,86 @@ import { readFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { build } from "esbuild";
 import { chromium } from "playwright";
+import { createTodoRoutes } from "./todo-routes.mjs";
 
 export async function hardeningBrowser() {
-  const root = process.cwd(), output = "/tmp/readflow-t6/screenshots";
+  const root = process.cwd(),
+    output = "/tmp/readflow-t6/screenshots";
   await mkdir(output, { recursive: true });
-  const bundle = await build({ entryPoints: ["tests/workbench/apple-fixture.tsx"], bundle: true, write: false, format: "esm", jsx: "automatic", alias: { "@": resolve(root, "src") }, logLevel: "silent" });
+  const bundle = await build({
+    entryPoints: ["tests/workbench/apple-fixture.tsx"],
+    bundle: true,
+    write: false,
+    format: "esm",
+    jsx: "automatic",
+    alias: { "@": resolve(root, "src") },
+    logLevel: "silent",
+  });
   const html = await readFile("workbench.html", "utf8");
   const favicon = html.match(/<link rel="icon"[^>]+>/)?.[0] ?? "";
-  const browser = await chromium.launch({ executablePath: process.env.READFLOW_CHROME_PATH || "/usr/bin/google-chrome", headless: true, args: ["--no-sandbox", "--disable-background-networking", "--disable-component-update", "--disable-sync", "--no-first-run"] });
+  const browser = await chromium.launch({
+    executablePath: process.env.READFLOW_CHROME_PATH || "/usr/bin/google-chrome",
+    headless: true,
+    args: [
+      "--no-sandbox",
+      "--disable-background-networking",
+      "--disable-component-update",
+      "--disable-sync",
+      "--no-first-run",
+    ],
+  });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: "light" });
-  await context.addInitScript(() => { window.__FRONT_RUNTIME_CONFIG__ = { apiBase: "http://hardening.test" }; let copied = ""; Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async (value) => { copied = value; }, readText: async () => copied } }); });
-  const page = await context.newPage(); page.setDefaultTimeout(12000);
-  const errors = [], unexpected = [];
+  await context.addInitScript(() => {
+    window.__FRONT_RUNTIME_CONFIG__ = { apiBase: "http://hardening.test" };
+    let copied = "";
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (value) => {
+          copied = value;
+        },
+        readText: async () => copied,
+      },
+    });
+  });
+  const page = await context.newPage();
+  page.setDefaultTimeout(12000);
+  const errors = [],
+    unexpected = [];
+  const todos = createTodoRoutes();
   page.on("pageerror", (error) => errors.push(error.name));
   await context.route("**/*", async (route) => {
-    const url = new URL(route.request().url()), path = url.pathname;
-    if (url.origin !== "http://hardening.test") { unexpected.push(url.origin); return route.abort(); }
-    if (path === "/workbench.html") return route.fulfill({ contentType: "text/html; charset=utf-8", body: `<!doctype html><html lang="zh-CN"><head><title>ReadFlow</title>${favicon}<link rel="stylesheet" href="/dist/css/workbench.css"></head><body><div id="workbench-root"></div><script type="module" src="/fixture.js"></script></body></html>` });
-    if (path === "/fixture.js") return route.fulfill({ contentType: "text/javascript", body: bundle.outputFiles[0].text });
-    if (path === "/api/v1/fonts") return route.fulfill({ json: { code: 0, data: { fonts: [{ family: "Source Han Serif SC", files: [], available: true }] } } });
-    if (path === "/dist/css/workbench.css") return route.fulfill({ contentType: "text/css", body: await readFile(resolve(root, path.slice(1))) });
-    if (/^\/src\/assets\/fonts\/inter\/InterVariable(?:-Italic)?\.woff2$/.test(path)) return route.fulfill({ contentType: "font/woff2", body: await readFile(resolve(root, path.slice(1))) });
-    if (path === "/src/assets/readflow-logo.svg") return route.fulfill({ contentType: "image/svg+xml", body: await readFile(resolve(root, path.slice(1))) });
-    if (path === "/reader.html") return route.fulfill({ contentType: "text/html; charset=utf-8", body: "<!doctype html><p>Offline Reader</p>" });
-    unexpected.push(path); return route.fulfill({ status: 404, body: "" });
+    const url = new URL(route.request().url()),
+      path = url.pathname;
+    if (await todos.handle(route)) return;
+    if (url.origin !== "http://hardening.test") {
+      unexpected.push(url.origin);
+      return route.abort();
+    }
+    if (path === "/workbench.html")
+      return route.fulfill({
+        contentType: "text/html; charset=utf-8",
+        body: `<!doctype html><html lang="zh-CN"><head><title>ReadFlow</title>${favicon}<link rel="stylesheet" href="/dist/css/workbench.css"></head><body><div id="workbench-root"></div><script type="module" src="/fixture.js"></script></body></html>`,
+      });
+    if (path === "/fixture.js")
+      return route.fulfill({ contentType: "text/javascript", body: bundle.outputFiles[0].text });
+    if (path === "/api/v1/fonts")
+      return route.fulfill({
+        json: { code: 0, data: { fonts: [{ family: "Source Han Serif SC", files: [], available: true }] } },
+      });
+    if (/^\/api\/research\/workbench\/(?:flashcards|decks|card-reviews|canvases)$/.test(path))
+      return route.fulfill({ json: { items: [] } });
+    if (path === "/dist/css/workbench.css")
+      return route.fulfill({ contentType: "text/css", body: await readFile(resolve(root, path.slice(1))) });
+    if (/^\/src\/assets\/fonts\/inter\/InterVariable(?:-Italic)?\.woff2$/.test(path))
+      return route.fulfill({ contentType: "font/woff2", body: await readFile(resolve(root, path.slice(1))) });
+    if (path === "/src/assets/readflow-logo.svg")
+      return route.fulfill({
+        contentType: "image/svg+xml",
+        body: await readFile(resolve(root, path.slice(1))),
+      });
+    unexpected.push(path);
+    return route.fulfill({ status: 404, body: "" });
   });
   await page.goto("http://hardening.test/workbench.html?large");
   await page.locator('[data-wb-list] [role="option"]').first().waitFor();

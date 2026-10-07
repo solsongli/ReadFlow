@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useAnnotations } from "./useAnnotations.js";
 import { sourceSelection } from "./selection.js";
-import { settledSelection } from "@/ui/wb/selection-events.js";
+import { clearReaderSelection, settledSelection } from "@/ui/wb/selection-events.js";
 import {
   DEFAULT_SEMANTICS,
   type Annotation,
@@ -110,16 +110,15 @@ export function useAnnotationReader(ports: ReaderPorts, model: ReturnType<typeof
     if (!selections.length) {
       return;
     }
-    await c.createBatch(
-      selections.map((selection) => ({
-        type,
-        color,
-        page_index: selection.page,
-        rects: selection.rects,
-        quote: selection.quote,
-      })),
-    );
-    window.getSelection()?.removeAllRanges();
+    const values = selections.map((selection) => ({
+      type,
+      color,
+      page_index: selection.page,
+      rects: selection.rects,
+      quote: selection.quote,
+    }));
+    clearReaderSelection();
+    await c.createBatch(values);
     if (note) {
       setRight(true);
       setFocus(false);

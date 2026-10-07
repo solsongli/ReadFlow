@@ -32,7 +32,13 @@ export function SelectionTools({
         rect = range.getBoundingClientRect();
       setBox({ x: Math.max(12, Math.min(rect.left, innerWidth - 380)), y: Math.max(8, rect.top - 44) });
     };
-    return settledSelection(() => root.current, selection);
+    const cleanup = settledSelection(() => root.current, selection);
+    const cleared = () => setBox(null);
+    document.addEventListener("readflow:selection-cleared", cleared);
+    return () => {
+      cleanup();
+      document.removeEventListener("readflow:selection-cleared", cleared);
+    };
   }, [root]);
   useLayoutEffect(() => {
     if (!box || !toolbar.current) return;

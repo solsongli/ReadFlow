@@ -17,7 +17,9 @@ def span_content(spans, size, math_font):
             return "super"
         return "text"
 
-    ordered = sorted(spans, key=lambda s: (round(s["bbox"][0], 1), {"sub": 0, "text": 1, "super": 2}[kind(s)]))
+    ordered = sorted(
+        spans, key=lambda s: (round(s["bbox"][0], 1), {"sub": 0, "text": 1, "super": 2}[kind(s)])
+    )
     text, parts, current, previous, start = "", [], [], None, 0
 
     def finish():
@@ -100,6 +102,36 @@ def source_runs(block, text=None):
     return [r for r in runs if r["text"]]
 
 
+def restore_lead_bold(block, runs):
+    """Recover run-in heads in old caches from the source font boundary, without rewriting the cache."""
+    if (
+        any(run.get("bold") for run in runs)
+        or block.get("type") not in {"text", "abstract", "list"}
+        or block.get("start_font") == block.get("text_font")
+        or not re.search(r"(?:bold|semi|demi|medi)", block.get("start_font", ""), re.I)
+    ):
+        return runs
+    text = "".join(run.get("text", "") for run in runs)
+    match = re.match(r"^(.{1,40}?[。．.!！:：])", text)
+    boundary = (
+        len(match.group(1))
+        if match
+        else next((index for index, char in enumerate(text) if char.isspace() and 2 <= index <= 40), -1)
+    )
+    if boundary < 2:
+        return runs
+    output, offset = [], 0
+    for run in runs:
+        value = run.get("text", "")
+        cut = max(0, min(len(value), boundary - offset))
+        if cut:
+            output.append({**run, "text": value[:cut], "bold": True})
+        if cut < len(value):
+            output.append({**run, "text": value[cut:]})
+        offset += len(value)
+    return [run for run in output if run["text"]]
+
+
 def restore_rich(text, mapping):
     if not isinstance(text, str) or not text.strip() or len(text) > 100000:
         return None
@@ -126,8 +158,10 @@ def restore_rich(text, mapping):
             else:
                 return None
         else:
-            runs.extend({**run, **({"bold": True} if bold else {})}
-                        for run in (span.get("runs") or [{"kind": "text", "text": span["text"]}]))
+            runs.extend(
+                {**run, **({"bold": True} if bold else {})}
+                for run in (span.get("runs") or [{"kind": "text", "text": span["text"]}])
+            )
         cursor = at + len(marker)
         if right and text[cursor:] and not text[cursor].isspace():
             runs.append({"kind": "text", "text": right})

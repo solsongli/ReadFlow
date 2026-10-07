@@ -777,3 +777,12 @@ X1b 最终包：224,542,336 字节，SHA-256 `e98831473b752c3373bfacc121bbe9cf1d
   - `tests/workbench/todos.test.mjs` 和 `release-presentation.test.mjs`：日期、分区、移动、篇数；
   - `desk-smoke.mjs` 共 17 个场景，覆盖待办交互、命令面板、深浅色截图、文献库分隔与篇数。夹具新增内存版待办路由 `todo-routes.mjs`，并对闪卡和画布请求返回空数据。
 - 已知：`hardening-smoke`、`notes-smoke`、`settings-smoke` 仍等待旧版 iframe 阅读器，在打开阅读器的场景处失败。原生阅读器上线后就已如此，与本项无关，留待整理冒烟脚本时处理。
+
+## X14：逐行字距与已知问题收尾
+
+- 逐行排版允许在行距约束内把字号最多放大到原字号的 1.12 倍；每段使用统一的窄栏宽度，将新增字距限制在 0.12em。英文原行的基线、行数、首行缩进及保护片段继续保留。
+- 旧缓存不改写；在排版和阅读呈现时，依据源块起始字体与句点边界恢复 SAM 等旧论文的段首粗体。离线四篇语料共恢复 107 个段首粗体块。
+- 新建批注后立即清除浏览器选区和选中工具条；宽窗口焦点转到页边说明框，窄窗口仍使用页内编辑框。
+- 三个旧 iframe 冒烟场景已改为原生阅读器的 `openReader` 契约，其他离线夹具也补齐了闪卡、画布、待办与图表查看请求。
+- 统一冒烟入口：`cd frontend/web && npm run smoke`。脚本先生成隔离的 PDF 夹具，再以单个 Chrome、串行方式运行全部 `*-smoke.mjs`；任一失败即返回非零。CI 不运行该命令。
+- 验收补充（维护者）：`paper_blocks_aligned._summary` 对 `aligned_fill_ratios` 和 `aligned_before_fill_ratios` 调用 `statistics.fmean` 时未处理空列表，没有逐行块的文档整份渲染失败（StatisticsError）。包内服务二次启动检查发现了这个问题，已修复并补单测。0.9.22 安装包 SHA-256 `cf84abd6b453e470b1312334c7dd4b3431414210fb144942d897251e67a8084a`。

@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { sourceRuns } from "../../src/features/paper-blocks/domain/model.js";
 export async function blocksMock(query, suppliedManifest) {
   const fixture = query.includes("blocks");
@@ -15,8 +16,9 @@ export async function blocksMock(query, suppliedManifest) {
       : null);
   if (manifest && query.includes("x2")) {
     const figure = manifest.blocks.find((block) => block.type === "figure");
+    const label = figure.figure_text?.[0] || {};
     figure.figure_text = [
-      { id: "label", text: "Training input", translatable: true },
+      { ...label, id: "label", text: "Training input", translatable: true },
       { id: "tick", text: "100%", translatable: false },
     ];
   }
@@ -119,7 +121,22 @@ export async function blocksMock(query, suppliedManifest) {
     };
   }
   if (query.includes("repaired-sam")) {
-    document = JSON.parse(await readFile("/tmp/readflow-x9b/sam-final/ui-document.json", "utf8"));
+    const root = process.env.READFLOW_SMOKE_CORPUS_DIR;
+    if (root) {
+      document = JSON.parse(await readFile(`${root}/SAM/blocks.json`, "utf8"));
+      const cache = JSON.parse(await readFile(`${root}/SAM/translations.json`, "utf8"));
+      const selection = JSON.parse(await readFile(`${root}/SAM/selection.json`, "utf8"));
+      for (const block of document.blocks) {
+        const payload = JSON.stringify([block.id, selection.language, selection.fingerprint]);
+        const value = cache[createHash("sha256").update(payload).digest("hex")];
+        if (value) {
+          block.translation = typeof value === "string" ? value : value.text;
+          block.translation_runs = typeof value === "object" ? value.runs : undefined;
+        }
+      }
+    } else {
+      document = JSON.parse(await readFile("/tmp/readflow-x9b/sam-final/ui-document.json", "utf8"));
+    }
   }
   if (query.includes("diagnostics")) {
     const detail = { stage: "terms", exception: "ConnectTimeout" };

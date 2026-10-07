@@ -26,7 +26,7 @@ from .layout_glyphs import display_runs
 from .layout_save import save_pdf
 from . import layout_incremental as incremental
 from .paper_blocks_model import cache_key
-from .paper_blocks_inline import source_runs, rich_text
+from .paper_blocks_inline import source_runs, rich_text, restore_lead_bold
 from .paper_blocks_labels import translated_labels
 from .paper_blocks_storage import write_json
 
@@ -35,11 +35,12 @@ def value_runs(block, cache, language, fingerprint):
     value = cache.get(cache_key(block, language, fingerprint))
     if not rich_text(value):
         return None
-    return (
+    runs = (
         value.get("runs") or [{"kind": "text", "text": value["text"]}]
         if isinstance(value, dict)
         else source_runs(block, value)
     )
+    return restore_lead_bold(block, runs)
 
 
 def tasks_for(document, cache, language, fingerprint, image_text, density="balanced"):

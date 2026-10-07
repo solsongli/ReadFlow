@@ -29,7 +29,9 @@ await page.route("**/*", async (route) => {
     return route.fulfill({ contentType: "font/woff2", body: await readFile(resolve(root, pathname.slice(1))) });
   }
   if (pathname === "/src/assets/readflow-logo.svg") return route.fulfill({ contentType: "image/svg+xml", body: await readFile(resolve(root, pathname.slice(1))) });
-  if (pathname === "/reader.html") return route.fulfill({ contentType: "text/html", body: "<!doctype html><title>Offline reader fixture</title><p>阅读器占位</p>" });
+  if (/^\/api\/research\/workbench\/(?:flashcards|decks|card-reviews|canvases|todos)$/.test(pathname)) {
+    return route.fulfill({ contentType: "application/json", body: JSON.stringify({ items: [] }) });
+  }
   throw new Error(`Unexpected offline request: ${pathname}`);
 });
 const button = (name) => page.getByRole("button", { name, exact: true });
@@ -183,22 +185,25 @@ try {
     }
     assert.equal(await page.evaluate(() => window.fixture.calls.filter((c) => c.method === "export").length), 2);
   });
-  await check("trash shortcut, undo and reader tabs close cleanly", async () => {
+  await check("trash shortcut, undo and native reader launch stay integrated", async () => {
     await selectRow("2").click();
     await page.keyboard.press("Delete");
     await page.waitForFunction(() => Boolean(window.fixture.rows[1].deleted_at));
     await button("撤销").click();
     await page.waitForFunction(() => !window.fixture.rows[1].deleted_at);
+    await page.evaluate(() => {
+      window.__opened = [];
+      window.fixture.wb.openReader = async (id) => {
+        window.__opened.push(id);
+        return true;
+      };
+    });
     await selectRow("1").dblclick();
-    await page.getByRole("navigation", { name: "阅读器标签页" }).waitFor();
-    await page.locator('iframe').waitFor();
-    assert.equal(await page.getByLabel("导航", { exact: true }).isVisible(), true);
-    await page.getByRole("navigation", { name: "阅读器标签页" }).getByRole("button", { name: /^关闭/ }).click();
-    assert.equal(await page.getByRole("navigation", { name: "阅读器标签页" }).count(), 0);
+    assert.deepEqual(await page.evaluate(() => window.__opened), ["1"]);
+    assert.equal(await page.locator("iframe").count(), 0);
     await selectRow("2").click();
     await page.keyboard.press("Enter");
-    await page.locator('iframe').waitFor();
-    await page.getByRole("navigation", { name: "阅读器标签页" }).getByRole("button", { name: /^关闭/ }).click();
+    assert.deepEqual(await page.evaluate(() => window.__opened), ["1", "2"]);
   });
   await check("command palette focus, Escape and slash search", async () => {
     await page.keyboard.press("Control+k");

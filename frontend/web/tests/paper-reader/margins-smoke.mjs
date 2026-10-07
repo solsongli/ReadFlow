@@ -76,6 +76,8 @@ try {
       .getByRole("button", { name: "重要", exact: true })
       .click();
     await page.locator("[data-margin-note]").first().waitFor();
+    assert.equal(await page.getByRole("toolbar", { name: "选中文字工具条" }).count(), 0);
+    assert.equal(await page.evaluate(() => getSelection().isCollapsed), true);
     const marginInput = page.locator("[data-margin-note]").first().getByRole("textbox");
     await marginInput.waitFor();
     assert.equal(await marginInput.evaluate((element) => element === document.activeElement), true);

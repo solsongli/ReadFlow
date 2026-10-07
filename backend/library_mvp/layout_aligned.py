@@ -58,11 +58,22 @@ def token_width(token, size, measure):
     return prefix + sum(measure(run["text"], size, run) for run in token.runs)
 
 
+def group_widths(group, size, measure):
+    return [
+        token_width(token, size, measure)
+        - (measure(" ", size, {"kind": "text"}) if index == 0 and token.space else 0)
+        for index, token in enumerate(group)
+    ]
+
+
 def partitions(tokens, capacities, size, measure):
     count = min(len(tokens), len(capacities))
     if count <= 1:
         return [tokens]
     widths = [token_width(token, size, measure) for token in tokens]
+    cumulative_widths = [0]
+    for width in widths:
+        cumulative_widths.append(cumulative_widths[-1] + width)
     total_width, total_capacity = sum(widths), sum(capacities[:count])
     output, start, cumulative = [], 0, 0.0
     for line in range(count - 1):
@@ -70,7 +81,7 @@ def partitions(tokens, capacities, size, measure):
         candidates = range(start + 1, len(tokens) - (count - line - 1) + 1)
         boundary = min(
             (at for at in candidates if legal_break(tokens, at)),
-            key=lambda at: abs(sum(widths[:at]) - cumulative),
+            key=lambda at: abs(cumulative_widths[at] - cumulative),
             default=start + 1,
         )
         output.append(tokens[start:boundary])
@@ -85,11 +96,15 @@ def plan_lines(runs, source_lines, source_size, measure):
         return {"lines": [], "font_size": source_size, "scale": 1, "overflow": False}
     capacities = [max(1, line["x1"] - line["x0"]) for line in source_lines]
     groups = partitions(tokens, capacities, source_size, measure)
-    ratios = [
-        capacities[index] / max(0.01, sum(token_width(token, source_size, measure) for token in group))
-        for index, group in enumerate(groups)
+    base_widths = [sum(group_widths(group, source_size, measure)) for group in groups]
+    ratios = [capacities[index] / max(0.01, width) for index, width in enumerate(base_widths)]
+    spacing = [
+        b["baseline"] - a["baseline"]
+        for a, b in zip(source_lines, source_lines[1:])
+        if b["baseline"] > a["baseline"]
     ]
-    scale = min(1, min(ratios, default=1))
+    maximum = min(1.12, (statistics.median(spacing) * 0.92 / source_size) if spacing else 1.12)
+    scale = min(maximum, min(ratios, default=maximum))
     overflow = scale < 0.7
     scale = max(0.7, scale)
     if overflow:
@@ -105,13 +120,31 @@ def plan_lines(runs, source_lines, source_size, measure):
         source_lines = [*source_lines, extra]
         capacities.append(capacities[-1])
         groups = partitions(tokens, capacities, source_size * scale, measure)
-    planned = []
+    size = source_size * scale
+    natural = [sum(group_widths(group, size, measure)) for group in groups]
+    nonfinal = [index for index, group in enumerate(groups[:-1]) if len(group) > 1]
+    paragraph_width = min(
+        (
+            min(capacities[index], natural[index] + (len(groups[index]) - 1) * size * 0.12)
+            for index in nonfinal
+        ),
+        default=0,
+    )
+    planned, spacing_em, fills = [], [], []
+    before_spacing, before_fills = [], []
     for index, (line, group) in enumerate(zip(source_lines, groups)):
-        size = source_size * scale
-        widths = [token_width(token, size, measure) for token in group]
+        widths = group_widths(group, size, measure)
         available = max(1, line["x1"] - line["x0"])
         justify = index < len(groups) - 1 and len(group) > 1
-        gap = max(0, (available - sum(widths)) / (len(group) - 1)) if justify else 0
+        target = min(available, max(sum(widths), paragraph_width)) if justify else sum(widths)
+        gap = max(0, (target - sum(widths)) / (len(group) - 1)) if justify else 0
+        before_scale = min(1, min(ratios, default=1))
+        before_widths = group_widths(group, source_size * before_scale, measure)
+        before_gap = max(0, (available - sum(before_widths)) / (len(group) - 1)) if justify else 0
+        spacing_em.append(gap / size if size else 0)
+        before_spacing.append(before_gap / (source_size * before_scale) if before_scale else 0)
+        fills.append(min(1, target / available))
+        before_fills.append(1 if justify else min(1, sum(before_widths) / available))
         x, pieces = line["x0"], []
         for token_index, (token, width) in enumerate(zip(group, widths)):
             if token_index and token.space:
@@ -123,7 +156,16 @@ def plan_lines(runs, source_lines, source_size, measure):
             if token_index < len(group) - 1:
                 x += gap
         planned.append({**line, "pieces": pieces, "fill": min(1, (x - line["x0"]) / available)})
-    return {"lines": planned, "font_size": source_size * scale, "scale": scale, "overflow": overflow}
+    return {
+        "lines": planned,
+        "font_size": size,
+        "scale": scale,
+        "overflow": overflow,
+        "spacing_em": max(spacing_em, default=0),
+        "fill_ratio": statistics.fmean(fills) if fills else 0,
+        "before_spacing_em": max(before_spacing, default=0),
+        "before_fill_ratio": statistics.fmean(before_fills) if before_fills else 0,
+    }
 
 
 def source_line_slots(box, lines, obstacles):

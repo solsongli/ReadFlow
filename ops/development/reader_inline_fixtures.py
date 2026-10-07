@@ -43,6 +43,7 @@ def main():
     parser.add_argument("--output", type=Path, default=Path("/tmp/readflow-x6"))
     parser.add_argument("--corpus-dir", type=Path)
     parser.add_argument("--blocks-root", type=Path, default=Path("/tmp/readflow-x5/after"))
+    parser.add_argument("--paper-data-root", type=Path)
     args = parser.parse_args()
     fixture = Path("frontend/web/tests/fixtures/blocks")
     crops(fixture / "paper.pdf", json.loads((fixture / "manifest.json").read_text()), args.output / "assets")
@@ -51,12 +52,21 @@ def main():
         if matches:
             pdf[0].insert_link({"kind": fitz.LINK_GOTO, "from": matches[0], "page": 2, "to": fitz.Point(0, 50)})
         pdf.save(args.output / "paper-links.pdf", garbage=4, deflate=True)
-    if args.corpus_dir:
-        for name in ["2406.09246", "2303.04137"]:
-            source = args.corpus_dir / (name + ".pdf")
+    if args.corpus_dir or args.paper_data_root:
+        for name, folder in [("2406.09246", "OpenVLA"), ("2303.04137", "DiffusionPolicy")]:
+            source = (
+                args.paper_data_root / folder / "source.pdf"
+                if args.paper_data_root
+                else args.corpus_dir / (name + ".pdf")
+            )
             if any(p.is_symlink() for p in [source, *source.parents]):
                 raise ValueError("Expected a regular, read-only corpus PDF")
-            manifest = fake(json.loads((args.blocks_root / name / "blocks.json").read_text()))
+            blocks = (
+                args.paper_data_root / folder / "blocks.json"
+                if args.paper_data_root
+                else args.blocks_root / name / "blocks.json"
+            )
+            manifest = fake(json.loads(blocks.read_text()))
             target = args.output / name
             crops(source, manifest, target / "assets")
             (target / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False))

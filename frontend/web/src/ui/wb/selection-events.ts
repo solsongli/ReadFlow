@@ -30,3 +30,8 @@ export function settledSelection(root: () => HTMLElement | null, work: () => voi
     window.removeEventListener("blur", up);
   };
 }
+
+export function clearReaderSelection() {
+  window.getSelection()?.removeAllRanges();
+  document.dispatchEvent(new Event("readflow:selection-cleared"));
+}

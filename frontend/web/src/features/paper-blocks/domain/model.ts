@@ -108,6 +108,15 @@ export interface BlockStatus {
       overflow_blocks: number;
       shrunk_blocks: number;
       mean_font_ratio: number;
+      spacing_em_p50?: number;
+      spacing_em_p95?: number;
+      spacing_em_max?: number;
+      mean_fill_ratio?: number;
+      before_spacing_em_p50?: number;
+      before_spacing_em_p95?: number;
+      before_spacing_em_max?: number;
+      before_mean_fill_ratio?: number;
+      bold_lead_blocks?: number;
     };
     language: string;
     fallback_blocks?: string[];

@@ -151,3 +151,16 @@ test("legacy translated paragraphs recover a bold lead from the real block font 
   assert.equal(runs[0].bold, true);
   assert.equal(runs.map((run) => run.text).join(""), block.translation);
 });
+test("SAM-style translated run-in heads recover through punctuation without inserted spacing", () => {
+  const block = {
+    type: "text",
+    text: "Task. We start by translating the idea",
+    translation: "任务。我们首先迁移这一概念。",
+    translation_runs: [{ kind: "text", text: "任务。我们首先迁移这一概念。" }],
+    start_font: "NimbusRomNo9L-Medi",
+    text_font: "NimbusRomNo9L-Regu",
+  };
+  const runs = displayTranslationRuns(block);
+  assert.deepEqual(runs[0], { kind: "text", text: "任务。", bold: true });
+  assert.equal(runs.map((run) => run.text).join(""), block.translation);
+});

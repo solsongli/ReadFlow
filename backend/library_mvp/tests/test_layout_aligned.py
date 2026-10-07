@@ -6,6 +6,7 @@ from backend.library_mvp.layout_aligned import (
     source_line_slots,
     tokens_from_runs,
 )
+from backend.library_mvp.paper_blocks_inline import restore_lead_bold
 
 
 def measure(text, size, run):
@@ -100,6 +101,39 @@ class AlignedPlanningTests(unittest.TestCase):
         slots = source_line_slots([0, 0, 120, 40], raw, [])
         self.assertEqual([slot["baseline"] for slot in slots], [18, 30])
         self.assertGreater(slots[0]["x0"], slots[1]["x0"])
+
+    def test_sparse_chinese_uses_larger_type_and_caps_added_spacing(self):
+        plan = plan_lines(
+            [{"kind": "text", "text": "视觉条件语言模型用于机器人研究与实验验证"}],
+            lines([100, 100, 100, 100]),
+            10,
+            measure,
+        )
+        self.assertEqual(len(plan["lines"]), 4)
+        self.assertGreater(plan["scale"], 1)
+        self.assertLessEqual(plan["scale"], 1.12)
+        self.assertLessEqual(plan["spacing_em"], 0.12001)
+        self.assertGreater(plan["before_spacing_em"], 0.12)
+        self.assertLess(plan["fill_ratio"], plan["before_fill_ratio"])
+
+    def test_old_cache_run_in_heads_recover_until_chinese_punctuation_without_internal_gap(self):
+        block = {
+            "type": "text",
+            "start_font": "NimbusRomNo9L-Medi",
+            "text_font": "NimbusRomNo9L-Regu",
+        }
+        runs = restore_lead_bold(
+            block,
+            [{"kind": "text", "text": "视觉条件语言模型。随后介绍训练方法。"}],
+        )
+        self.assertEqual(runs[0], {"kind": "text", "text": "视觉条件语言模型。", "bold": True})
+        self.assertEqual("".join(run["text"] for run in runs), "视觉条件语言模型。随后介绍训练方法。")
+
+    def test_audit_summary_of_a_document_without_aligned_blocks(self):
+        from backend.library_mvp.paper_blocks_aligned import _audit, _summary
+        summary = _summary(_audit())
+        self.assertEqual((summary["mean_fill_ratio"], summary["before_mean_fill_ratio"]), (0, 0))
+        self.assertEqual(summary["spacing_em_max"], 0)
 
 
 if __name__ == "__main__":

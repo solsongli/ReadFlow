@@ -20,6 +20,7 @@
     "smoke:config-resolution": "node --import ./tests/helpers/register-jsx.mjs --test --test-force-exit tests/shared/config-resolution.test.mjs",
     "pretest": "npm run prepare:workspace",
     "test": "node --import ./tests/helpers/register-jsx.mjs --test --test-concurrency=2",
+    "smoke": "node ./scripts/run-smokes.mjs",
     "watch:css": "node ./scripts/build-css.mjs --watch",
     "watch:js": "node ./scripts/build-js-bundle.mjs --watch",
     "smoke:workbench-settings": "node --import ./tests/helpers/register-jsx.mjs --test --test-force-exit tests/workbench/settings-domain.test.mjs tests/workbench/translation-settings.test.mjs tests/workbench/connector-settings.test.mjs"

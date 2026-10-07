@@ -40,7 +40,10 @@ export async function readerBrowser(query = "", fixture = "tests/paper-reader/fi
     const page = await context.newPage(),
       errors = [],
       unexpected = [];
-    page.setDefaultTimeout(15000);
+    // The serial smoke runner intentionally uses two low-priority CPU cores. PDF.js
+    // may need more than 15 seconds to paint its first text layer after a corpus
+    // scenario, so keep interaction assertions deterministic under that load.
+    page.setDefaultTimeout(30000);
     page.on("pageerror", (e) => errors.push(e.message));
     const annotationCount = Number(new URLSearchParams(query.replace(/^\?/, "")).get("annotations") || 0);
     let annotations = Array.from({ length: annotationCount }, (_, i) => ({

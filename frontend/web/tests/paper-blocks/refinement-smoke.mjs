@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import { readerBrowser } from "../paper-reader/browser.mjs";
+import { translationAction } from "../paper-reader/controls.mjs";
 const output = "/tmp/readflow-x1b/screenshots";
 await mkdir(output, { recursive: true });
 const env = await readerBrowser("?blocks&configured", "tests/paper-reader/integration-fixture.tsx");
@@ -31,7 +32,7 @@ try {
   await card.getByRole("button", { name: "重新翻译", exact: true }).click();
   await page.getByRole("status").filter({ hasText: "单块翻译 · 35%" }).waitFor();
   const single = blocks.requests().at(-1).id;
-  await button("补翻／重新排版").click();
+  await translationAction(page, "补翻／重新排版");
   await page.getByText("翻译 35%", { exact: true }).first().waitFor();
   const full = blocks.requests().at(-1).id;
   assert.notEqual(single, full);
@@ -40,8 +41,10 @@ try {
   blocks.finish(single);
   await page.getByRole("status").filter({ hasText: "单块翻译 · 35%" }).waitFor({ state: "hidden" });
   await button("取消翻译").click();
-  await button("补翻／重新排版").waitFor();
-  await card.getByRole("button", { name: "关闭", exact: true }).click();
+  await button("翻译菜单").click();
+  await page.getByRole("menuitem", { name: "补翻／重新排版", exact: true }).waitFor();
+  await page.keyboard.press("Escape");
+  await card.getByRole("button", { name: "关闭块译文", exact: true }).click();
   await button("块模式").click();
   await page.reload();
   await open();

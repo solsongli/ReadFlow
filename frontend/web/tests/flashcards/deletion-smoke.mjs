@@ -6,6 +6,7 @@ try {
   await page.getByRole('option',{name:'Paper a',exact:true}).dblclick();
   await page.getByRole('spinbutton',{name:'页码'}).fill('1');
   await page.getByRole('spinbutton',{name:'页码'}).press('Enter');
+  await page.evaluate(() => window.fixture.wb.setPrefs({ marginNotes: false }));
   for(const policy of ['keep','remove']) {
     await page.locator('[data-annotation-source=true] .pr-text-layer span').filter({hasText:'We follow'}).first().evaluate(span=>{
       const r=document.createRange();r.selectNodeContents(span);getSelection().removeAllRanges();getSelection().addRange(r);
@@ -16,7 +17,10 @@ try {
     await editor.getByRole('button',{name:'保存',exact:true}).click();
     await editor.waitFor({state:'hidden'});
     const id=env.annotations().at(-1).id;
-    await page.locator(`[data-annotation-id="${id}"]`).first().click({force:true});
+    await page.getByRole('tab',{name:'批注',exact:true}).click();
+    const card=page.locator(`[data-annotation-card="${id}"]`);
+    await card.getByRole('button',{name:'批注操作'}).click();
+    await page.getByRole('menuitem',{name:'删除…',exact:true}).click();
     const popup=page.getByRole('region',{name:'编辑批注'});
     await popup.getByRole('button',{name:'删除',exact:true}).click();
     await popup.getByRole('button',{name:'确认删除',exact:true}).click();

@@ -69,11 +69,11 @@ try {
   await selectionTools.getByRole("button", { name: "重要", exact: true }).click();
   await page.locator("[data-annotation-id]").first().waitFor();
   assert.ok(env.annotations().at(-1).quote.includes(original.trim()));
-  await page
-    .getByRole("region", { name: "编辑批注" })
-    .getByRole("button", { name: "收起", exact: true })
-    .click();
-  await page.evaluate(() => getSelection().removeAllRanges());
+  const marginNote = page.locator("[data-margin-note]").first().getByRole("textbox");
+  await marginNote.waitFor();
+  assert.equal(await marginNote.evaluate((element) => element === document.activeElement), true);
+  assert.equal(await selectionTools.count(), 0);
+  assert.equal(await page.evaluate(() => getSelection().isCollapsed), true);
   await jump(1);
   await page.locator('.pr-link[aria-label="文内链接"]').first().click();
   await page.waitForFunction(() => document.querySelector('input[name="page"]').value === "3");

@@ -65,8 +65,10 @@ try {
   assert.ok((await page.evaluate(() => getSelection().toString())).trim());
   await page.getByRole("toolbar", { name: "选中文字工具条" }).getByRole("button", { name: "重要", exact: true }).click();
   await page.locator("[data-annotation-id]").first().waitFor();
-  await page.getByRole("region", { name: "编辑批注" }).getByRole("button", { name: "收起", exact: true }).click();
-  await page.evaluate(() => getSelection().removeAllRanges());
+  const marginInput = page.locator("[data-margin-note]").first().getByRole("textbox");
+  await marginInput.waitFor();
+  assert.equal(await marginInput.evaluate((element) => element === document.activeElement), true);
+  assert.equal(await page.getByRole("region", { name: "编辑批注" }).count(), 0);
   await page.locator('.pr-link[aria-label="文内链接"]').first().click();
   await page.waitForFunction(() => document.querySelector('input[name="page"]').value === "3");
   await page.getByRole("button", { name: "后退", exact: true }).click();

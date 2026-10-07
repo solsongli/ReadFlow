@@ -49,7 +49,9 @@ export function displayTranslationRuns(block: Block): InlineRun[] {
   const font = block.start_font || "";
   const startsBold = /(?:bold|semi|demi|medi)/iu.test(font) && font !== block.text_font;
   const text = runs.map((run) => run.text).join("");
-  const boundary = text.search(/\s/u);
+  const lead = text.match(/^.{1,40}?[。．.!！:：]/u)?.[0];
+  const punctuation = lead ? Array.from(lead).length : -1;
+  const boundary = punctuation > 0 ? punctuation : text.search(/\s/u);
   if (!startsBold || boundary < 2 || boundary > 40) return runs;
   return [
     ...sliceRuns(runs, 0, boundary).map((run) => ({ ...run, bold: true })),

@@ -4,7 +4,7 @@ from pathlib import Path
 import pymupdf as fitz
 from .paper_blocks_model import digest
 
-VERSION = "layout-x13-1"
+VERSION = "layout-x14-1"
 LISTS = ("layout_overflow", "layout_truncated", "render_fallback", "label_fallback")
 COUNTS = (
     "residual_source_chars",

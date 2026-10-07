@@ -31,11 +31,13 @@ def regular(path):
     )
 
 
-def compare_png(source, translated, page_number, output):
+def compare_png(source, translated, page_number, output, clip=None, zoom=1.45):
     images = []
     for path in (source, translated):
         with fitz.open(path) as pdf:
-            pixmap = pdf[page_number - 1].get_pixmap(matrix=fitz.Matrix(1.45, 1.45), alpha=False)
+            pixmap = pdf[page_number - 1].get_pixmap(
+                matrix=fitz.Matrix(zoom, zoom), clip=fitz.Rect(clip) if clip else None, alpha=False
+            )
             images.append(Image.frombytes("RGB", (pixmap.width, pixmap.height), pixmap.samples))
     height = max(image.height for image in images)
     canvas = Image.new("RGB", (sum(image.width for image in images), height), "white")
@@ -150,6 +152,15 @@ def render_one(source_root, output_root, name, reuse=False):
             target / "translated-aligned.pdf",
             page,
             output_root / f"{name}-p{page}-source-aligned.png",
+        )
+    if name == "SAM":
+        compare_png(
+            target / "source.pdf",
+            target / "translated-aligned.pdf",
+            4,
+            output_root / "SAM-p4-run-in-closeup.png",
+            clip=(35, 65, 420, 775),
+            zoom=2.1,
         )
     for path in required:
         if digest(path) != hashes[path.name]:

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdir,readFile,writeFile } from 'node:fs/promises';
 import { PNG } from 'pngjs';
 import { readerBrowser } from '../paper-reader/browser.mjs';
+import { setPaperTone } from '../paper-reader/controls.mjs';
 const output='/tmp/readflow-m1/screenshots';
 await mkdir(output,{recursive:true});
 const checks=[];
@@ -42,7 +43,7 @@ const checks=[];
 {
  const env=await readerBrowser('?images');const {page}=env;
  try {
-  await page.getByLabel('页面底色',{exact:true}).selectOption('night');
+  await setPaperTone(page,'night');
   const result=await page.locator('[data-paper-page="1"] .pr-image-colors').evaluate(canvas=>{
    const source=canvas.parentElement.querySelector('canvas');
    const x=Math.floor(100*source.width/400), y=Math.floor(180*source.height/600);

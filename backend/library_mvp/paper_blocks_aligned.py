@@ -45,6 +45,11 @@ def _audit():
         "aligned_overflow": [],
         "aligned_shrunk": [],
         "aligned_font_ratios": [],
+        "aligned_spacing_em": [],
+        "aligned_fill_ratios": [],
+        "aligned_before_spacing_em": [],
+        "aligned_before_fill_ratios": [],
+        "aligned_bold_leads": [],
     }
 
 
@@ -62,6 +67,12 @@ def _summary(audit):
     def percentile(at):
         return values[min(len(values) - 1, round((len(values) - 1) * at))] if values else 0
 
+    spacing = sorted(audit["aligned_spacing_em"])
+    before_spacing = sorted(audit["aligned_before_spacing_em"])
+
+    def at(values, percentile):
+        return values[min(len(values) - 1, round((len(values) - 1) * percentile))] if values else 0
+
     return {
         "baseline_p50": round(percentile(0.5), 3),
         "baseline_p95": round(percentile(0.95), 3),
@@ -71,6 +82,18 @@ def _summary(audit):
         "mean_font_ratio": round(statistics.fmean(audit["aligned_font_ratios"]), 4)
         if audit["aligned_font_ratios"]
         else 1,
+        "spacing_em_p50": round(at(spacing, 0.5), 4),
+        "spacing_em_p95": round(at(spacing, 0.95), 4),
+        "spacing_em_max": round(max(spacing, default=0), 4),
+        # A document can have no aligned blocks (scanned pages, labels only); fmean([]) raises.
+        "mean_fill_ratio": round(statistics.fmean(audit["aligned_fill_ratios"]), 4) if audit["aligned_fill_ratios"] else 0,
+        "before_spacing_em_p50": round(at(before_spacing, 0.5), 4),
+        "before_spacing_em_p95": round(at(before_spacing, 0.95), 4),
+        "before_spacing_em_max": round(max(before_spacing, default=0), 4),
+        "before_mean_fill_ratio": round(statistics.fmean(audit["aligned_before_fill_ratios"]), 4)
+        if audit["aligned_before_fill_ratios"]
+        else 0,
+        "bold_lead_blocks": len(set(audit["aligned_bold_leads"])),
     }
 
 
@@ -139,6 +162,11 @@ def render_aligned(
                     "aligned_overflow",
                     "aligned_shrunk",
                     "aligned_font_ratios",
+                    "aligned_spacing_em",
+                    "aligned_fill_ratios",
+                    "aligned_before_spacing_em",
+                    "aligned_before_fill_ratios",
+                    "aligned_bold_leads",
                 ):
                     audit[key].extend(record.get("aligned", {}).get(key, []))
                 audit["aligned_blocks"] += record.get("aligned", {}).get("blocks", 0)
@@ -154,6 +182,11 @@ def render_aligned(
                     "aligned_overflow",
                     "aligned_shrunk",
                     "aligned_font_ratios",
+                    "aligned_spacing_em",
+                    "aligned_fill_ratios",
+                    "aligned_before_spacing_em",
+                    "aligned_before_fill_ratios",
+                    "aligned_bold_leads",
                 )
             }
             block_before = audit["aligned_blocks"]
@@ -195,6 +228,14 @@ def render_aligned(
                             audit["aligned_blocks"] += 1
                             audit["aligned_line_count_match"] += len(plan["lines"]) == len(source_lines)
                             audit["aligned_font_ratios"].append(plan["scale"])
+                            audit["aligned_spacing_em"].append(plan["spacing_em"])
+                            audit["aligned_fill_ratios"].append(plan["fill_ratio"])
+                            audit["aligned_before_spacing_em"].append(plan["before_spacing_em"])
+                            audit["aligned_before_fill_ratios"].append(plan["before_fill_ratio"])
+                            if task["type"] in {"text", "abstract", "list"} and any(
+                                run.get("bold") for run in runs
+                            ):
+                                audit["aligned_bold_leads"].append(task["id"])
                             audit["aligned_baseline_deltas"].extend(
                                 abs(item["source_baseline"] - item["target_baseline"])
                                 for item in placement["aligned"]
@@ -244,6 +285,11 @@ def render_aligned(
                     "aligned_overflow",
                     "aligned_shrunk",
                     "aligned_font_ratios",
+                    "aligned_spacing_em",
+                    "aligned_fill_ratios",
+                    "aligned_before_spacing_em",
+                    "aligned_before_fill_ratios",
+                    "aligned_bold_leads",
                 )
             }
             aligned.update(

@@ -15,30 +15,53 @@ for (const [identity, title, pages] of performanceOnly
       ["2406.09246", "OpenVLA", [1, 2]],
       ["2303.04137", "Diffusion Policy", [2, 4]],
     ]) {
+  const manifest = JSON.parse(await readFile(`/tmp/readflow-x6/${identity}/manifest.json`, "utf8"));
   const env = await readerBrowser(
     `?blocks&configured&x6&corpus=${identity}`,
     "tests/paper-reader/integration-fixture.tsx",
+    { pdf: `${root}/${identity}.pdf`, blocks: manifest, dpr: 1 },
   );
-  const { page, context } = env;
+  const { page } = env;
   try {
+    page.setDefaultTimeout(90000);
     await page.setViewportSize({ width: 1680, height: 1050 });
-    const pdf = await readFile(`${root}/${identity}.pdf`);
-    await context.route("**/api/research/attachments/*/pdf", (route) =>
-      route.fulfill({ body: pdf, contentType: "application/pdf" }),
-    );
     await page.evaluate(async (name) => {
       window.fixture.rows[0].title = name;
       await window.fixture.wb.refreshAll();
     }, title);
     await page.getByRole("option", { name: title, exact: true }).dblclick();
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll("[data-paper-page] > canvas")].some(
+        (canvas) => canvas.width > 0 && canvas.style.visibility === "visible",
+      ),
+    );
     const jump = async (number) => {
       const input = page.getByRole("spinbutton", { name: "页码" });
       await input.fill(String(number));
       await input.press("Enter");
-      await page.waitForFunction((p) => {
-        const canvas = document.querySelector(`[data-paper-page="${p}"] > canvas`);
-        return canvas?.style.visibility === "visible" && canvas.width > 0;
-      }, number);
+      try {
+        await page.waitForFunction((p) => {
+          const canvas = document.querySelector(`[data-paper-page="${p}"] > canvas`);
+          return canvas?.style.visibility === "visible" && canvas.width > 0;
+        }, number);
+      } catch (error) {
+        console.error(
+          "reader-state",
+          await page.evaluate(() => ({
+            title: document.title,
+            reader: Boolean(document.querySelector("[data-paper-reader]")),
+            statuses: [...document.querySelectorAll('[role="status"]')].map((node) => node.textContent),
+            canvases: [...document.querySelectorAll("[data-paper-page] > canvas")].map((canvas) => ({
+              page: canvas.parentElement.dataset.paperPage,
+              width: canvas.width,
+              visibility: canvas.style.visibility,
+            })),
+          })),
+          env.errors,
+          env.unexpected,
+        );
+        throw error;
+      }
     };
     await jump(1);
     if (await page.getByRole("button", { name: "知道了", exact: true }).count())
