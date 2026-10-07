@@ -2,6 +2,7 @@
 from .paper_markers import clean_rich, has_markers
 from .paper_blocks_model import protect
 from .paper_blocks_labels import translation_units
+from .paper_blocks_aligned import ALIGNED_REVISION
 
 
 def normalize_cache(document, cache):
@@ -27,15 +28,24 @@ def normalize_cache(document, cache):
     return patch, {"entries": len(patch), "tokens": count, "unresolved": unresolved}
 
 
+def aligned_stale(result):
+    """A finished layout whose line-aligned PDF is missing or from an older renderer."""
+    return bool(
+        result
+        and result.get("layout_ready")
+        and (not result.get("aligned_ready") or result.get("aligned_revision") != ALIGNED_REVISION)
+    )
+
+
 def schedule_repair(service, item, entry):
     """Only one local render retry per process; failed repair stays available for manual rendering."""
     with service.lock:
         state = service.storage.repair_state(entry)
         result = service.storage.result(entry)
-        aligned_missing = bool(result and result.get("layout_ready") and not result.get("aligned_ready"))
+        aligned_missing = aligned_stale(result)
         if (not state.get("pending") and not aligned_missing) or not result or service.closed:
             return
-        revision = state["revision"] if state.get("pending") else "aligned-layout-v1"
+        revision = state["revision"] if state.get("pending") else f"aligned-layout-v{ALIGNED_REVISION}"
         jobs = [j for j in service.jobs.values() if j["sha256"] == entry["sha256"]]
         if any(j["status"] in ("queued", "running", "cancelling") for j in jobs):
             return

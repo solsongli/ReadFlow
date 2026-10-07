@@ -18,6 +18,10 @@ from .paper_blocks_layout import tasks_for, translated_outline
 from .paper_blocks_storage import write_json
 from . import layout_incremental as incremental
 
+# Bump when the aligned renderer changes visibly: finished results with an older (or no)
+# revision are re-rendered locally once, without any model call. 2 = 0.9.23 robustness fixes.
+ALIGNED_REVISION = 2
+
 PDF_NAME = "translated-aligned.pdf"
 AUDIT_NAME = "layout-aligned-audit.json"
 PAGES_NAME = "layout-aligned-pages.json"
@@ -264,6 +268,7 @@ def render_aligned(
                                 "scale": placement["scale"],
                                 "text": placement["text"],
                                 "glyph_boxes": placement["boxes"],
+                                "glyphs": placement.get("glyphs", []),
                                 "fonts": placement["fonts"],
                                 "font_size": placement.get("font_size", task["size"] * placement["scale"]),
                                 "leading": placement.get("leading", 1),

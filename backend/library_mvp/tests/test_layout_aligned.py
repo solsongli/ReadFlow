@@ -6,7 +6,8 @@ from backend.library_mvp.layout_aligned import (
     source_line_slots,
     tokens_from_runs,
 )
-from backend.library_mvp.paper_blocks_inline import restore_lead_bold
+from backend.library_mvp.paper_blocks_inline import normalize_render_runs, restore_lead_bold
+from backend.library_mvp.layout_ownership import region_obstacles
 
 
 def measure(text, size, run):
@@ -37,11 +38,13 @@ class AlignedPlanningTests(unittest.TestCase):
         self.assertNotIn("OpenVLA", values)
 
     def test_line_start_and_end_punctuation_rules_reject_bad_boundaries(self):
-        tokens = tokens_from_runs([{"kind": "text", "text": "研究（方法），结果。"}])
+        tokens = tokens_from_runs([{"kind": "text", "text": "研究（方法），”结果。"}])
         opening = next(index for index, token in enumerate(tokens) if token.text == "（")
         closing = next(index for index, token in enumerate(tokens) if token.text == "）")
+        quote = next(index for index, token in enumerate(tokens) if token.text == "”")
         self.assertFalse(legal_break(tokens, opening + 1))
         self.assertFalse(legal_break(tokens, closing))
+        self.assertFalse(legal_break(tokens, quote))
 
     def test_justified_nonfinal_lines_touch_both_source_edges(self):
         plan = plan_lines([{"kind": "text", "text": "逐行对齐让每行填充原来的视觉宽度"}], lines([90, 55]), 10, measure)
@@ -52,9 +55,21 @@ class AlignedPlanningTests(unittest.TestCase):
     def test_one_font_scale_is_used_and_extra_line_records_overflow(self):
         plan = plan_lines([{"kind": "text", "text": "这是一段远远超过原始单行容量的中文译文"}], lines([20]), 10, measure)
         self.assertTrue(plan["overflow"])
-        self.assertEqual(plan["scale"], 0.7)
+        self.assertEqual(plan["scale"], 0.75)
         self.assertEqual(len(plan["lines"]), 2)
-        self.assertEqual({plan["font_size"] for _ in plan["lines"]}, {7})
+        self.assertEqual({plan["font_size"] for _ in plan["lines"]}, {7.5})
+
+    def test_extra_overflow_line_uses_paragraph_width_not_short_last_line(self):
+        plan = plan_lines(
+            [{"kind": "text", "text": "中文译文需要连续排入完整的物理行而不是末行碎片"}],
+            lines([100, 8]),
+            10,
+            measure,
+        )
+        self.assertTrue(plan["overflow"])
+        self.assertEqual(len(plan["lines"]), 3)
+        self.assertEqual(plan["lines"][-1]["x1"] - plan["lines"][-1]["x0"], 100)
+        self.assertGreaterEqual(plan["scale"], 0.75)
 
     def test_super_sub_and_bold_styles_survive_partitioning(self):
         runs = [
@@ -102,6 +117,45 @@ class AlignedPlanningTests(unittest.TestCase):
         self.assertEqual([slot["baseline"] for slot in slots], [18, 30])
         self.assertGreater(slots[0]["x0"], slots[1]["x0"])
 
+    def test_source_slots_ignore_word_gaps_and_merge_overlapping_math_fragments(self):
+        raw = [
+            {
+                "spans": [
+                    {
+                        "origin": [10, 28],
+                        "chars": [
+                            {"c": "A", "bbox": [10, 20, 18, 30]},
+                            {"c": " ", "bbox": [0, 0, 0, 0]},
+                            {"c": "B", "bbox": [30, 20, 38, 30]},
+                        ],
+                    }
+                ]
+            },
+            {
+                "spans": [
+                    {
+                        "origin": [20, 22],
+                        "chars": [{"c": "(", "bbox": [20, 21, 24, 31]}],
+                    }
+                ]
+            },
+        ]
+        slots = source_line_slots([5, 15, 45, 35], raw, [])
+        self.assertEqual(len(slots), 1)
+        self.assertEqual(slots[0]["baseline"], 28)
+        self.assertEqual((slots[0]["x0"], slots[0]["x1"]), (10, 38))
+
+    def test_detected_table_cannot_erase_its_caption_source_rows(self):
+        region = {
+            "id": "caption",
+            "type": "caption",
+            "bbox": [10, 20, 110, 40],
+            "line_boxes": [[10, 20, 110, 30], [10, 30, 80, 40]],
+        }
+        task = {"id": "caption", "box": region["bbox"]}
+        obstacles = region_obstacles(region["bbox"], task, [region], [[5, 5, 115, 80]])
+        self.assertEqual(obstacles, [])
+
     def test_sparse_chinese_uses_larger_type_and_caps_added_spacing(self):
         plan = plan_lines(
             [{"kind": "text", "text": "视觉条件语言模型用于机器人研究与实验验证"}],
@@ -129,11 +183,42 @@ class AlignedPlanningTests(unittest.TestCase):
         self.assertEqual(runs[0], {"kind": "text", "text": "视觉条件语言模型。", "bold": True})
         self.assertEqual("".join(run["text"] for run in runs), "视觉条件语言模型。随后介绍训练方法。")
 
+    def test_old_cache_math_controls_and_modifier_quote_are_printable(self):
+        runs = normalize_render_runs(
+            [
+                {"kind": "text", "text": "N\x000,σ2I\x01 通用˝\x07"},
+                {"kind": "sub", "text": "Strategy"},
+                {"kind": "sub", "text": "θ"},
+            ]
+        )
+        self.assertEqual(
+            runs,
+            [
+                {"kind": "text", "text": "N(0,σ2I) 通用”"},
+                {"kind": "text", "text": "Strategy"},
+                {"kind": "sub", "text": "θ"},
+            ],
+        )
+
     def test_audit_summary_of_a_document_without_aligned_blocks(self):
         from backend.library_mvp.paper_blocks_aligned import _audit, _summary
         summary = _summary(_audit())
         self.assertEqual((summary["mean_fill_ratio"], summary["before_mean_fill_ratio"]), (0, 0))
         self.assertEqual(summary["spacing_em_max"], 0)
+
+
+    def test_finished_layouts_from_older_aligned_renderers_are_repaired_once(self):
+        from backend.library_mvp.paper_blocks_aligned import ALIGNED_REVISION
+        from backend.library_mvp.paper_cache_repair import aligned_stale
+        current = {"layout_ready": True, "aligned_ready": True, "aligned_revision": ALIGNED_REVISION}
+        self.assertFalse(aligned_stale(current))
+        self.assertTrue(aligned_stale({**current, "aligned_ready": False}))
+        # 0.9.21 / 0.9.22 results carry no revision; an older number is stale too.
+        self.assertTrue(aligned_stale({"layout_ready": True, "aligned_ready": True}))
+        self.assertTrue(aligned_stale({**current, "aligned_revision": ALIGNED_REVISION - 1}))
+        # Nothing to repair before the original layout exists.
+        self.assertFalse(aligned_stale({"layout_ready": False}))
+        self.assertFalse(aligned_stale(None))
 
 
 if __name__ == "__main__":

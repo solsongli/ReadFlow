@@ -41,10 +41,27 @@ export function sliceRuns(runs: InlineRun[], start: number, end: number) {
     return text ? [{ ...run, text }] : [];
   });
 }
+export function normalizeTranslationRuns(runs: InlineRun[]) {
+  return runs.flatMap((run) => {
+    const text = run.text
+      .replaceAll("\u0000", "(")
+      .replaceAll("\u0001", ")")
+      .replaceAll("˝", "”")
+      .replace(/[\u0002-\u0008\u000b\u000c\u000e-\u001f]/gu, "")
+      .replace(/[\t\r\n]/gu, " ");
+    const kind: InlineRun["kind"] =
+      ["super", "sub"].includes(run.kind) && /^[A-Za-z][A-Za-z0-9 ._-]{2,}$/u.test(text.trim())
+        ? "text"
+        : run.kind;
+    return text ? [{ ...run, text, kind }] : [];
+  });
+}
 export function displayTranslationRuns(block: Block): InlineRun[] {
-  const runs = block.translation_runs?.length
-    ? block.translation_runs
-    : [{ kind: "text" as const, text: block.translation || "" }];
+  const runs = normalizeTranslationRuns(
+    block.translation_runs?.length
+      ? block.translation_runs
+      : [{ kind: "text" as const, text: block.translation || "" }],
+  );
   if (runs.some((run) => run.bold) || !["text", "abstract", "list"].includes(block.type)) return runs;
   const font = block.start_font || "";
   const startsBold = /(?:bold|semi|demi|medi)/iu.test(font) && font !== block.text_font;

@@ -164,3 +164,17 @@ test("SAM-style translated run-in heads recover through punctuation without inse
   assert.deepEqual(runs[0], { kind: "text", text: "任务。", bold: true });
   assert.equal(runs.map((run) => run.text).join(""), block.translation);
 });
+test("cached PDF math controls and modifier quotes become printable without rewriting cache", () => {
+  const block = {
+    type: "text",
+    translation: "N\u00000,σ²I\u0001 通用˝\u0007Strategyθ",
+    translation_runs: [
+      { kind: "text", text: "N\u00000,σ²I\u0001 通用˝\u0007" },
+      { kind: "sub", text: "Strategy" },
+      { kind: "sub", text: "θ" },
+    ],
+  };
+  const runs = displayTranslationRuns(block);
+  assert.equal(runs.map((run) => run.text).join(""), "N(0,σ²I) 通用”Strategyθ");
+  assert.deepEqual(runs.slice(-2).map((run) => run.kind), ["text", "sub"]);
+});

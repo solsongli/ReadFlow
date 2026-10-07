@@ -2,7 +2,7 @@
 from datetime import datetime, timezone
 from contextlib import nullcontext
 from .paper_blocks_layout import render_layout
-from .paper_blocks_aligned import render_aligned
+from .paper_blocks_aligned import ALIGNED_REVISION, render_aligned
 from .paper_blocks_render import render
 from .paper_blocks_storage import write_json
 
@@ -68,6 +68,7 @@ def render_outputs(
         "revision": datetime.now(timezone.utc).isoformat(),
         "layout_ready": True,
         "aligned_ready": True,
+        "aligned_revision": ALIGNED_REVISION,
         "reflow_ready": False,
         "layout_overflow": layout["layout_overflow"],
         "layout_truncated": layout["layout_truncated"],

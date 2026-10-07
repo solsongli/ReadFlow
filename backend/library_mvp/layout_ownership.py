@@ -69,7 +69,15 @@ def bounded_tables(page, regions):
 def region_obstacles(box, task, regions, tables):
     parent = next((r for r in regions if r["id"] == task.get("parent")), None)
     own = next((r for r in regions if r["id"] == task["id"] and r["bbox"] == task["box"]), None)
-    obstacles = list(tables)
+    # A table detector can include its caption band. Exact source glyph rows
+    # remain authoritative: a broad table rectangle must not reduce those rows
+    # to a few-pixel slot.
+    own_lines = [fitz.Rect(value) for value in (own or {}).get("line_boxes", [])]
+    obstacles = [
+        table
+        for table in tables
+        if not any(overlap(table, line) > area(line) * 0.5 for line in own_lines)
+    ]
     for region in regions:
         if region["id"] in {task["id"], task.get("parent")} or not fitz.Rect(region["bbox"]).intersects(box):
             continue

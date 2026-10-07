@@ -8,6 +8,7 @@ import time
 import pymupdf as fitz
 from PIL import Image
 from backend.library_mvp.paper_blocks_aligned import render_aligned
+from ops.development.layout_aligned_quality import inspect_layout
 
 PAGES = {
     "SAM": (2, 4),
@@ -84,7 +85,7 @@ def integrity(source, translated, baseline, audit, baseline_audit):
     return result
 
 
-def render_one(source_root, output_root, name, reuse=False):
+def render_one(source_root, output_root, name, reuse=False, baseline_root=None):
     source = source_root / name
     required = [
         source / filename for filename in ("source.pdf", "blocks.json", "translations.json", "selection.json")
@@ -162,6 +163,15 @@ def render_one(source_root, output_root, name, reuse=False):
             clip=(35, 65, 420, 775),
             zoom=2.1,
         )
+    if name == "DiffusionPolicy":
+        compare_png(
+            target / "source.pdf",
+            target / "translated-aligned.pdf",
+            2,
+            output_root / "DiffusionPolicy-p2-math-closeup.png",
+            clip=(290, 570, 555, 745),
+            zoom=2.1,
+        )
     for path in required:
         if digest(path) != hashes[path.name]:
             raise AssertionError(f"read-only corpus changed: {path}")
@@ -170,6 +180,12 @@ def render_one(source_root, output_root, name, reuse=False):
         "pages": checks["pages"],
         "seconds": round(elapsed, 3),
         **result["metrics"],
+        "aligned_blocks": result["aligned_blocks"],
+        "line_count_match": result["aligned_line_count_match"],
+        "quality": inspect_layout(target),
+        "before_quality": inspect_layout(baseline_root / name)
+        if baseline_root and (baseline_root / name / "translated-aligned.pdf").is_file()
+        else None,
         "render_fallback": len(result["render_fallback"]),
         "label_fallback": len(result["label_fallback"]),
         "links_reanchored": result["links_reanchored"],
@@ -184,6 +200,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--corpus", type=Path)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--baseline", type=Path)
     parser.add_argument("--reuse-output", action="store_true")
     args = parser.parse_args()
     corpus = args.corpus or (
@@ -193,8 +210,37 @@ def main():
     if corpus is None or not corpus.is_dir():
         print("SKIP aligned corpus: READFLOW_X13_CORPUS_DIR is not set or unavailable")
         return
-    rows = [render_one(corpus.resolve(), args.output.resolve(), name, args.reuse_output) for name in PAGES]
+    baseline = args.baseline.resolve() if args.baseline and args.baseline.is_dir() else None
+    rows = [
+        render_one(corpus.resolve(), args.output.resolve(), name, args.reuse_output, baseline)
+        for name in PAGES
+    ]
     (args.output / "metrics.json").write_text(json.dumps(rows, ensure_ascii=False, indent=2))
+    keys = ("scattered_lines", "tiny_blocks", "missing_glyphs", "forbidden_starts", "lead_gaps")
+    summary = {
+        "before": {
+            key: sum((row["before_quality"] or {}).get(key, 0) for row in rows) for key in keys
+        },
+        "after": {key: sum(row["quality"][key] for row in rows) for key in keys},
+        "baseline_p95_max": max(row["baseline_p95"] for row in rows),
+        "line_count_rate": sum(row["line_count_match"] for row in rows)
+        / max(1, sum(row["aligned_blocks"] for row in rows)),
+        "spacing_em_p95_max": max(row["spacing_em_p95"] for row in rows),
+        "remaining": [
+            {"paper": row["paper"], **item}
+            for row in rows
+            for item in row["quality"]["remaining"]
+        ],
+    }
+    (args.output / "quality-summary.json").write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2)
+    )
+    if any(summary["after"][key] for key in ("scattered_lines", "missing_glyphs", "forbidden_starts", "lead_gaps")):
+        raise AssertionError(summary)
+    if summary["baseline_p95_max"] >= 1 or summary["line_count_rate"] < 0.98:
+        raise AssertionError(summary)
+    if summary["spacing_em_p95_max"] > 0.1201:
+        raise AssertionError(summary)
     print(json.dumps(rows, ensure_ascii=False, indent=2))
 
 

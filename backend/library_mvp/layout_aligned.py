@@ -6,8 +6,8 @@ import statistics
 import pymupdf as fitz
 from .layout_geometry import free_rects
 
-OPENING = set("（〔［｛〈《「『【(［{<")
-CLOSING = set("，。、；：！？）〕］｝〉》」』】,.!?;:)]}>")
+OPENING = set("（〔［｛〈《「『【“‘(［{<")
+CLOSING = set("，。、；：！？）〕］｝〉》」』】”’,.!?;:)]}>")
 TOKEN = re.compile(
     r"\[[^\]\n]{1,48}\]|https?://\S+|[A-Za-z0-9]+(?:[-–—./][A-Za-z0-9]+)*|[^\s]",
     re.UNICODE,
@@ -105,21 +105,26 @@ def plan_lines(runs, source_lines, source_size, measure):
     ]
     maximum = min(1.12, (statistics.median(spacing) * 0.92 / source_size) if spacing else 1.12)
     scale = min(maximum, min(ratios, default=maximum))
-    overflow = scale < 0.7
-    scale = max(0.7, scale)
+    minimum = 0.75
+    overflow = scale < minimum
     if overflow:
-        extra = dict(source_lines[-1])
         spacing = (
             statistics.median([b["baseline"] - a["baseline"] for a, b in zip(source_lines, source_lines[1:])])
             if len(source_lines) > 1
             else source_size * 1.2
         )
-        extra["baseline"] += spacing
-        extra["y0"] += spacing
-        extra["y1"] += spacing
+        template = max(source_lines, key=lambda line: line["x1"] - line["x0"])
+        extra = dict(template)
+        extra["baseline"] = source_lines[-1]["baseline"] + spacing
+        extra["y0"] = source_lines[-1]["y0"] + spacing
+        extra["y1"] = source_lines[-1]["y1"] + spacing
         source_lines = [*source_lines, extra]
-        capacities.append(capacities[-1])
-        groups = partitions(tokens, capacities, source_size * scale, measure)
+        capacities.append(extra["x1"] - extra["x0"])
+        groups = partitions(tokens, capacities, source_size, measure)
+        base_widths = [sum(group_widths(group, source_size, measure)) for group in groups]
+        ratios = [capacities[index] / max(0.01, width) for index, width in enumerate(base_widths)]
+        scale = min(maximum, min(ratios, default=maximum))
+    scale = max(minimum, scale)
     size = source_size * scale
     natural = [sum(group_widths(group, size, measure)) for group in groups]
     nonfinal = [index for index, group in enumerate(groups[:-1]) if len(group) > 1]
@@ -168,40 +173,70 @@ def plan_lines(runs, source_lines, source_size, measure):
     }
 
 
-def source_line_slots(box, lines, obstacles):
+def _merge_physical_rows(rows):
+    """Fold font/math fragments back into their physical text line."""
     output = []
+    for row in sorted(rows, key=lambda value: (value["y0"], value["x0"])):
+        match = next(
+            (
+                current
+                for current in reversed(output)
+                if max(0, min(current["y1"], row["y1"]) - max(current["y0"], row["y0"]))
+                / max(0.01, min(current["y1"] - current["y0"], row["y1"] - row["y0"]))
+                >= 0.45
+            ),
+            None,
+        )
+        if match is None:
+            output.append(dict(row))
+            continue
+        if row["weight"] > match["weight"]:
+            match["baseline"] = row["baseline"]
+        match["x0"] = min(match["x0"], row["x0"])
+        match["x1"] = max(match["x1"], row["x1"])
+        match["y0"] = min(match["y0"], row["y0"])
+        match["y1"] = max(match["y1"], row["y1"])
+        match["weight"] += row["weight"]
+    return sorted(output, key=lambda row: (row["baseline"], row["x0"]))
+
+
+def source_line_slots(box, lines, obstacles):
+    rows = []
+    block = fitz.Rect(box)
     for line in lines:
-        groups, current = [], None
+        rects, origins, weight = [], [], 0
         for span in line.get("spans", []):
+            accepted = 0
             for char in span.get("chars", []):
                 rect = fitz.Rect(char["bbox"])
                 center = (rect.tl + rect.br) / 2
-                if not fitz.Rect(box).contains(center) or any(
+                if not block.contains(center) or any(
                     fitz.Rect(item).contains(center) for item in obstacles
                 ):
-                    if current:
-                        groups.append(current)
-                        current = None
                     continue
-                current = rect if current is None else current | rect
-        if current:
-            groups.append(current)
-        for rect in groups:
-            for available in free_rects(rect & fitz.Rect(box), obstacles):
-                spans = [
-                    span for span in line.get("spans", []) if fitz.Rect(span["bbox"]).intersects(available)
-                ]
-                baseline = statistics.median(span["origin"][1] for span in spans) if spans else available.y1
-                output.append(
-                    {
-                        "x0": available.x0,
-                        "x1": available.x1,
-                        "y0": available.y0,
-                        "y1": available.y1,
-                        "baseline": baseline,
-                    }
-                )
-    return sorted(output, key=lambda row: (row["baseline"], row["x0"]))
+                rects.append(rect)
+                accepted += 1
+            if accepted:
+                origins.append(span["origin"][1])
+                weight += accepted
+        if not rects:
+            continue
+        envelope = rects[0]
+        for rect in rects[1:]:
+            envelope |= rect
+        available = max(free_rects(envelope & block, obstacles), key=lambda rect: rect.width, default=None)
+        if available:
+            rows.append(
+                {
+                    "x0": available.x0,
+                    "x1": available.x1,
+                    "y0": available.y0,
+                    "y1": available.y1,
+                    "baseline": statistics.median(origins),
+                    "weight": weight,
+                }
+            )
+    return [{key: value for key, value in row.items() if key != "weight"} for row in _merge_physical_rows(rows)]
 
 
 def _color(value):
@@ -224,8 +259,8 @@ def render_placement(plan, folder, color):
     for key, path in files.items():
         if path.is_file():
             page.insert_font(fontname=names[key], fontfile=str(path))
-    boxes = []
-    for line in lines:
+    boxes, glyphs = [], []
+    for line_index, line in enumerate(lines):
         for piece in line["pieces"]:
             kind = piece.get("kind", "text")
             size = plan["font_size"] * (0.66 if kind in {"super", "sub"} else 1)
@@ -245,12 +280,23 @@ def render_placement(plan, folder, color):
                 color=_color(color),
                 overlay=True,
             )
-            boxes.append([x, baseline - size, x + piece["width"], baseline + size * 0.2])
+            box = [x, baseline - size, x + piece["width"], baseline + size * 0.2]
+            boxes.append(box)
+            glyphs.append(
+                {
+                    "bbox": box,
+                    "text": piece["text"],
+                    "bold": bool(piece.get("bold")),
+                    "kind": kind,
+                    "line": line_index,
+                }
+            )
     return bounds, {
         "doc": document,
         "scale": 1,
         "text": "".join(piece["text"] for line in lines for piece in line["pieces"]),
         "boxes": boxes,
+        "glyphs": glyphs,
         "fonts": list(names.values()),
         "font_size": plan["font_size"],
         "leading": 1,

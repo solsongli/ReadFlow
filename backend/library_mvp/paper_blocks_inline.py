@@ -3,6 +3,32 @@ import re
 import statistics
 from .paper_markers import canonicalize, clean_rich
 
+RENDER_CHARACTERS = str.maketrans(
+    {
+        "\x00": "(",
+        "\x01": ")",
+        "˝": "”",
+        "\t": " ",
+        "\n": " ",
+        "\r": " ",
+        **{chr(code): "" for code in range(2, 32) if code not in (9, 10, 13)},
+    }
+)
+
+
+def normalize_render_runs(runs):
+    """Repair known PDF math encodings and drop non-printing cache artifacts locally."""
+    output = []
+    for run in runs:
+        text = run.get("text", "").translate(RENDER_CHARACTERS)
+        if not text:
+            continue
+        kind = run.get("kind", "text")
+        if kind in {"super", "sub"} and re.fullmatch(r"[A-Za-z][A-Za-z0-9 ._-]{2,}", text.strip()):
+            kind = "text"
+        output.append({**run, "text": text, "kind": kind})
+    return output
+
 
 def span_content(spans, size, math_font):
     normal = [s for s in spans if s["size"] >= size * 0.88]
