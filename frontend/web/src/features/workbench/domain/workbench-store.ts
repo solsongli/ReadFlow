@@ -50,6 +50,7 @@ export interface Prefs extends TypographyPrefs {
   marginNotes: boolean;
   marginSide: "auto" | "right";
   marginTranslations: boolean;
+  alignmentGuide: boolean;
   reviewNewLimit: number;
   reviewLimit: number;
   blockLanguage: string;
@@ -111,6 +112,7 @@ export const DEFAULT_PREFS: Prefs = {
   marginNotes: true,
   marginSide: "auto",
   marginTranslations: false,
+  alignmentGuide: true,
   reviewNewLimit: 20,
   reviewLimit: 200,
   blockLanguage: "zh-CN",
@@ -292,6 +294,7 @@ export function prefsOf(state: S): Prefs {
     marginNotes,
     marginSide,
     marginTranslations,
+    alignmentGuide,
   } = state;
   return {
     sort,
@@ -323,5 +326,6 @@ export function prefsOf(state: S): Prefs {
     marginNotes,
     marginSide,
     marginTranslations,
+    alignmentGuide,
   };
 }

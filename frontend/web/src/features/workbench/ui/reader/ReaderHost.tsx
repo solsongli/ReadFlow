@@ -18,6 +18,7 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
   const marginNotes = useWb((s) => s.marginNotes);
   const marginSide = useWb((s) => s.marginSide);
   const marginTranslations = useWb((s) => s.marginTranslations);
+  const alignmentGuide = useWb((s) => s.alignmentGuide);
   const tone = useWb((state) => state.paperTone);
   const language = useWb((state) => state.blockLanguage);
   const format = useWb((state) => state.translationFormat);
@@ -78,6 +79,9 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
         }
         inlineAvailable={blocks.inlineAvailable}
         layoutAligned={blocks.layoutAligned}
+        alignmentGuide={alignmentGuide}
+        setAlignmentGuide={(enabled) => wb.setPrefs({ alignmentGuide: enabled })}
+        paragraphs={blocks.paragraphs}
         registerBlockNavigation={blocks.registerBlockNavigation}
         translationPanel={blocks.sidebar}
         {...canvas.ports}

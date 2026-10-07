@@ -7,6 +7,7 @@ export function ReaderSettings() {
   const marginNotes = useWb((s) => s.marginNotes);
   const marginSide = useWb((s) => s.marginSide);
   const marginTranslations = useWb((s) => s.marginTranslations);
+  const alignmentGuide = useWb((s) => s.alignmentGuide);
   return (
     <SettingsCard title="阅读辅助" description="仅在本机处理已有术语与块译文；不会自动调用模型。">
       <SettingsRow label="页边批注">
@@ -34,6 +35,14 @@ export function ReaderSettings() {
           aria-label="全部译文旁排"
           checked={marginTranslations}
           onChange={(e) => wb.setPrefs({ marginTranslations: e.target.checked })}
+        />
+      </SettingsRow>
+      <SettingsRow label="对齐辅助线">
+        <input
+          type="checkbox"
+          aria-label="对齐辅助线"
+          checked={alignmentGuide}
+          onChange={(e) => wb.setPrefs({ alignmentGuide: e.target.checked })}
         />
       </SettingsRow>
       <SettingsRow label="术语悬停释义">

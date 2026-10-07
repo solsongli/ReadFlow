@@ -9,6 +9,7 @@ import {
 } from "react";
 import { offsets, pageAt, visiblePages } from "../domain/navigation.js";
 import type { Position } from "../domain/types.js";
+import type { PagePoint } from "../domain/alignment.js";
 import type { PDFDocumentProxy, PageSize, renderQueue } from "../state/document.js";
 import { PdfPage, type LinkBox } from "./PdfPage.js";
 import { marginSpace, type MarginSide } from "@/ui/wb/margin-layout.js";
@@ -43,6 +44,13 @@ export const PdfPane = forwardRef<
     marginSide?: MarginSide;
     paragraphMargins?: boolean;
     reserveMargins?: boolean;
+    readingOverlay?: (page: number) => React.ReactNode;
+    readingGuide?: {
+      move: (point: PagePoint) => void;
+      leave: () => void;
+      click: (point: PagePoint) => void;
+      doubleClick: (point: PagePoint) => void;
+    };
   }
 >(function PdfPane(
   {
@@ -65,6 +73,8 @@ export const PdfPane = forwardRef<
     marginSide = "auto",
     paragraphMargins = false,
     reserveMargins = true,
+    readingOverlay,
+    readingGuide,
   },
   ref,
 ) {
@@ -256,6 +266,8 @@ export const PdfPane = forwardRef<
               onLeave={onLeave}
               painted={painted}
               overlay={overlay?.(index)}
+              readingOverlay={readingOverlay?.(index + 1)}
+              readingGuide={readingGuide}
               margins={marginEntries.get(index)}
               marginSide={marginSide}
               marginLeft={

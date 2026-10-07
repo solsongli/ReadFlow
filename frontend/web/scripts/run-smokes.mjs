@@ -48,7 +48,12 @@ await new Promise((resolve) => setTimeout(resolve, 1500));
 const smokeFiles = files(path.join(web, "tests"))
   .map((file) => path.relative(web, file))
   .sort((left, right) => {
-    const priority = (file) => (file.endsWith("paper-blocks/inline-corpus-smoke.mjs") ? 0 : 1);
+    const priority = (file) =>
+      file.endsWith("paper-reader/alignment-smoke.mjs")
+        ? 2
+        : file.endsWith("paper-blocks/inline-corpus-smoke.mjs")
+          ? 3
+          : 1;
     return priority(left) - priority(right) || left.localeCompare(right);
   });
 console.log(`Running ${smokeFiles.length} offline smoke scripts serially.`);

@@ -172,6 +172,8 @@ export function Toolbar({
         toggleFocus={toggleFocus}
         margins={ports.marginPreferences}
         setMargins={ports.setMarginPreferences}
+        alignmentGuide={ports.alignmentGuide}
+        setAlignmentGuide={ports.setAlignmentGuide}
       />
       <IconButton label="切换信息面板" onClick={toggleRight}>
         <PanelRight size={17} />

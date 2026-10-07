@@ -231,6 +231,11 @@ export function usePaperBlocks(
     compareTranslated: status?.result?.aligned_ready
       ? api.url(`/files/translated-aligned.pdf?revision=${encodeURIComponent(status.result.revision)}`)
       : undefined,
+    paragraphs: blocks
+      .filter((block) => ["title", "heading", "abstract", "text", "list", "caption", "footnote"].includes(block.type))
+      .flatMap((block) =>
+        block.anchors.map((anchor) => ({ id: block.id, page: anchor.page, rect: anchor.view_bbox })),
+      ),
     translation: {
       running,
       label: jobs.full ? `${jobs.full.phase} ${jobs.full.percent}%` : "翻译全文",

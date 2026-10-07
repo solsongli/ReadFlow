@@ -81,7 +81,12 @@ test("margin typography preserves original title hierarchy and rich-run owner", 
   assert.equal(marginTypography({ type: "caption", size: 8 }, 0.5).fontSize, 11);
 });
 test("margin preferences round-trip through safe existing preferences storage", () => {
-  const prefs = { marginNotes: false, marginSide: "right", marginTranslations: true };
+  const prefs = {
+    marginNotes: false,
+    marginSide: "right",
+    marginTranslations: true,
+    alignmentGuide: false,
+  };
   const roundtrip = parseWorkbenchPrefs(JSON.stringify(prefsOf(initialWorkbenchState(prefs))));
   for (const key of Object.keys(prefs)) assert.equal(roundtrip[key], prefs[key]);
   assert.equal(parseWorkbenchPrefs('{"marginSide":"unexpected"}').marginSide, "auto");

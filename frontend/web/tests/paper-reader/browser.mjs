@@ -108,7 +108,7 @@ export async function readerBrowser(query = "", fixture = "tests/paper-reader/fi
       { configured: query.includes("configured") },
     );
     const flashcards = flashcardMock();
-    const blocks = await blocksMock(query, options.blocks);
+    const blocks = await blocksMock(query, options.blocks, options.alignedPdf);
     await context.route("**/*", async (route) => {
       const url = new URL(route.request().url()),
         p = url.pathname;

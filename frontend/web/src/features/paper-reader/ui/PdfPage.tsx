@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { TextLayer, type PDFDocumentProxy, type PageSize, type renderQueue } from "../state/document.js";
 import { PageMargins, type MarginEntry } from "@/ui/wb/PageMargins.js";
 import type { MarginSide } from "@/ui/wb/margin-layout.js";
+import type { PagePoint } from "../domain/alignment.js";
 export interface LinkBox {
   rect: number[];
   dest?: unknown;
@@ -23,6 +24,8 @@ export function PdfPage({
   onLeave,
   painted,
   overlay,
+  readingOverlay,
+  readingGuide,
   margins,
   marginSide = "auto",
   marginLeft = 20,
@@ -40,6 +43,13 @@ export function PdfPage({
   onLeave: () => void;
   painted: () => void;
   overlay?: React.ReactNode;
+  readingOverlay?: React.ReactNode;
+  readingGuide?: {
+    move: (point: PagePoint) => void;
+    leave: () => void;
+    click: (point: PagePoint) => void;
+    doubleClick: (point: PagePoint) => void;
+  };
   margins?: MarginEntry[];
   marginSide?: MarginSide;
   marginLeft?: number;
@@ -60,6 +70,14 @@ export function PdfPage({
       ({ rect: [x1, y1, x2, y2] }) =>
         x >= Math.min(x1, x2) && x <= Math.max(x1, x2) && y >= Math.min(y1, y2) && y <= Math.max(y1, y2),
     );
+  };
+  const pagePoint = (event: React.MouseEvent): PagePoint => {
+    const box = event.currentTarget.getBoundingClientRect();
+    return {
+      page: number,
+      x: (event.clientX - box.left) / box.width,
+      y: (event.clientY - box.top) / box.height,
+    };
   };
   useEffect(() => {
     let gone = false,
@@ -202,17 +220,35 @@ export function PdfPage({
           !event.defaultPrevented
         )
           onLink(destination);
-        else onTextClick(event);
+        else {
+          onTextClick(event);
+          if (
+            readingGuide &&
+            gesture.current &&
+            gesture.current.moved < 3 &&
+            event.detail === 1 &&
+            !getSelection()?.toString().trim() &&
+            !event.defaultPrevented
+          )
+            readingGuide.click(pagePoint(event));
+        }
       }}
+      onDoubleClick={(event) => readingGuide?.doubleClick(pagePoint(event))}
       onMouseMove={(event) => {
         if (gesture.current && event.buttons)
           gesture.current.moved = Math.max(
             gesture.current.moved,
             Math.hypot(event.clientX - gesture.current.x, event.clientY - gesture.current.y),
           );
-        if (!event.buttons) onHover(event, linkAt(event));
+        if (!event.buttons) {
+          onHover(event, linkAt(event));
+          readingGuide?.move(pagePoint(event));
+        }
       }}
-      onMouseLeave={onLeave}
+      onMouseLeave={() => {
+        onLeave();
+        readingGuide?.leave();
+      }}
     >
       <canvas ref={canvas} aria-label={`第 ${number} 页`} className="absolute inset-0 h-full w-full" />
       <canvas
@@ -220,6 +256,7 @@ export function PdfPage({
         aria-hidden="true"
         className="pr-image-colors pointer-events-none absolute inset-0 h-full w-full"
       />
+      {readingOverlay}
       <div ref={text} className="pr-text-layer" style={{ "--scale-factor": scale } as React.CSSProperties} />
       {links.map((link, index) => {
         const [x1, y1, x2, y2] = link.rect;

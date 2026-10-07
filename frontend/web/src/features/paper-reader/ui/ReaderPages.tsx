@@ -9,14 +9,18 @@ import type { useAnnotationReader } from "../state/annotations/useAnnotationRead
 import type { PaperReaderProps } from "./PaperReader.js";
 import { useMemo, useRef } from "react";
 import type { MarginEntry } from "@/ui/wb/PageMargins.js";
+import type { useAlignmentGuide } from "../state/useAlignmentGuide.js";
+import { AlignmentOverlay } from "./AlignmentOverlay.js";
 export function ReaderPages({
   model,
   ports,
   annotations,
+  alignment,
 }: {
   model: ReturnType<typeof useReaderModel>;
   ports: PaperReaderProps;
   annotations: ReturnType<typeof useAnnotationReader>;
+  alignment: ReturnType<typeof useAlignmentGuide>;
 }) {
   const {
     main,
@@ -33,6 +37,20 @@ export function ReaderPages({
     link,
   } = model;
   const { c, byPage } = annotations;
+  const readingGuide = {
+    move: alignment.move,
+    leave: alignment.leave,
+    click: alignment.click,
+    doubleClick: alignment.doubleClick,
+  };
+  const readingOverlay = (page: number) => (
+    <AlignmentOverlay
+      page={page}
+      band={alignment.band}
+      pinned={alignment.pinned}
+      paragraph={alignment.paragraph}
+    />
+  );
   const latest = useRef(annotations);
   latest.current = annotations;
   const margins = useMemo(() => {
@@ -87,6 +105,8 @@ export function ReaderPages({
           paragraphMargins={ports.blockMarginWide}
           reserveMargins={mode !== "compare"}
           margins={margins}
+          readingOverlay={readingOverlay}
+          readingGuide={readingGuide}
           overlay={
             mode === "translated"
               ? undefined
@@ -113,6 +133,8 @@ export function ReaderPages({
           sizes={comparison.sizes}
           {...common}
           label="译文页面"
+          readingOverlay={readingOverlay}
+          readingGuide={readingGuide}
           onLink={(value) => void link(value, true)}
           onPosition={(pos, program) => report(pos, true, program)}
         />

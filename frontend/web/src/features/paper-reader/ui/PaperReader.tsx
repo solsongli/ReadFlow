@@ -23,6 +23,7 @@ import { InformationPanel } from "./InformationPanel.js";
 import { Preview } from "./Preview.js";
 import { SelectionTools } from "./SelectionTools.js";
 import { useSelectionGesture } from "../state/useSelectionGesture.js";
+import { useAlignmentGuide } from "../state/useAlignmentGuide.js";
 import type { MarginEntry } from "@/ui/wb/PageMargins.js";
 export interface PaperReaderProps extends ReaderPorts {
   toolbarTools?: ReactNode;
@@ -56,6 +57,16 @@ export function PaperReader(ports: PaperReaderProps) {
   }, [ports.flashAnnotationId, ports.navigationKey, ports.active]);
   const annotationKeys = useRef<(event: KeyboardEvent) => boolean>(() => false);
   const model = useReaderModel({ ...ports, annotationKeys: (event) => annotationKeys.current(event) });
+  const alignment = useAlignmentGuide({
+    active:
+      ports.active &&
+      model.mode === "compare" &&
+      Boolean(ports.compareTranslated) &&
+      ports.alignmentGuide !== false,
+    lines: model.source.lines,
+    sizes: model.source.sizes,
+    paragraphs: ports.paragraphs || [],
+  });
   useSelectionGesture(model.root);
   const peek = useInlinePeek(ports.active && model.mode === "inline");
   const annotations = useAnnotationReader(ports, model);
@@ -71,7 +82,8 @@ export function PaperReader(ports: PaperReaderProps) {
         .join("\n") ||
         undefined),
   );
-  annotationKeys.current = (event) => cards.key(event) || assistance.key(event) || annotations.key(event);
+  annotationKeys.current = (event) =>
+    cards.key(event) || assistance.key(event) || annotations.key(event) || alignment.key(event);
   const { c, labels, byPage, annotate } = annotations;
   const {
     root,
@@ -254,7 +266,12 @@ export function PaperReader(ports: PaperReaderProps) {
             indexed={main.indexed}
           />
         ) : null}
-        <ReaderPages model={model} ports={{ ...ports, inlinePeek: peek }} annotations={annotations} />
+        <ReaderPages
+          model={model}
+          ports={{ ...ports, inlinePeek: peek }}
+          annotations={annotations}
+          alignment={alignment}
+        />
         <InformationPanel
           overview={ports.assistance ? assistance.overview : undefined}
           hidden={!right || focus || layout !== "document"}

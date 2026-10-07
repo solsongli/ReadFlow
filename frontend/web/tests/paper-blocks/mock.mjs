@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { sourceRuns } from "../../src/features/paper-blocks/domain/model.js";
-export async function blocksMock(query, suppliedManifest) {
+export async function blocksMock(query, suppliedManifest, alignedPdf) {
   const fixture = query.includes("blocks");
   const corpus = new URLSearchParams(query.replace(/^\?/, "")).get("corpus");
   const manifest =
@@ -297,7 +297,7 @@ export async function blocksMock(query, suppliedManifest) {
         });
       } else if (path.endsWith("/files/translated-aligned.pdf")) {
         await route.fulfill({
-          body: await readFile("tests/fixtures/blocks/translated.pdf"),
+          body: await readFile(alignedPdf || "tests/fixtures/blocks/translated.pdf"),
           contentType: "application/pdf",
         });
       } else if (path.endsWith("/files/translated.pdf")) {

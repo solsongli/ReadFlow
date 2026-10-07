@@ -20,6 +20,8 @@ export function ReaderActions({
   toggleFocus,
   margins,
   setMargins,
+  alignmentGuide,
+  setAlignmentGuide,
 }: {
   tone: PaperTone;
   setTone: (value: PaperTone) => void;
@@ -28,6 +30,8 @@ export function ReaderActions({
   toggleFocus: () => void;
   margins?: ReaderPorts["marginPreferences"];
   setMargins?: ReaderPorts["setMarginPreferences"];
+  alignmentGuide?: boolean;
+  setAlignmentGuide?: ReaderPorts["setAlignmentGuide"];
 }) {
   return (
     <MenuRoot>
@@ -42,6 +46,14 @@ export function ReaderActions({
           {focus ? "退出专注模式" : "专注模式"}
         </MenuItem>
         <MenuSeparator />
+        {setAlignmentGuide ? (
+          <MenuCheckboxItem
+            checked={alignmentGuide !== false}
+            onCheckedChange={(enabled) => setAlignmentGuide(enabled)}
+          >
+            对齐辅助线
+          </MenuCheckboxItem>
+        ) : null}
         {margins ? (
           <>
             <MenuCheckboxItem

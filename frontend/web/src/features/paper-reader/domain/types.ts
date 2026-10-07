@@ -1,5 +1,6 @@
 import type { AssistancePorts } from "./assistance.js";
 import type { Semantics, Tool, AnnotationColor } from "./annotations/types.js";
+import type { ParagraphBox } from "./alignment.js";
 export interface Position {
   page: number;
   offset: number;
@@ -73,6 +74,9 @@ export interface ReaderPorts {
   bilingualOutline?: boolean;
   inlineAvailable?: boolean;
   layoutAligned?: boolean;
+  alignmentGuide?: boolean;
+  setAlignmentGuide?: (enabled: boolean) => void;
+  paragraphs?: ParagraphBox[];
   registerBlockNavigation?: (jump: (page: number, offset: number) => void) => () => void;
   assistance?: AssistancePorts;
   canvasLinks?: Array<{ canvas_id: string; node_id: string; annotation_id: string; name: string }>;
