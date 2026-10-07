@@ -12,7 +12,7 @@ async function hoverText(text){
  assert.ok(box,`text ${text}`);await page.mouse.move(box.x,box.y);
 }
 try{
- await check('native canvas and selectable text open without iframe',async()=>{assert.equal(await page.locator('iframe').count(),0);await page.getByRole('button',{name:'References',exact:true}).waitFor();assert.ok(await page.locator('[data-pdf-pane] canvas').count()<=5);await page.screenshot({path:output+'/reading.png'});});
+ await check('native canvas and selectable text open without iframe',async()=>{assert.equal(await page.locator('iframe').count(),0);await page.getByRole('button',{name:'References',exact:true}).waitFor();assert.ok(await page.locator('[data-paper-page]').count()<=6);await page.screenshot({path:output+'/reading.png'});});
  await check('reference hover prefers link destination and can copy and search the library',async()=>{
   await page.getByText(/本文参考文献 · 12/).waitFor();
   await page.locator('.pr-link[aria-label="文内链接"]').hover();

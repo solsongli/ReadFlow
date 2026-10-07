@@ -47,6 +47,9 @@ export interface Notice {
 }
 
 export interface Prefs extends TypographyPrefs {
+  marginNotes: boolean;
+  marginSide: "auto" | "right";
+  marginTranslations: boolean;
   reviewNewLimit: number;
   reviewLimit: number;
   blockLanguage: string;
@@ -105,6 +108,9 @@ export interface WorkbenchState extends Prefs {
 export const LIBRARY_TAB = "library";
 
 export const DEFAULT_PREFS: Prefs = {
+  marginNotes: true,
+  marginSide: "auto",
+  marginTranslations: false,
   reviewNewLimit: 20,
   reviewLimit: 200,
   blockLanguage: "zh-CN",
@@ -237,6 +243,6 @@ export function createWorkbenchStore(prefs: Partial<Prefs> = {}) {
 export type WorkbenchStore = ReturnType<typeof createWorkbenchStore>;
 
 export function prefsOf(state: S): Prefs {
-  const { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit, blockLanguage, blockImageText, autoTranslateImports, layoutDensity, translationFormat, termHover, bilingualOutline, translationDisableThinking, blockModeDisabled, blockModeHintDismissed } = state;
-  return { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit, blockLanguage, blockImageText, autoTranslateImports, layoutDensity, translationFormat, termHover, bilingualOutline, translationDisableThinking, blockModeDisabled, blockModeHintDismissed };
+  const { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit, blockLanguage, blockImageText, autoTranslateImports, layoutDensity, translationFormat, termHover, bilingualOutline, translationDisableThinking, blockModeDisabled, blockModeHintDismissed, marginNotes, marginSide, marginTranslations } = state;
+  return { sort, order, layout, density, theme, expandedGroups, sidebarCollapsed, startView, uiFont, customFont, textScale, noteFont, paperTone, annotationSemantics, reviewNewLimit, reviewLimit, blockLanguage, blockImageText, autoTranslateImports, layoutDensity, translationFormat, termHover, bilingualOutline, translationDisableThinking, blockModeDisabled, blockModeHintDismissed, marginNotes, marginSide, marginTranslations };
 }

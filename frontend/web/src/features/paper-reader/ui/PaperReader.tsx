@@ -1,14 +1,14 @@
 import { useInlinePeek } from "../state/useInlinePeek.js";
 import { useReaderCards } from "../state/useReaderCards.js";
-import { CardBadges } from "./annotations/CardBadges.js";
+
 import { useAssistance } from "../state/assistance/useAssistance.js";
 import { DeleteReferences } from "./annotations/DeleteReferences.js";
 import { ReaderCanvasLayout, type ReaderLayout } from "./ReaderCanvasLayout.js";
-import { CanvasBadges } from "./annotations/CanvasBadges.js";
+
 import { ReaderDialogs } from "./ReaderDialogs.js";
 import { useAnnotationReader } from "../state/annotations/useAnnotationReader.js";
 import { AnnotationTools } from "./annotations/Tools.js";
-import { AnnotationLayer } from "./annotations/Layer.js";
+
 import { AnnotationsPanel } from "./annotations/Panel.js";
 import { AnnotationPopup } from "./annotations/Popup.js";
 import { Colors } from "./annotations/Colors.js";
@@ -17,13 +17,19 @@ import { Button } from "@/ui/wb/Button.js";
 import type { ReaderPorts } from "../domain/types.js";
 import { useReaderModel } from "../state/useReaderModel.js";
 import { Toolbar } from "./Toolbar.js";
-import { PdfPane } from "./PdfPane.js";
+import { ReaderPages } from "./ReaderPages.js";
 import { NavigationPanel } from "./NavigationPanel.js";
 import { InformationPanel } from "./InformationPanel.js";
 import { Preview } from "./Preview.js";
 import { SelectionTools } from "./SelectionTools.js";
+import { useSelectionGesture } from "../state/useSelectionGesture.js";
+import type { MarginEntry } from "@/ui/wb/PageMargins.js";
 export interface PaperReaderProps extends ReaderPorts {
   toolbarTools?: ReactNode;
+  blockMargins?: (page: number, interactive: boolean) => MarginEntry[];
+  blockMarginActive?: boolean;
+  blockMarginWide?: boolean;
+  inlinePeek?: boolean;
   figures?: ReactNode;
   blockOverlay?: (page: number, interactive: boolean, inline?: boolean, peek?: boolean) => ReactNode;
   translationPanel?: (page: number) => ReactNode;
@@ -32,6 +38,16 @@ export interface PaperReaderProps extends ReaderPorts {
   panels?: Partial<Record<"批注" | "画布" | "AI", ReactNode>>;
 }
 export function PaperReader(ports: PaperReaderProps) {
+  const [marginPreferences, setMarginPreferences] = useState({
+    notes: true,
+    side: "auto" as "auto" | "right",
+    translations: false,
+  });
+  ports = {
+    ...ports,
+    marginPreferences: ports.marginPreferences || marginPreferences,
+    setMarginPreferences: ports.setMarginPreferences || setMarginPreferences,
+  };
   const [layout, setLayout] = useState<ReaderLayout>("document");
   useEffect(() => {
     if (ports.flashAnnotationId && ports.active) {
@@ -40,6 +56,7 @@ export function PaperReader(ports: PaperReaderProps) {
   }, [ports.flashAnnotationId, ports.navigationKey, ports.active]);
   const annotationKeys = useRef<(event: KeyboardEvent) => boolean>(() => false);
   const model = useReaderModel({ ...ports, annotationKeys: (event) => annotationKeys.current(event) });
+  useSelectionGesture(model.root);
   const peek = useInlinePeek(ports.active && model.mode === "inline");
   const annotations = useAnnotationReader(ports, model);
   const assistance = useAssistance(ports, model, annotations, () => setLayout("document"));
@@ -232,59 +249,7 @@ export function PaperReader(ports: PaperReaderProps) {
             indexed={main.indexed}
           />
         ) : null}
-        {main.error ? (
-          <div role="status" className="m-auto p-8 text-wb-text-3">
-            {main.error}{" "}
-            <Button
-              onClick={() => {
-                pendingJump.current = position;
-                if (mode === "translated") {
-                  setTranslatedRetry((n) => n + 1);
-                } else {
-                  setSourceRetry((n) => n + 1);
-                }
-              }}
-            >
-              重试
-            </Button>
-          </div>
-        ) : main.pdf ? (
-          <PdfPane
-            ref={primary}
-            pdf={main.pdf}
-            sizes={main.sizes}
-            {...common}
-            label={mode === "translated" ? "译文页面" : "原文页面"}
-            overlay={
-              mode === "translated"
-                ? undefined
-                : (page) => (
-                    <>
-                      {ports.blockOverlay?.(page + 1, c.tool === "select", mode === "inline", peek)}
-                      <AnnotationLayer page={page} rows={byPage.get(page) ?? []} controller={c} />
-                      <CanvasBadges rows={byPage.get(page) ?? []} ports={ports} />
-                      <CardBadges rows={byPage.get(page) ?? []} />
-                    </>
-                  )
-            }
-            onPosition={(pos, program) => report(pos, false, program)}
-          />
-        ) : (
-          <p role="status" className="m-auto text-wb-text-3">
-            正在打开论文…
-          </p>
-        )}
-        {mode === "compare" && translated.pdf ? (
-          <PdfPane
-            ref={secondary}
-            pdf={translated.pdf}
-            sizes={translated.sizes}
-            {...common}
-            label="译文页面"
-            onLink={(value) => void link(value, true)}
-            onPosition={(pos, program) => report(pos, true, program)}
-          />
-        ) : null}
+        <ReaderPages model={model} ports={{ ...ports, inlinePeek: peek }} annotations={annotations} />
         <InformationPanel
           overview={ports.assistance ? assistance.overview : undefined}
           hidden={!right || focus || layout !== "document"}

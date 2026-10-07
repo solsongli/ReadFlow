@@ -170,6 +170,8 @@ export function Toolbar({
         bookmark={bookmark}
         focus={focus}
         toggleFocus={toggleFocus}
+        margins={ports.marginPreferences}
+        setMargins={ports.setMarginPreferences}
       />
       <IconButton label="切换信息面板" onClick={toggleRight}>
         <PanelRight size={17} />

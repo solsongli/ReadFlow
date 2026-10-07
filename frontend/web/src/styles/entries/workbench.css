@@ -201,8 +201,17 @@
 .pr-text-layer { position: absolute; inset: 0; overflow: hidden; line-height: 1; text-align: initial; transform-origin: 0 0; z-index: 1; }
 .pr-text-layer :is(span,br) { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0 0; }
 .pr-text-layer span.markedContent { top: 0; height: 0; }
+.pr-text-layer > :not(.markedContent,.endOfContent), .pr-text-layer .markedContent span:not(.markedContent) { z-index: 1; }
 .pr-text-layer .pr-search-hit { background: var(--pr-search); }
 .pr-text-layer ::selection { background: var(--wb-accent-tint); }
+.pr-text-layer { text-size-adjust: none; forced-color-adjust: none; caret-color: CanvasText; }
+.pr-text-layer ::selection { background: var(--pr-selection); }
+.pr-text-layer br::selection { background: transparent; }
+.pr-text-layer .endOfContent { display: block; position: absolute; inset: 100% 0 0; z-index: 0; user-select: none; cursor: default; }
+.pr-text-layer.selecting .endOfContent { top: 0; }
+.pr-reader[data-selecting="true"] :is(.pr-link,.pr-annotations,.pr-annotations *,[data-block-tools],[data-canvas-badge],[data-card-badge]) { pointer-events: none !important; }
+.pr-reader[data-selecting="true"] .pb-inline-layer,
+.pr-page[data-text-selected="true"] .pb-inline-layer { visibility: hidden; }
 .pr-link { z-index: 2; cursor: pointer; }
 .pr-link:hover { background: var(--wb-accent-soft); }
 .pr-focus-edge { display: none; }
@@ -258,3 +267,11 @@
 .pb-overflow-mark { position: absolute; right: 0; bottom: 0; background: var(--pr-paper); padding-inline: 2px; }
 
 [data-inline-block] { contain: strict; }
+
+/* Both annotation notes and translated paragraphs share these page-margin surfaces. */
+.pr-margin-card { border-radius: 10px; background: var(--pr-margin-paper); color: var(--pr-margin-text); box-shadow: var(--wb-shadow-pop); border: 1px solid var(--pr-margin-line); overflow: auto; }
+.pr-margin-entry[data-active="true"] .pr-margin-card { border-color: var(--wb-accent); }
+.pr-margin-entry[data-annotation-color] .pr-margin-card { border-inline-start: 3px solid var(--pr-color); }
+.pr-margin-color { color: var(--pr-color); }
+.pr-margin-leader { overflow: visible; stroke: var(--pr-margin-line); stroke-width: 1; }
+.pr-reader[data-selecting="true"] [data-page-margins] * { pointer-events: none !important; }

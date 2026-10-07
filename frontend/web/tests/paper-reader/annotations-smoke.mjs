@@ -1,3 +1,4 @@
+import { setPaperTone } from "./controls.mjs";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { readerBrowser } from "./browser.mjs";
@@ -131,7 +132,7 @@ try {
     await page.screenshot({ path: output + "/annotations-light.png" });
   });
   await check("night mode and source-only compare annotation layer", async () => {
-    await page.getByRole("combobox", { name: "页面底色" }).selectOption("night");
+    await setPaperTone(page, "night");
     await page.screenshot({ path: output + "/annotations-night.png" });
     await button("对照").click();
     await page.getByLabel("译文页面", { exact: true }).locator(".pr-text-layer span").first().waitFor();
@@ -188,7 +189,7 @@ try {
     await waitCount(8);
     await button("撤销批注").click();
     await waitCount(10);
-    await page.getByRole("combobox", { name: "页面底色" }).selectOption("auto");
+    await setPaperTone(page, "auto");
     const input = page.getByRole("spinbutton", { name: "页码" });
     await input.fill("1");
     await input.press("Enter");

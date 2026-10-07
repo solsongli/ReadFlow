@@ -72,5 +72,17 @@ export function externalLink(raw: string): string | null {
 }
 /** Keep zoomed HiDPI pages within a per-canvas pixel budget, rather than allocating gigapixels. */
 export function rasterRatio(width: number, height: number, deviceRatio: number): number {
-  return Math.min(Math.max(1, deviceRatio || 1), 2.5, Math.sqrt(16_000_000 / Math.max(1, width * height)));
+  const desired = Math.max(1.75, Number.isFinite(deviceRatio) ? deviceRatio : 1);
+  return Math.min(desired, Math.sqrt(16_000_000 / Math.max(1, width * height)));
+}
+export function rasterDimensions(width: number, height: number, deviceRatio: number) {
+  let ratio = rasterRatio(width, height, deviceRatio);
+  let pixelsWide = Math.ceil(width * ratio),
+    pixelsHigh = Math.ceil(height * ratio);
+  if (pixelsWide * pixelsHigh > 16_000_000) {
+    ratio = Math.min(ratio, Math.sqrt(16_000_000 / ((width + 1) * (height + 1))));
+    pixelsWide = Math.floor(width * ratio);
+    pixelsHigh = Math.floor(height * ratio);
+  }
+  return { width: pixelsWide, height: pixelsHigh, ratio };
 }

@@ -1,7 +1,9 @@
 import { restoreImageColors } from "../state/image-colors.js";
-import { rasterRatio } from "../domain/navigation.js";
+import { rasterDimensions } from "../domain/navigation.js";
 import { useEffect, useRef, useState } from "react";
 import { TextLayer, type PDFDocumentProxy, type PageSize, type renderQueue } from "../state/document.js";
+import { PageMargins, type MarginEntry } from "@/ui/wb/PageMargins.js";
+import type { MarginSide } from "@/ui/wb/margin-layout.js";
 export interface LinkBox {
   rect: number[];
   dest?: unknown;
@@ -21,6 +23,10 @@ export function PdfPage({
   onLeave,
   painted,
   overlay,
+  margins,
+  marginSide = "auto",
+  marginLeft = 20,
+  marginRight = 20,
 }: {
   pdf: PDFDocumentProxy;
   number: number;
@@ -34,6 +40,10 @@ export function PdfPage({
   onLeave: () => void;
   painted: () => void;
   overlay?: React.ReactNode;
+  margins?: MarginEntry[];
+  marginSide?: MarginSide;
+  marginLeft?: number;
+  marginRight?: number;
 }) {
   const imageColors = useRef<HTMLCanvasElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null),
@@ -41,6 +51,16 @@ export function PdfPage({
   const [links, setLinks] = useState<LinkBox[]>([]),
     [version, setVersion] = useState(0),
     [error, setError] = useState("");
+  const gesture = useRef<{ x: number; y: number; moved: number } | undefined>(undefined);
+  const linkAt = (event: React.MouseEvent) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - box.left,
+      y = event.clientY - box.top;
+    return links.find(
+      ({ rect: [x1, y1, x2, y2] }) =>
+        x >= Math.min(x1, x2) && x <= Math.max(x1, x2) && y >= Math.min(y1, y2) && y <= Math.max(y1, y2),
+    );
+  };
   useEffect(() => {
     let gone = false,
       task: { cancel: () => void } | undefined,
@@ -48,8 +68,8 @@ export function PdfPage({
     const imageTarget = imageColors.current!;
     const target = canvas.current!,
       container = text.current!;
-    target.style.visibility = "hidden";
-    imageTarget.style.visibility = "hidden";
+    const next = document.createElement("canvas");
+    const nextImages = document.createElement("canvas");
     queue.run(async () => {
       if (gone) {
         return;
@@ -59,12 +79,13 @@ export function PdfPage({
         if (gone) {
           return;
         }
-        const viewport = page.getViewport({ scale }),
-          ratio = rasterRatio(viewport.width, viewport.height, window.devicePixelRatio);
-        target.width = Math.ceil(viewport.width * ratio);
-        target.height = Math.ceil(viewport.height * ratio);
+        const viewport = page.getViewport({ scale });
+        const dimensions = rasterDimensions(viewport.width, viewport.height, window.devicePixelRatio);
+        const ratio = dimensions.ratio;
+        next.width = dimensions.width;
+        next.height = dimensions.height;
         const render = page.render({
-          canvasContext: target.getContext("2d", { alpha: false })!,
+          canvasContext: next.getContext("2d", { alpha: false })!,
           viewport,
           transform: [ratio, 0, 0, ratio, 0, 0],
         });
@@ -73,10 +94,20 @@ export function PdfPage({
         if (gone) {
           return;
         }
-        await restoreImageColors(page, target, imageTarget, viewport, ratio, () => gone).catch(() => {
+        await restoreImageColors(page, next, nextImages, viewport, ratio, () => gone).catch(() => {
           if (!gone) setError("本页图片原色恢复失败；文字与阅读仍可用。");
         });
         if (gone) return;
+        // Keep the last bitmap through zoom; commit the completed raster in one frame.
+        target.width = next.width;
+        target.height = next.height;
+        target.getContext("2d", { alpha: false })!.drawImage(next, 0, 0);
+        imageTarget.width = nextImages.width;
+        imageTarget.height = nextImages.height;
+        imageTarget.style.cssText = nextImages.style.cssText;
+        Object.assign(imageTarget.dataset, nextImages.dataset);
+        if (nextImages.width && nextImages.height) imageTarget.getContext("2d")!.drawImage(nextImages, 0, 0);
+        next.width = next.height = nextImages.width = nextImages.height = 0;
         target.style.visibility = "visible";
         imageTarget.style.visibility = "visible";
         painted();
@@ -90,6 +121,9 @@ export function PdfPage({
         if (gone) {
           return;
         }
+        const end = document.createElement("div");
+        end.className = "endOfContent";
+        container.append(end);
         setVersion((v) => v + 1);
         const annotations = await page.getAnnotations({ intent: "display" });
         if (gone) {
@@ -115,11 +149,17 @@ export function PdfPage({
       gone = true;
       task?.cancel();
       layer?.cancel();
-      target.width = target.height = 0;
-      imageTarget.width = imageTarget.height = 0;
+      next.width = next.height = nextImages.width = nextImages.height = 0;
       container.replaceChildren();
     };
   }, [pdf, number, scale, queue]);
+  useEffect(() => {
+    const target = canvas.current!,
+      imageTarget = imageColors.current!;
+    return () => {
+      target.width = target.height = imageTarget.width = imageTarget.height = 0;
+    };
+  }, []);
   useEffect(() => {
     const spans = [...(text.current?.querySelectorAll("span") ?? [])];
     const joined = spans
@@ -148,8 +188,30 @@ export function PdfPage({
       className="pr-page relative shrink-0"
       data-paper-page={number}
       style={{ width: size.width * scale, height: size.height * scale }}
-      onClick={onTextClick}
-      onMouseMove={(event) => onHover(event)}
+      onPointerDown={(event) => {
+        gesture.current = event.button === 0 ? { x: event.clientX, y: event.clientY, moved: 0 } : undefined;
+      }}
+      onClick={(event) => {
+        const destination = linkAt(event);
+        if (
+          destination &&
+          gesture.current &&
+          gesture.current.moved < 3 &&
+          event.detail === 1 &&
+          !getSelection()?.toString().trim() &&
+          !event.defaultPrevented
+        )
+          onLink(destination);
+        else onTextClick(event);
+      }}
+      onMouseMove={(event) => {
+        if (gesture.current && event.buttons)
+          gesture.current.moved = Math.max(
+            gesture.current.moved,
+            Math.hypot(event.clientX - gesture.current.x, event.clientY - gesture.current.y),
+          );
+        if (!event.buttons) onHover(event, linkAt(event));
+      }}
       onMouseLeave={onLeave}
     >
       <canvas ref={canvas} aria-label={`第 ${number} 页`} className="absolute inset-0 h-full w-full" />
@@ -187,6 +249,17 @@ export function PdfPage({
         );
       })}
       {overlay}
+      {margins?.length ? (
+        <PageMargins
+          entries={margins}
+          width={size.width * scale}
+          height={size.height * scale}
+          scale={scale}
+          left={marginLeft}
+          right={marginRight}
+          side={marginSide}
+        />
+      ) : null}
       {error ? (
         <p role="status" className="absolute inset-x-4 top-4 rounded-lg bg-wb-panel p-3 text-wb-text">
           {error}

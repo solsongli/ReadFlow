@@ -6,6 +6,9 @@ import { InlineRuns } from "./InlineRuns.js";
 import { sourceRuns } from "../domain/model.js";
 import type { Block } from "../domain/model.js";
 import { BLOCK_LABELS as labels, adjacentBlock } from "../domain/reading.js";
+import { Copy, FileText, Network, GalleryVerticalEnd, RefreshCw, Eye, X, Maximize2 } from "lucide-react";
+import { IconButton } from "@/ui/wb/Button.js";
+import { marginTypography } from "../domain/margin-typography.js";
 export function BlockCard({
   block,
   blocks,
@@ -18,6 +21,7 @@ export function BlockCard({
   running,
   move,
   enlarge,
+  margin,
 }: {
   block: Block;
   blocks: Block[];
@@ -30,18 +34,19 @@ export function BlockCard({
   running: boolean;
   move?: (direction: number) => void;
   enlarge?: () => void;
+  margin?: { width: number; scale: number; selected: boolean };
 }) {
   const cards = useFlashcards();
   const root = useRef<HTMLElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
-    root.current?.focus({ preventScroll: true });
+    if (!margin || margin.selected) root.current?.focus({ preventScroll: true });
     return () => {
       if (root.current?.contains(document.activeElement) && previous?.isConnected) {
         previous.focus({ preventScroll: true });
       }
     };
-  }, []);
+  }, [margin?.selected]);
   const [source, setSource] = useState(false),
     [error, setError] = useState("");
   const value = blocks.find((b) => b.id === block.caption_id) || block;
@@ -60,7 +65,7 @@ export function BlockCard({
     <section
       ref={root}
       tabIndex={-1}
-      role="dialog"
+      role={margin && !margin.selected ? "region" : "dialog"}
       aria-label="块译文"
       data-block-card={block.id}
       onKeyDown={(event) => {
@@ -80,23 +85,33 @@ export function BlockCard({
           move?.(event.key === "ArrowUp" ? -1 : 1);
         }
       }}
-      className="fixed z-50 w-[min(440px,92vw)] space-y-3 rounded-xl bg-wb-panel p-4 shadow-wb-pop"
-      style={{
-        left: Math.max(8, Math.min(x, innerWidth - 460)),
-        top: Math.max(8, Math.min(y + 12, innerHeight - 390)),
-        maxHeight: "70vh",
-        overflow: "auto",
-      }}
+      className={
+        margin
+          ? "flex min-h-0 flex-col gap-2 p-2.5"
+          : "fixed z-50 w-[min(440px,92vw)] space-y-3 rounded-xl bg-wb-panel p-4 shadow-wb-pop"
+      }
+      style={
+        margin
+          ? { maxHeight: "var(--pr-margin-height, 340px)" }
+          : {
+              left: Math.max(8, Math.min(x, innerWidth - 460)),
+              top: Math.max(8, Math.min(y + 12, innerHeight - 390)),
+              maxHeight: "70vh",
+              overflow: "auto",
+            }
+      }
     >
-      <header className="flex items-center justify-between text-sm text-wb-text-3">
+      <header className="flex shrink-0 items-center justify-between text-sm text-wb-text-3">
         <span>
           块译文 · 第 {block.page} 页 · {labels[block.type] || "正文"}
         </span>
-        <Button size="sm" onClick={close}>
-          关闭
-        </Button>
+        {!margin || margin.selected ? (
+          <IconButton label="关闭块译文" onClick={close}>
+            <X size={13} />
+          </IconButton>
+        ) : null}
       </header>
-      {move ? (
+      {move && !margin ? (
         <div className="flex gap-1">
           <Button
             size="sm"
@@ -116,7 +131,10 @@ export function BlockCard({
           </Button>
         </div>
       ) : null}
-      <p className="whitespace-pre-wrap text-[1rem] leading-relaxed">
+      <p
+        className="m-0 min-h-0 overflow-auto whitespace-pre-wrap font-wb-serif"
+        style={margin ? marginTypography(value, margin.scale) : { fontSize: "1rem", lineHeight: 1.5 }}
+      >
         {translated ? (
           <InlineRuns runs={value.translation_runs} text={translated} />
         ) : readable ? (
@@ -138,62 +156,129 @@ export function BlockCard({
           </dl>
         </section>
       ) : null}
-      <div className="flex flex-wrap gap-1">
-        {block.asset && ["figure", "table"].includes(block.type) && enlarge ? (
-          <Button size="sm" onClick={enlarge}>
-            放大
-          </Button>
-        ) : null}
-        {readable ? (
-          <Button size="sm" disabled={running} onClick={() => translate(block.id, Boolean(translated))}>
-            {translated ? "重新翻译" : "翻译这一块"}
-          </Button>
-        ) : null}
-        <Button
-          size="sm"
-          disabled={!translated}
-          onClick={() => void act(() => navigator.clipboard.writeText(translated!))}
-        >
-          复制
-        </Button>
-        <Button
-          size="sm"
-          disabled={!translated}
-          onClick={() =>
-            void act(() => ports.note(`${translated}\n\n> ${value.text}\n\n第 ${block.page} 页`))
-          }
-        >
-          加入笔记
-        </Button>
-        <Button
-          size="sm"
-          disabled={!translated}
-          onClick={() => {
-            ports.canvas(`${translated}\n\n> ${value.text}\n\n第 ${block.page} 页`);
-            close();
-          }}
-        >
-          加入画布
-        </Button>
-        {cards ? (
-          <Button
-            size="sm"
-            onClick={() => {
-              cards.create({
-                item_id: item,
-                page: block.page,
-                quote: value.text,
-                translation: translated,
-              });
-              close();
-            }}
-          >
-            加入闪卡
-          </Button>
-        ) : null}
-        <Button size="sm" onClick={() => setSource(!source)}>
-          查看原文
-        </Button>
+      <div className={margin ? "pr-margin-actions flex shrink-0 gap-0.5" : "flex flex-wrap gap-1"}>
+        {margin ? (
+          <>
+            {block.asset && enlarge ? (
+              <IconButton size="sm" label="放大图表" onClick={enlarge}>
+                <Maximize2 size={14} />
+              </IconButton>
+            ) : null}
+            <IconButton
+              size="sm"
+              label="复制译文"
+              disabled={!translated}
+              onClick={() => void act(() => navigator.clipboard.writeText(translated!))}
+            >
+              <Copy size={14} />
+            </IconButton>
+            <IconButton
+              size="sm"
+              label="加入笔记"
+              disabled={!translated}
+              onClick={() =>
+                void act(() => ports.note(`${translated}\n\n> ${value.text}\n\n第 ${block.page} 页`))
+              }
+            >
+              <FileText size={14} />
+            </IconButton>
+            <IconButton
+              size="sm"
+              label="加入画布"
+              disabled={!translated}
+              onClick={() => ports.canvas(`${translated}\n\n> ${value.text}\n\n第 ${block.page} 页`)}
+            >
+              <Network size={14} />
+            </IconButton>
+            {cards ? (
+              <IconButton
+                size="sm"
+                label="加入闪卡"
+                onClick={() =>
+                  cards.create({
+                    item_id: item,
+                    page: block.page,
+                    quote: value.text,
+                    translation: translated,
+                  })
+                }
+              >
+                <GalleryVerticalEnd size={14} />
+              </IconButton>
+            ) : null}
+            {readable ? (
+              <IconButton
+                size="sm"
+                label={translated ? "重新翻译" : "翻译这一块"}
+                disabled={running}
+                onClick={() => translate(block.id, Boolean(translated))}
+              >
+                <RefreshCw size={14} />
+              </IconButton>
+            ) : null}
+            <IconButton size="sm" label="查看原文" onClick={() => setSource(!source)}>
+              <Eye size={14} />
+            </IconButton>
+          </>
+        ) : (
+          <>
+            {block.asset && ["figure", "table"].includes(block.type) && enlarge ? (
+              <Button size="sm" onClick={enlarge}>
+                放大
+              </Button>
+            ) : null}
+            {readable ? (
+              <Button size="sm" disabled={running} onClick={() => translate(block.id, Boolean(translated))}>
+                {translated ? "重新翻译" : "翻译这一块"}
+              </Button>
+            ) : null}
+            <Button
+              size="sm"
+              disabled={!translated}
+              onClick={() => void act(() => navigator.clipboard.writeText(translated!))}
+            >
+              复制
+            </Button>
+            <Button
+              size="sm"
+              disabled={!translated}
+              onClick={() =>
+                void act(() => ports.note(`${translated}\n\n> ${value.text}\n\n第 ${block.page} 页`))
+              }
+            >
+              加入笔记
+            </Button>
+            <Button
+              size="sm"
+              disabled={!translated}
+              onClick={() => {
+                ports.canvas(`${translated}\n\n> ${value.text}\n\n第 ${block.page} 页`);
+                close();
+              }}
+            >
+              加入画布
+            </Button>
+            {cards ? (
+              <Button
+                size="sm"
+                onClick={() => {
+                  cards.create({
+                    item_id: item,
+                    page: block.page,
+                    quote: value.text,
+                    translation: translated,
+                  });
+                  close();
+                }}
+              >
+                加入闪卡
+              </Button>
+            ) : null}
+            <Button size="sm" onClick={() => setSource(!source)}>
+              查看原文
+            </Button>
+          </>
+        )}
       </div>
       {source ? (
         <blockquote className="m-0 whitespace-pre-wrap rounded-lg bg-wb-fill p-3 font-wb-serif">

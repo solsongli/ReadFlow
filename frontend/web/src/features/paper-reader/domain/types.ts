@@ -67,6 +67,8 @@ export interface PaperMetadata {
   citekey: string;
 }
 export interface ReaderPorts {
+  marginPreferences?: { notes: boolean; side: "auto" | "right"; translations: boolean };
+  setMarginPreferences?: (value: { notes: boolean; side: "auto" | "right"; translations: boolean }) => void;
   blockHeadings?: OutlineEntry[];
   bilingualOutline?: boolean;
   inlineAvailable?: boolean;

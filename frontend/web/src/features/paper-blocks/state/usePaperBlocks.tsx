@@ -14,7 +14,7 @@ import { blocksApi } from "./api.js";
 import { useBlockMode, type BlockModePreferences } from "./useBlockMode.js";
 import { busy, jobViews, type Block, type BlockStatus } from "../domain/model.js";
 import { useBlockReading } from "./useBlockReading.js";
-import { BlockCard } from "../ui/BlockCard.js";
+import { blockMargins } from "./block-margins.js";
 import { usageText } from "../domain/status.js";
 export function usePaperBlocks(
   item: string,
@@ -31,6 +31,7 @@ export function usePaperBlocks(
   },
   options: {
     imageText: boolean;
+    allMargins?: boolean;
     termHover?: boolean;
     currentPage?: () => number;
     format?: TranslationFormat;
@@ -218,7 +219,7 @@ export function usePaperBlocks(
   const localReview = useLocalReview(api, attachment, language, refresh, setError);
   const variant = pdfFormats(status?.result || null, options.format || "layout");
   const blocks = status?.document?.blocks || [];
-  const block = blocks.find((b) => b.id === selected?.id);
+
   const usage = usageText(jobs.full?.usage ?? status?.result?.usage);
   const issue = error || (dismissed === status?.job?.id ? "" : status?.job?.error?.message);
   return {
@@ -242,6 +243,25 @@ export function usePaperBlocks(
     },
     inlineAvailable: Boolean(status?.has_translation && status.language === language),
     registerBlockNavigation: reading.registerNavigation,
+    marginActive: Boolean(selected || options.allMargins),
+    marginWide: enabled || Boolean(options.allMargins),
+    margins: (page: number, interactive: boolean) =>
+      active && interactive
+        ? blockMargins({
+            blocks,
+            page,
+            selected: selected?.id,
+            selectedPage: selected?.page,
+            all: Boolean(options.allMargins),
+            item,
+            ports,
+            translate: (id, force) => void start(id, force),
+            running: blockRunning,
+            move: reading.move,
+            enlarge: reading.enlarge,
+            close: () => setSelected(null),
+          })
+        : [],
     sidebar: reading.sidebar,
     headings: aids.headings,
     figures: aids.figures,
@@ -304,22 +324,6 @@ export function usePaperBlocks(
               取消单块翻译
             </Button>
           </div>
-        ) : null}
-        {selected && block && active ? (
-          <BlockCard
-            key={block.id}
-            block={block}
-            blocks={blocks}
-            item={item}
-            x={selected.x}
-            y={selected.y}
-            ports={ports}
-            translate={(id, force) => void start(id, force)}
-            running={blockRunning}
-            move={reading.move}
-            enlarge={() => reading.enlarge(block)}
-            close={() => setSelected(null)}
-          />
         ) : null}
         {issue && active ? (
           <div

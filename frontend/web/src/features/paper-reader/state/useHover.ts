@@ -7,7 +7,15 @@ import type { LinkBox } from "../ui/PdfPage.js";
 function textAt(event: React.MouseEvent, link?: LinkBox): string {
   const element = event.target as HTMLElement;
   if (link) {
-    const rect = element.getBoundingClientRect();
+    const page = element.closest("[data-paper-page]")?.getBoundingClientRect();
+    if (!page) return "";
+    const [x1, y1, x2, y2] = link.rect;
+    const rect = {
+      left: page.left + Math.min(x1, x2),
+      right: page.left + Math.max(x1, x2),
+      top: page.top + Math.min(y1, y2),
+      bottom: page.top + Math.max(y1, y2),
+    };
     return [...(element.closest("[data-paper-page]")?.querySelectorAll(".pr-text-layer span") ?? [])]
       .filter((span) => {
         const b = span.getBoundingClientRect();
@@ -100,7 +108,7 @@ export function useHover(
     timers.current.close = setTimeout(() => setPreview(null), 180);
   };
   const hover = (event: React.MouseEvent, link?: LinkBox) => {
-    if (!pdf || window.getSelection()?.toString()) {
+    if (!pdf || event.buttons || window.getSelection()?.toString()) {
       return;
     }
     const text = textAt(event, link);

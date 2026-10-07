@@ -11,6 +11,8 @@ import { offsets, pageAt, visiblePages } from "../domain/navigation.js";
 import type { Position } from "../domain/types.js";
 import type { PDFDocumentProxy, PageSize, renderQueue } from "../state/document.js";
 import { PdfPage, type LinkBox } from "./PdfPage.js";
+import { marginSpace, type MarginSide } from "@/ui/wb/margin-layout.js";
+import type { MarginEntry } from "@/ui/wb/PageMargins.js";
 export interface PaneHandle {
   scale: () => number;
   position: () => Position;
@@ -37,6 +39,10 @@ export const PdfPane = forwardRef<
     onLeave: () => void;
     painted: () => void;
     overlay?: (page: number) => React.ReactNode;
+    margins?: (page: number) => MarginEntry[];
+    marginSide?: MarginSide;
+    paragraphMargins?: boolean;
+    reserveMargins?: boolean;
   }
 >(function PdfPane(
   {
@@ -55,6 +61,10 @@ export const PdfPane = forwardRef<
     onLeave,
     painted,
     overlay,
+    margins,
+    marginSide = "auto",
+    paragraphMargins = false,
+    reserveMargins = true,
   },
   ref,
 ) {
@@ -73,12 +83,16 @@ export const PdfPane = forwardRef<
   } | null>(null);
   const size = sizes[0],
     maximumWidth = Math.max(...sizes.map((page) => page.width));
+  const space = marginSpace(box.width, Boolean(margins) && reserveMargins, marginSide, paragraphMargins);
   const scale =
     typeof zoom === "number"
       ? zoom
       : Math.max(
           0.15,
-          Math.min((box.width - 40) / maximumWidth, zoom === "page" ? (box.height - 40) / size.height : 4),
+          Math.min(
+            (box.width - space.left - space.right) / maximumWidth,
+            zoom === "page" ? (box.height - 40) / size.height : 4,
+          ),
         );
   const tops = useMemo(
     () =>
@@ -89,6 +103,12 @@ export const PdfPane = forwardRef<
     [sizes, scale],
   );
   const visible = active ? visiblePages(tops, scrollTop, box.height) : [];
+  const marginVisible = active ? visiblePages(tops, scrollTop, box.height, 0) : [];
+  const visibleKey = marginVisible.join(",");
+  const marginEntries = useMemo(
+    () => new Map(marginVisible.map((index) => [index, margins?.(index)])),
+    [margins, visibleKey],
+  );
   const position = (): Position => {
     const page = pageAt(tops, element.current?.scrollTop ?? 0);
     return {
@@ -142,7 +162,12 @@ export const PdfPane = forwardRef<
         x = event.clientX - rect.left;
       const page = pageAt(tops, target.scrollTop + pointer);
       const oldMargin =
-        (Math.max(target.clientWidth, maximumWidth * scale + 40) - sizes[page].width * scale) / 2;
+        space.left +
+        (Math.max(target.clientWidth, maximumWidth * scale + space.left + space.right) -
+          space.left -
+          space.right -
+          sizes[page].width * scale) /
+          2;
       anchor.current = {
         page,
         local: (target.scrollTop + pointer - tops[page]) / scale,
@@ -154,7 +179,7 @@ export const PdfPane = forwardRef<
     };
     target.addEventListener("wheel", wheel, { passive: false });
     return () => target.removeEventListener("wheel", wheel);
-  }, [active, scale, tops, setZoom, sizes, maximumWidth]);
+  }, [active, scale, tops, setZoom, sizes, maximumWidth, space.left, space.right]);
   useLayoutEffect(() => {
     const a = anchor.current,
       target = element.current;
@@ -172,7 +197,12 @@ export const PdfPane = forwardRef<
     target.scrollTop = tops[a.page] + a.local * scale - a.pointer;
     target.scrollLeft =
       a.horizontal * scale +
-      (Math.max(target.clientWidth, maximumWidth * scale + 40) - sizes[a.page].width * scale) / 2 -
+      space.left +
+      (Math.max(target.clientWidth, maximumWidth * scale + space.left + space.right) -
+        space.left -
+        space.right -
+        sizes[a.page].width * scale) /
+        2 -
       a.x;
     programTarget.current = target.scrollTop;
     setScrollTop(target.scrollTop);
@@ -204,11 +234,15 @@ export const PdfPane = forwardRef<
         className="relative"
         style={{
           height: tops.at(-1)! + Math.max(0, box.height - sizes.at(-1)!.height * scale - 20),
-          minWidth: maximumWidth * scale + 40,
+          minWidth: maximumWidth * scale + space.left + space.right,
         }}
       >
         {visible.map((index) => (
-          <div key={index} className="absolute flex w-full justify-center" style={{ top: tops[index] }}>
+          <div
+            key={index}
+            className="absolute flex w-full justify-center"
+            style={{ top: tops[index], paddingLeft: space.left, paddingRight: space.right }}
+          >
             <PdfPage
               pdf={pdf}
               number={index + 1}
@@ -222,6 +256,24 @@ export const PdfPane = forwardRef<
               onLeave={onLeave}
               painted={painted}
               overlay={overlay?.(index)}
+              margins={marginEntries.get(index)}
+              marginSide={marginSide}
+              marginLeft={
+                space.left +
+                (Math.max(box.width, maximumWidth * scale + space.left + space.right) -
+                  space.left -
+                  space.right -
+                  sizes[index].width * scale) /
+                  2
+              }
+              marginRight={
+                space.right +
+                (Math.max(box.width, maximumWidth * scale + space.left + space.right) -
+                  space.left -
+                  space.right -
+                  sizes[index].width * scale) /
+                  2
+              }
             />
           </div>
         ))}

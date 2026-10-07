@@ -15,6 +15,9 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
   const annotationSemantics = useWb((state) => state.annotationSemantics);
   const termHover = useWb((state) => state.termHover);
   const bilingualOutline = useWb((state) => state.bilingualOutline);
+  const marginNotes = useWb((s) => s.marginNotes);
+  const marginSide = useWb((s) => s.marginSide);
+  const marginTranslations = useWb((s) => s.marginTranslations);
   const tone = useWb((state) => state.paperTone);
   const language = useWb((state) => state.blockLanguage);
   const format = useWb((state) => state.translationFormat);
@@ -35,7 +38,15 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
     row?.translation.status === "done",
     (message) => wb.notify(message, "success"),
     { disabled, hintDismissed, save: (prefs) => wb.setPrefs(prefs) },
-    { imageText, termHover, density, currentPage: () => currentPage.current, format, setFormat: (translationFormat) => wb.setPrefs({ translationFormat }) },
+    {
+      allMargins: marginTranslations,
+      imageText,
+      termHover,
+      density,
+      currentPage: () => currentPage.current,
+      format,
+      setFormat: (translationFormat) => wb.setPrefs({ translationFormat }),
+    },
   );
   if (!row || !tab.attachmentId) {
     return (
@@ -54,6 +65,17 @@ export function ReaderHost({ tab, active }: { tab: ReaderTab; active: boolean })
         bilingualOutline={bilingualOutline}
         figures={blocks.figures}
         blockOverlay={blocks.overlay}
+        blockMargins={blocks.margins}
+        blockMarginActive={blocks.marginActive}
+        blockMarginWide={blocks.marginWide}
+        marginPreferences={{ notes: marginNotes, side: marginSide, translations: marginTranslations }}
+        setMarginPreferences={(value) =>
+          wb.setPrefs({
+            marginNotes: value.notes,
+            marginSide: value.side,
+            marginTranslations: value.translations,
+          })
+        }
         inlineAvailable={blocks.inlineAvailable}
         layoutAligned={blocks.layoutAligned}
         registerBlockNavigation={blocks.registerBlockNavigation}

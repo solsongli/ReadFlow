@@ -1,5 +1,5 @@
 import { annotationMarkdown } from "../../domain/annotations/markdown.js";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Annotation, Point, Rect } from "../../domain/annotations/types.js";
 import { boxBetween, simplifyInk } from "../../domain/annotations/geometry.js";
 import type { AnnotationController } from "../../state/annotations/useAnnotations.js";
@@ -37,6 +37,84 @@ export function AnnotationLayer({
   controller: AnnotationController;
 }) {
   const [draft, setDraft] = useState<Point[]>([]);
+  const layer = useRef<SVGSVGElement>(null);
+  const current = useRef({ rows, c });
+  current.current = { rows, c };
+  useEffect(() => {
+    const pageElement = layer.current?.closest<HTMLElement>("[data-paper-page]");
+    if (!pageElement) return;
+    let origin: { x: number; y: number } | undefined;
+    let distance = 0;
+    let hovered: string | null = null;
+    let pending: ReturnType<typeof setTimeout> | undefined;
+    const hit = (event: MouseEvent) => {
+      const box = pageElement.getBoundingClientRect();
+      const x = (event.clientX - box.left) / box.width;
+      const y = (event.clientY - box.top) / box.height;
+      return current.current.rows.find(
+        (row) =>
+          row.type !== "sticky" &&
+          row.rects.some(
+            (rect) => x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height,
+          ),
+      );
+    };
+    const down = (event: PointerEvent) => {
+      clearTimeout(pending);
+      origin = event.button === 0 ? { x: event.clientX, y: event.clientY } : undefined;
+      distance = 0;
+    };
+    const move = (event: PointerEvent) => {
+      if (origin && event.buttons) {
+        distance = Math.max(distance, Math.hypot(event.clientX - origin.x, event.clientY - origin.y));
+        return;
+      }
+      if (!(event.target as Element).closest(".pr-text-layer")) return;
+      const id = hit(event)?.id || null;
+      if (id !== hovered) {
+        hovered = id;
+        current.current.c.setHover(id);
+      }
+    };
+    const click = (event: MouseEvent) => {
+      if (
+        !origin ||
+        distance > 3 ||
+        event.detail > 1 ||
+        getSelection()?.toString().trim() ||
+        current.current.c.tool !== "select" ||
+        !(event.target as Element).closest(".pr-text-layer")
+      )
+        return;
+      const row = hit(event);
+      const linked = [...pageElement.querySelectorAll<HTMLElement>(".pr-link")].some((link) => {
+        const box = link.getBoundingClientRect();
+        return (
+          event.clientX >= box.left &&
+          event.clientX <= box.right &&
+          event.clientY >= box.top &&
+          event.clientY <= box.bottom
+        );
+      });
+      if (linked) return;
+      if (row) {
+        event.preventDefault();
+        pending = setTimeout(() => {
+          if (!getSelection()?.toString().trim()) current.current.c.setEditingId(row.id);
+        }, 220);
+      }
+      origin = undefined;
+    };
+    pageElement.addEventListener("pointerdown", down);
+    pageElement.addEventListener("pointermove", move);
+    pageElement.addEventListener("click", click);
+    return () => {
+      clearTimeout(pending);
+      pageElement.removeEventListener("pointerdown", down);
+      pageElement.removeEventListener("pointermove", move);
+      pageElement.removeEventListener("click", click);
+    };
+  }, []);
   const gesture = useRef<{ points: Point[]; moving?: Annotation } | null>(null);
   const interactive = ["sticky", "region", "ink", "erase"].includes(c.tool);
   const point = (event: React.PointerEvent<SVGSVGElement>): Point => {
@@ -133,6 +211,7 @@ export function AnnotationLayer({
   return (
     <>
       <svg
+        ref={layer}
         viewBox="0 0 1000 1000"
         preserveAspectRatio="none"
         aria-label={`第 ${page + 1} 页批注层`}
@@ -159,7 +238,7 @@ export function AnnotationLayer({
               c.flash === row.id
             }
             className="pr-mark"
-            style={{ pointerEvents: "auto" }}
+            style={{ pointerEvents: c.tool === "select" && row.type !== "sticky" ? "none" : "auto" }}
             onClick={(event) => {
               event.stopPropagation();
               c.setEditingId(row.id);

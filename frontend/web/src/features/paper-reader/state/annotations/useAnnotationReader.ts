@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useAnnotations } from "./useAnnotations.js";
 import { sourceSelection } from "./selection.js";
+import { settledSelection } from "@/ui/wb/selection-events.js";
 import {
   DEFAULT_SEMANTICS,
   type Annotation,
@@ -44,7 +45,7 @@ export function useAnnotationReader(ports: ReaderPorts, model: ReturnType<typeof
         );
       }
     };
-    document.addEventListener("selectionchange", capture);
+    const stopSelection = settledSelection(() => root.current, capture);
     root.current?.addEventListener("dragstart", drag);
     const unregister = ports.registerCanvasSelection?.(async () => {
       const anchors = sourceSelection(root.current);
@@ -66,7 +67,7 @@ export function useAnnotationReader(ports: ReaderPorts, model: ReturnType<typeof
     });
     const element = root.current;
     return () => {
-      document.removeEventListener("selectionchange", capture);
+      stopSelection();
       element?.removeEventListener("dragstart", drag);
       unregister?.();
     };

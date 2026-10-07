@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/ui/wb/Button.js";
+import { settledSelection } from "@/ui/wb/selection-events.js";
 export function SelectionTools({
   root,
   copy,
@@ -31,8 +32,7 @@ export function SelectionTools({
         rect = range.getBoundingClientRect();
       setBox({ x: Math.max(12, Math.min(rect.left, innerWidth - 380)), y: Math.max(8, rect.top - 44) });
     };
-    document.addEventListener("selectionchange", selection);
-    return () => document.removeEventListener("selectionchange", selection);
+    return settledSelection(() => root.current, selection);
   }, [root]);
   useLayoutEffect(() => {
     if (!box || !toolbar.current) return;

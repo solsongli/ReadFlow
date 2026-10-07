@@ -19,7 +19,7 @@ export function useBlockReading(
   summary?: ReactNode,
 ) {
   const blocks = status?.document?.blocks || [];
-  const [selected, setSelected] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [selected, setSelected] = useState<{ id: string; x: number; y: number; page?: number } | null>(null);
   const [hovered, setHovered] = useState<string>(),
     [figure, setFigure] = useState<string>();
   const [originals, setOriginals] = useState<Set<string>>(new Set());
@@ -30,13 +30,16 @@ export function useBlockReading(
       navigation.current = () => {};
     };
   }, []);
-  const open = useCallback((block: Block, x: number, y: number) => setSelected({ id: block.id, x, y }), []);
+  const open = useCallback(
+    (block: Block, x: number, y: number, page = block.page) => setSelected({ id: block.id, x, y, page }),
+    [],
+  );
   const locate = (block: Block, page = block.page) => {
     setHovered(undefined);
     if (!enabled) setEnabled();
     const anchor = block.anchors.find((a) => a.page === page) || block.anchors[0];
     navigation.current(anchor.page, Math.max(0, anchor.view_bbox[1] - 0.05));
-    setSelected({ id: block.id, x: Math.max(100, innerWidth / 2 - 180), y: 100 });
+    setSelected({ id: block.id, page: anchor.page, x: Math.max(100, innerWidth / 2 - 180), y: 100 });
   };
   const move = (direction: number) => {
     if (!selected) return;
@@ -97,7 +100,7 @@ export function useBlockReading(
           highlighted={hovered || selected?.id}
           geometry={status?.document?.pages?.find((p) => p.page === page)}
           labelHints={inline && imageText}
-          expand={inline ? open : undefined}
+          expand={inline ? (block, x, y) => open(block, x, y, page) : undefined}
           open={(block, x, y) => {
             if (["figure", "table"].includes(block.type) && block.asset) {
               setSelected(null);
@@ -109,7 +112,7 @@ export function useBlockReading(
                 else next.add(block.id);
                 return next;
               });
-            else open(block, x, y);
+            else open(block, x, y, page);
           }}
         />
       </>

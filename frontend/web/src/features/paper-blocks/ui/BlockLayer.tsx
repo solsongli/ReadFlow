@@ -46,6 +46,7 @@ export function BlockLayer({
       );
     };
     const down = (event: PointerEvent) => {
+      clearTimeout(pending);
       start = event.button === 0 && eligible(event) ? { x: event.clientX, y: event.clientY } : null;
       moved = 0;
     };
@@ -79,7 +80,7 @@ export function BlockLayer({
           plainClick(distance, window.getSelection()?.toString() || "", event.detail, event.defaultPrevented)
         )
           latest.current.open(value.block, event.clientX, event.clientY);
-      }, 0);
+      }, 220);
     };
     const leave = () => {
       setHover(undefined);

@@ -8,7 +8,7 @@ import { readFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { build } from "esbuild";
 import { chromium } from "playwright";
-export async function readerBrowser(query = "", fixture = "tests/paper-reader/fixture.tsx") {
+export async function readerBrowser(query = "", fixture = "tests/paper-reader/fixture.tsx", options = {}) {
   const output = "/tmp/readflow-r1/screenshots";
   await mkdir(output, { recursive: true });
   const built = await build({
@@ -19,6 +19,7 @@ export async function readerBrowser(query = "", fixture = "tests/paper-reader/fi
     jsx: "automatic",
     alias: { "@": resolve("src") },
     logLevel: "silent",
+    plugins: options.plugins || [],
   });
   const browser = await chromium.launch({
     executablePath: "/usr/bin/google-chrome",
@@ -34,7 +35,7 @@ export async function readerBrowser(query = "", fixture = "tests/paper-reader/fi
   try {
     const context = await browser.newContext({
       viewport: { width: 1440, height: 950 },
-      deviceScaleFactor: 2,
+      deviceScaleFactor: options.dpr ?? 2,
     });
     const page = await context.newPage(),
       errors = [],
@@ -104,7 +105,7 @@ export async function readerBrowser(query = "", fixture = "tests/paper-reader/fi
       { configured: query.includes("configured") },
     );
     const flashcards = flashcardMock();
-    const blocks = await blocksMock(query);
+    const blocks = await blocksMock(query, options.blocks);
     await context.route("**/*", async (route) => {
       const url = new URL(route.request().url()),
         p = url.pathname;
@@ -116,14 +117,26 @@ export async function readerBrowser(query = "", fixture = "tests/paper-reader/fi
       if (await blocks.route(route)) return;
       if (await assistance.route(route)) return;
       if (await canvases.route(route)) return;
-      if (query.includes("x2") && p === "/api/research/ocr/modules") return route.fulfill({ json: {
-        modules: [{ id: "readflow-ocr-mobile-cpu", builtin: true, engine_version: "ReadFlow CPU 1",
-          model_version: "PP-OCRv5 mobile", status: "ready", total_bytes: 21524900,
-          download_enabled: false, files: [], error: null }],
-      } });
-      if (p === "/api/v1/fonts") return route.fulfill({ json: { fonts: [
-        { family: "Source Han Serif SC", available: true },
-      ] } });
+      if (query.includes("x2") && p === "/api/research/ocr/modules")
+        return route.fulfill({
+          json: {
+            modules: [
+              {
+                id: "readflow-ocr-mobile-cpu",
+                builtin: true,
+                engine_version: "ReadFlow CPU 1",
+                model_version: "PP-OCRv5 mobile",
+                status: "ready",
+                total_bytes: 21524900,
+                download_enabled: false,
+                files: [],
+                error: null,
+              },
+            ],
+          },
+        });
+      if (p === "/api/v1/fonts")
+        return route.fulfill({ json: { fonts: [{ family: "Source Han Serif SC", available: true }] } });
       if (p === "/workbench.html")
         return route.fulfill({
           contentType: "text/html",
@@ -151,8 +164,10 @@ export async function readerBrowser(query = "", fixture = "tests/paper-reader/fi
           return route.fulfill({ json: annotations.find((row) => row.id === id) });
         }
         if (method === "DELETE") {
-          if (!canvases.detach(id, url.searchParams.get("canvas_policy")) ||
-            !flashcards.detach(id, url.searchParams.get("canvas_policy"))) {
+          if (
+            !canvases.detach(id, url.searchParams.get("canvas_policy")) ||
+            !flashcards.detach(id, url.searchParams.get("canvas_policy"))
+          ) {
             return route.fulfill({ status: 409, json: { error: { message: "该批注在画布中被引用。" } } });
           }
           annotations = annotations.filter((row) => row.id !== id);
@@ -181,16 +196,28 @@ export async function readerBrowser(query = "", fixture = "tests/paper-reader/fi
       }
       let file;
       if (/^\/api\/research\/attachments\/[^/]+\/pdf$/.test(p))
-        file = resolve(query.includes("x6") ? "/tmp/readflow-x6/paper-links.pdf" : query.includes("blocks") ? "tests/fixtures/blocks/paper.pdf" : "tests/fixtures/paper.pdf");
+        file = resolve(
+          query.includes("x6")
+            ? "/tmp/readflow-x6/paper-links.pdf"
+            : query.includes("blocks")
+              ? "tests/fixtures/blocks/paper.pdf"
+              : "tests/fixtures/paper.pdf",
+        );
       if (p === "/api/v1/jobs/task/pdf") file = resolve("tests/fixtures/paper-translated.pdf");
       if (p === "/src/assets/readflow-logo.svg") file = resolve(p.slice(1));
-      if (/^\/fixtures\/paper(?:-translated|-100|-no-outline|-images)?\.pdf$/.test(p)) file = resolve("tests" + p);
+      if (/^\/fixtures\/paper(?:-translated|-100|-no-outline|-images)?\.pdf$/.test(p))
+        file = resolve("tests" + p);
       else if (
         p === "/dist/css/workbench.css" ||
         p.startsWith("/vendor/pdfjs-dist/") ||
         p.startsWith("/src/assets/fonts/inter/")
       )
         file = resolve(p.slice(1));
+      if (
+        options.pdf &&
+        (p === "/fixtures/paper.pdf" || /^\/api\/research\/attachments\/[^/]+\/pdf$/.test(p))
+      )
+        file = options.pdf;
       if (file)
         return route.fulfill({
           body: await readFile(file),
@@ -210,7 +237,9 @@ export async function readerBrowser(query = "", fixture = "tests/paper-reader/fi
     if (fixture === "tests/paper-reader/fixture.tsx")
       await page.locator('[data-paper-page="1"] .pr-text-layer span').first().waitFor();
     return {
-      flashcards, blocks, browser,
+      flashcards,
+      blocks,
+      browser,
       context,
       page,
       errors,

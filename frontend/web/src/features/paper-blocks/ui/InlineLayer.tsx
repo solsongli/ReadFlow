@@ -20,8 +20,7 @@ export const InlineLayer = memo(function InlineLayer({
 }) {
   const root = useRef<HTMLDivElement>(null);
   const [near, setNear] = useState(false);
-  const [width, setWidth] = useState(0),
-    [selecting, setSelecting] = useState(false);
+  const [width, setWidth] = useState(0);
   useEffect(() => {
     const target = root.current!.closest<HTMLElement>("[data-paper-page]")!;
     const intersection = new IntersectionObserver(([entry]) => setNear(entry.isIntersecting), {
@@ -31,33 +30,9 @@ export const InlineLayer = memo(function InlineLayer({
     intersection.observe(target);
     const observer = new ResizeObserver(() => setWidth(target.clientWidth));
     observer.observe(target);
-    let start: { x: number; y: number } | null = null;
-    const selection = () => {
-      const value = window.getSelection();
-      setSelecting(Boolean(value?.toString().trim() && target.contains(value.anchorNode)));
-    };
-    const down = (event: PointerEvent) => {
-      if (event.button === 0) start = { x: event.clientX, y: event.clientY };
-    };
-    const move = (event: PointerEvent) => {
-      if (start && event.buttons && Math.hypot(start.x - event.clientX, start.y - event.clientY) > 4)
-        setSelecting(true);
-    };
-    const up = () => {
-      start = null;
-      selection();
-    };
-    target.addEventListener("pointerdown", down);
-    target.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-    document.addEventListener("selectionchange", selection);
     return () => {
       observer.disconnect();
       intersection.disconnect();
-      target.removeEventListener("pointerdown", down);
-      target.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      document.removeEventListener("selectionchange", selection);
     };
   }, []);
   const entries = blocks.flatMap((block) => {
@@ -98,7 +73,7 @@ export const InlineLayer = memo(function InlineLayer({
       ref={root}
       data-inline-layer={page}
       data-inline-ready={near}
-      data-inline-hidden={hidden || selecting}
+      data-inline-hidden={hidden}
       className="pb-inline-layer pointer-events-none absolute inset-0"
       aria-hidden="true"
     >

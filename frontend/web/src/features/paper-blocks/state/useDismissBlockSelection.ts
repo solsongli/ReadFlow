@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { settledSelection } from "@/ui/wb/selection-events.js";
 export function useDismissBlockSelection(clear: () => void) {
   useEffect(() => {
     const changed = () => {
@@ -6,7 +7,6 @@ export function useDismissBlockSelection(clear: () => void) {
       const parent = selection?.anchorNode?.parentElement;
       if (selection?.toString().trim() && parent?.closest("[data-paper-page]")) clear();
     };
-    document.addEventListener("selectionchange", changed);
-    return () => document.removeEventListener("selectionchange", changed);
+    return settledSelection(() => document.querySelector("[data-wb-reader-active=\"true\"]"), changed);
   }, []);
 }

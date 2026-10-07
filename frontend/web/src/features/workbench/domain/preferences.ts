@@ -11,6 +11,7 @@ export function parseWorkbenchPrefs(raw: string | null | undefined): Partial<Pre
     for (const key of Object.keys(DEFAULT_PREFS) as Array<keyof Prefs>) {
       if (key in value && typeof value[key] === typeof DEFAULT_PREFS[key]) (prefs as Record<string, unknown>)[key] = value[key];
     }
+    prefs.marginSide = prefs.marginSide === "right" ? "right" : "auto";
     prefs.translationFormat = prefs.translationFormat === "reflow" ? "reflow" : "layout";
     prefs.layoutDensity = prefs.layoutDensity === "compact" ? "compact" : "balanced";
     prefs.blockLanguage = ["zh-CN", "en", "ja", "de", "fr"].includes(prefs.blockLanguage || "") ? prefs.blockLanguage : "zh-CN";
