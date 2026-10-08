@@ -13,7 +13,7 @@ from .layout_geometry import area, native_lines, owned_lines, text_color, visibl
 from .layout_links import apply_links
 from .layout_ownership import bounded_tables, overlap_policy, region_obstacles
 from .layout_regions import ruled_tables
-from .layout_save import save_pdf
+from .layout_save import publish, save_pdf
 from .paper_blocks_layout import tasks_for, translated_outline
 from .paper_blocks_storage import write_json
 from . import layout_incremental as incremental
@@ -317,7 +317,7 @@ def render_aligned(
         translated_outline(pdf, document, cache, language, fingerprint)
         check()
         save_pdf(pdf, output, check)
-    output.replace(Path(root) / PDF_NAME)
+    publish(output, Path(root) / PDF_NAME)
     audit["seconds"] = round(time.perf_counter() - started, 3)
     audit["metrics"] = _summary(audit)
     write_json(Path(root) / AUDIT_NAME, audit)

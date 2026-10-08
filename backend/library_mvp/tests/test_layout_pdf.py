@@ -128,6 +128,37 @@ class LayoutPdfTests(unittest.TestCase):
                     self.assertEqual(len(pdf[index].get_links()), len(original[index].get_links()))
                     self.assertIn("Keep original footer", pdf[index].get_text())
 
+    @unittest.skipUnless(Path("/proc/self/fd").is_dir(), "needs /proc to list open files")
+    def test_incremental_render_never_replaces_a_pdf_it_still_holds_open(self):
+        # Windows refuses to replace an open file; the first Windows build failed re-rendering a cached layout
+        # because the reused previous PDF stayed open (PermissionError in render_layout).
+        import os
+        replace = os.replace
+        held = []
+
+        def guarded(src, dst, *args, **kwargs):
+            target = os.path.realpath(dst)
+            for fd in os.listdir("/proc/self/fd"):
+                try:
+                    if os.readlink(f"/proc/self/fd/{fd}") in (target, os.path.realpath(src)):
+                        held.append(target)
+                except OSError:
+                    pass
+            return replace(src, dst, *args, **kwargs)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source.pdf"
+            document, cache = sample(source)
+            with patch("backend.library_mvp.paper_blocks_layout.prepare_fonts", return_value=(None, "", root)):
+                render_layout(source, root, document, cache, "zh-CN", "fake")
+                selected = next(b for b in document["blocks"] if b["page"] == 2 and b["type"] == "text")
+                cache[cache_key(selected, "zh-CN", "fake")] = {"text": "A revised paragraph"}
+                with patch("os.replace", guarded):
+                    result = render_layout(source, root, document, cache, "zh-CN", "fake")
+            self.assertEqual(result["reused_pages"], [1])
+            self.assertEqual(held, [])
+
     def test_misclassified_ruled_table_cells_stay_original_while_caption_translates(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

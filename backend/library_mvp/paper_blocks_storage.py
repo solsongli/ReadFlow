@@ -10,6 +10,7 @@ from .store import StoreError
 from .paper_blocks_extract import extract
 from .paper_blocks_model import SCHEMA_VERSION, EXTRACTOR_VERSION
 from .document_models import revision
+from .layout_save import publish
 
 
 def write_json(path, value):
@@ -19,7 +20,7 @@ def write_json(path, value):
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as stream:
             json.dump(value, stream, ensure_ascii=False)
-        os.replace(temporary, path)
+        publish(temporary, path)
     finally:
         Path(temporary).unlink(missing_ok=True)
 

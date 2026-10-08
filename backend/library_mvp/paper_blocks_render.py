@@ -10,6 +10,7 @@ import zipfile
 import pymupdf as fitz
 from .paper_blocks_model import cache_key, REFERENCE, SKIP
 from .paper_blocks_inline import rich_text, source_runs
+from .layout_save import publish
 from .paper_blocks_storage import write_json
 from .store import StoreError
 from .paper_blocks_image_render import label_layout
@@ -211,7 +212,7 @@ def render(root, document, cache, language, fingerprint, check=lambda: None, *, 
                 process.kill()
                 process.communicate()
     check()
-    (root / "render-pending.pdf").replace(root / "translated.pdf")
+    publish(root / "render-pending.pdf", root / "translated.pdf")
     return {
         "render_fallback": list(dict.fromkeys(render_fallback)),
         "label_fallback": [v for v in dict.fromkeys(label_fallback) if v not in render_fallback],

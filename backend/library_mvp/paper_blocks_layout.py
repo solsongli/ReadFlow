@@ -23,7 +23,7 @@ from .layout_regions import ruled_tables
 from .layout_ownership import bounded_tables, source_boxes, region_obstacles, flow_slots, overlap_policy
 from .layout_squeeze import suspected_squeeze
 from .layout_glyphs import display_runs
-from .layout_save import save_pdf
+from .layout_save import publish, save_pdf
 from . import layout_incremental as incremental
 from .paper_blocks_model import cache_key
 from .paper_blocks_inline import normalize_render_runs, source_runs, rich_text, restore_lead_bold
@@ -308,7 +308,7 @@ def render_layout(
         check()
         save_pdf(pdf, output, check)
     check()
-    output.replace(Path(root) / "translated-layout.pdf")
+    publish(output, Path(root) / "translated-layout.pdf")
     for key in ("layout_overflow", "layout_truncated", "render_fallback", "label_fallback"):
         audit[key] = list(dict.fromkeys(audit[key]))
     audit["seconds"] = round(time.perf_counter() - started, 3)

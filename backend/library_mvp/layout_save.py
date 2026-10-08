@@ -1,7 +1,24 @@
 """Linear font-stream interning avoids whole-document quadratic stream comparisons."""
 import hashlib
+import os
 import re
+import time
 import pymupdf as fitz
+
+
+def publish(pending, final, attempts=20):
+    """Atomically move a finished output into place.
+
+    On Windows a reader (the PDF viewer's range requests, an export) can hold the old file open for a moment,
+    and replacing an open file fails there; retry briefly instead of failing the whole render.
+    """
+    for attempt in range(attempts):
+        try:
+            return os.replace(pending, final)
+        except PermissionError:
+            if os.name != "nt" or attempt == attempts - 1:
+                raise
+            time.sleep(0.1)
 
 
 def save_pdf(pdf, path, check=lambda: None):

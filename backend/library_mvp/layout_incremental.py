@@ -50,7 +50,9 @@ def previous(
             or value.get("mtime_ns") != path.stat().st_mtime_ns
         ):
             return None
-        pdf = fitz.open(path)
+        # Read into memory: grafted objects keep the source document alive past close(), and Windows
+        # cannot replace this file afterwards while a handle to it is still open.
+        pdf = fitz.open(stream=path.read_bytes(), filetype="pdf")
         if len(pdf) != len(expected) or len(audit["pages"]) != len(expected):
             pdf.close()
             return None

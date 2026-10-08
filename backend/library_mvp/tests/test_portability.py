@@ -45,6 +45,28 @@ class PortabilityTests(unittest.TestCase):
                   "open(x, 'rb')\nfitz.open(x)\nwheel.open(i)\np.read_text(encoding='utf-8')\n")
         self.assertEqual([n.lineno for n in default_encoding_calls(ast.parse(source))], [1, 2, 3, 4])
 
+    def test_publish_retries_a_briefly_open_output_only_on_windows(self):
+        # A viewer's range request can hold the old PDF open while a re-render publishes the new one.
+        from types import SimpleNamespace
+        from unittest import mock
+        from backend.library_mvp import layout_save
+        calls = []
+
+        def replace(src, dst):
+            calls.append((src, dst))
+            if len(calls) < 3:
+                raise PermissionError(32, "in use")
+
+        with mock.patch.object(layout_save, "os", SimpleNamespace(name="nt", replace=replace)), \
+                mock.patch.object(layout_save.time, "sleep"):
+            layout_save.publish("a.pending", "a.pdf")
+        self.assertEqual(len(calls), 3)
+        calls.clear()
+        with mock.patch.object(layout_save, "os", SimpleNamespace(name="posix", replace=replace)):
+            with self.assertRaises(PermissionError):
+                layout_save.publish("a.pending", "a.pdf")
+        self.assertEqual(len(calls), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
