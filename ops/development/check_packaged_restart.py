@@ -7,12 +7,16 @@ import json
 import os
 from pathlib import Path
 import secrets
-import selectors
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from urllib.request import Request, urlopen
+
+WINDOWS = os.name == 'nt'
+PYTHON = 'backend/python/python.exe' if WINDOWS else 'backend/python/bin/python3'
+TYPST = 'backend/typst/bin/typst.exe' if WINDOWS else 'backend/typst/bin/typst'
 
 
 async def seed(resources, root):
@@ -80,11 +84,18 @@ async def seed(resources, root):
 
 def check(unpacked, home):
     resources = unpacked / 'resources'
-    python = resources / 'backend/python/bin/python3'
+    python = resources / PYTHON
     data = home / 'profile/chromium/data/research-library'
-    env = {'PATH': '/usr/bin:/bin', 'LANG': 'C.UTF-8', 'HOME': str(home),
-           'XDG_CONFIG_HOME': str(home / '.config'), 'RETAIN_PDF_RESEARCH_CONNECTOR_PORT': '',
-           'READFLOW_TYPST_BIN': str(resources / 'backend/typst/bin/typst'),
+    if WINDOWS:
+        system = os.environ.get('SYSTEMROOT', r'C:\Windows')
+        base = {'SYSTEMROOT': system, 'PATH': system + r'\System32', 'USERPROFILE': str(home),
+                'APPDATA': str(home / 'AppData/Roaming'), 'LOCALAPPDATA': str(home / 'AppData/Local'),
+                'TEMP': str(home / 'tmp'), 'TMP': str(home / 'tmp'), 'PYTHONUTF8': '1'}
+        (home / 'tmp').mkdir(parents=True, exist_ok=True)
+    else:
+        base = {'PATH': '/usr/bin:/bin', 'LANG': 'C.UTF-8', 'HOME': str(home), 'XDG_CONFIG_HOME': str(home / '.config')}
+    env = {**base, 'RETAIN_PDF_RESEARCH_CONNECTOR_PORT': '',
+           'READFLOW_TYPST_BIN': str(resources / TYPST),
            'READFLOW_TYPST_PACKAGES': str(resources / 'backend/typst-packages'),
            'READFLOW_FONT_DIRS': str(resources / 'backend/fonts'),
            'READFLOW_MODELS_DIR': str(resources / 'backend/models'),
@@ -99,13 +110,16 @@ def check(unpacked, home):
         child = subprocess.Popen([str(python), '-I', '-B',
             str(resources / 'backend/research-library/native_library_service.py'), '--data-root', str(data),
             '--native-base', 'http://127.0.0.1:9', '--port', '0'], env=env,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True)
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding='utf-8',
+            **({'creationflags': subprocess.CREATE_NEW_PROCESS_GROUP} if WINDOWS else {'start_new_session': True}))
         try:
-            with selectors.DefaultSelector() as ready:
-                ready.register(child.stdout, selectors.EVENT_READ)
-                if not ready.select(25):
-                    raise RuntimeError('Packaged sidecar readiness timed out')
-            line = child.stdout.readline()
+            first = []
+            reader = threading.Thread(target=lambda: first.append(child.stdout.readline()), daemon=True)
+            reader.start()
+            reader.join(60 if WINDOWS else 25)
+            if not first:
+                raise RuntimeError('Packaged sidecar readiness timed out: ' + (child.stderr.read() if child.poll() is not None else ''))
+            line = first[0]
             if not line.startswith('RETAINPDF_RESEARCH_READY='):
                 raise RuntimeError('Packaged sidecar did not become ready')
             base = json.loads(line.split('=', 1)[1])['base_url']
@@ -170,7 +184,7 @@ if __name__ == '__main__':
     if args.seed:
         # The Electron check seeds without the desktop's env; resolve bundled tools from the same app.
         backend = unpacked / 'resources/backend'
-        for name, value in (('READFLOW_TYPST_BIN', backend / 'typst/bin/typst'),
+        for name, value in (('READFLOW_TYPST_BIN', unpacked / 'resources' / TYPST),
                             ('READFLOW_TYPST_PACKAGES', backend / 'typst-packages'),
                             ('READFLOW_FONT_DIRS', backend / 'fonts'),
                             ('READFLOW_MODELS_DIR', backend / 'models')):

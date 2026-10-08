@@ -8,3 +8,8 @@ dist-readflow/
 !/build/
 /build/*
 !/build/readflow/
+
+# Protected Windows release (generated on the build machine)
+build/windows-licenses/
+build-protect/
+dist-win/

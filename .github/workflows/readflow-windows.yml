@@ -1,0 +1,144 @@
+name: ReadFlow Windows (protected installer)
+# Manual only. Builds a source-protected Windows installer and keeps it as a private workflow artifact
+# (7 days). It never releases or publishes anything and uses no repository credentials.
+"on":
+  workflow_dispatch: {}
+permissions:
+  contents: read
+env:
+  DESKTOP_ROOT: frontend/desktop
+  TYPST_VERSION: '0.15.1'
+  CMARKER_VERSION: '0.1.10'
+  MITEX_VERSION: '0.2.7'
+  PYTHONDONTWRITEBYTECODE: '1'
+  CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+  RETAIN_PDF_DESKTOP_PLATFORM: windows
+jobs:
+  windows:
+    if: github.ref_type != 'tag'
+    runs-on: windows-latest
+    timeout-minutes: 150
+    concurrency:
+      group: readflow-windows-${{ github.ref }}
+      cancel-in-progress: true
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: JavaScript dependencies
+        run: |
+          npm ci
+          node -e "require('@tailwindcss/oxide')"
+          if ($LASTEXITCODE -ne 0) {
+            $ver = node -p "require('@tailwindcss/oxide/package.json').version"
+            npm install --no-save --no-package-lock "@tailwindcss/oxide@$ver"
+          }
+          npm --prefix frontend/web run prepare:workspace
+          npm run build --workspace retainpdf2doc
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+      - name: Rust services
+        run: cargo build --release --locked --workspace --bins --target x86_64-pc-windows-msvc
+      - name: Typst runtime and packages
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP "typst.zip"
+          Invoke-WebRequest "https://github.com/typst/typst/releases/download/v$env:TYPST_VERSION/typst-x86_64-pc-windows-msvc.zip" -OutFile $zip
+          $x = Join-Path $env:RUNNER_TEMP "typst"; Expand-Archive $zip $x -Force
+          $bin = "$env:DESKTOP_ROOT/src/runtime/windows/typst/bin"; New-Item -ItemType Directory $bin -Force | Out-Null
+          Copy-Item (Get-ChildItem $x -Recurse -Filter typst.exe | Select-Object -First 1).FullName "$bin/typst.exe"
+          & "$bin/typst.exe" --version
+          foreach ($pkg in @(@{n="cmarker";v=$env:CMARKER_VERSION}, @{n="mitex";v=$env:MITEX_VERSION})) {
+            $t = "$env:DESKTOP_ROOT/src/runtime/shared/typst-packages/preview/$($pkg.n)/$($pkg.v)"
+            New-Item -ItemType Directory $t -Force | Out-Null
+            $tgz = Join-Path $env:RUNNER_TEMP "$($pkg.n).tar.gz"
+            Invoke-WebRequest "https://packages.typst.org/preview/$($pkg.n)-$($pkg.v).tar.gz" -OutFile $tgz
+            tar -xzf $tgz -C $t
+          }
+      - name: Bundled Python runtime
+        run: |
+          $root = Split-Path -Parent (Get-Command python).Source
+          $bundle = "$env:DESKTOP_ROOT/src/runtime/windows/python"
+          New-Item -ItemType Directory $bundle -Force | Out-Null
+          robocopy $root $bundle /E /NFL /NDL /NJH /NJS /NP /XD "__pycache__" "Doc" "docs" "Tools" "Scripts" "site-packages" "include" "libs"
+          if ($LASTEXITCODE -ge 8) { throw "robocopy failed: $LASTEXITCODE" }
+          $site = "$bundle/Lib/site-packages"; New-Item -ItemType Directory $site -Force | Out-Null
+          python -m pip install --upgrade pip
+          python -m pip install --target $site -r "$env:DESKTOP_ROOT/requirements-readflow-windows.txt"
+          python -m pip install --target $site --no-deps --no-build-isolation backend/pipeline backend/ai
+          & "$bundle/python.exe" -I -c "import fitz, pikepdf, PIL, numpy, onnxruntime, fastapi, uvicorn, httpx; print('bundle-import-ok')"
+      - uses: actions/cache@v4
+        with:
+          path: .model-cache
+          key: readflow-cpu-Windows-${{ hashFiles('ops/models/manifest.json', 'ops/models/fetch.py') }}
+      - name: Document models
+        run: python ops/models/fetch.py --stage .model-cache/runtime
+      - name: Web build and app assembly
+        run: |
+          npm --prefix frontend/web run build
+          Push-Location $env:DESKTOP_ROOT
+          $env:RETAIN_PDF_VERSION = node -p "require('./package.json').version"
+          node scripts/prepare-app.mjs
+          node --input-type=module -e "import { stageDocumentModels } from './scripts/stage-document-models.mjs'; stageDocumentModels(process.cwd() + '/../..', 'app/backend')"
+          Pop-Location
+      - name: Protect Python (Nuitka-compiled library_mvp)
+        run: |
+          python -m pip install "nuitka==2.7.16" ordered-set zstandard
+          python "$env:DESKTOP_ROOT/scripts/protect-python.py" --research-library "$env:DESKTOP_ROOT/app/backend/research-library" `
+            --bundled-python "$env:DESKTOP_ROOT/app/backend/python/python.exe" --work-dir "$env:DESKTOP_ROOT/build-protect"
+          $left = Get-ChildItem "$env:DESKTOP_ROOT/app/backend/research-library/library_mvp" -Recurse -Filter *.py | Where-Object Name -ne "ocr_worker.py"
+          if ($left) { throw "Python sources left: $($left.FullName -join ', ')" }
+      - name: Licence notices
+        run: python "$env:DESKTOP_ROOT/scripts/collect-windows-licenses.py" --site-packages "$env:DESKTOP_ROOT/app/backend/python/Lib/site-packages"
+      - name: Protect JavaScript (obfuscation)
+        run: |
+          npm install --prefix "$env:RUNNER_TEMP/obf" javascript-obfuscator@4.1.1
+          Push-Location $env:DESKTOP_ROOT
+          node scripts/protect-js.mjs --obfuscator "$env:RUNNER_TEMP/obf/node_modules/javascript-obfuscator"
+          Pop-Location
+      - name: Installer (NSIS, hardened fuses)
+        working-directory: frontend/desktop
+        run: npx electron-builder --win nsis --x64 --publish never --config electron-builder.windows.cjs
+      - name: Verify protection
+        run: |
+          $app = "$env:DESKTOP_ROOT/dist-win/win-unpacked"
+          npx --yes @electron/fuses read --app "$app/ReadFlow.exe" | Tee-Object -FilePath fuses.txt
+          if (-not (Select-String -Path fuses.txt -Pattern "RunAsNode is Disabled")) { throw "RunAsNode fuse not disabled" }
+          if (-not (Select-String -Path fuses.txt -Pattern "EnableEmbeddedAsarIntegrityValidation is Enabled")) { throw "asar integrity fuse not enabled" }
+          node -e "const a=require('@electron/asar'); const p=JSON.parse(a.extractFile(process.argv[1],'package.json')); if(!p.readflowProtected) throw new Error('not marked protected'); const b=a.extractFile(process.argv[1],'app/frontend/dist/workbench.bundle.js').toString(); if(/sourceMappingURL/.test(b)) throw new Error('source map'); console.log('asar-protected-ok', b.length)" "$app/resources/app.asar"
+          $py = Get-ChildItem "$app/resources/backend/research-library/library_mvp" -Recurse -Filter *.py | Where-Object Name -ne "ocr_worker.py"
+          if ($py) { throw "Python sources shipped: $($py.FullName -join ', ')" }
+          Get-ChildItem "$app/resources/backend/research-library" | Format-Table Name, Length
+          Get-ChildItem "$app/resources/licenses" | Format-Table Name
+      - name: Packaged sidecar restart check (compiled backend, twice)
+        run: python ops/development/check_packaged_restart.py "$env:DESKTOP_ROOT/dist-win/win-unpacked"
+      - name: Launch smoke
+        run: |
+          $exe = Resolve-Path "$env:DESKTOP_ROOT/dist-win/win-unpacked/ReadFlow.exe"
+          $p = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 45
+          if ($p.HasExited) { throw "ReadFlow.exe exited early with code $($p.ExitCode)" }
+          Get-Process | Where-Object { $_.Path -like "*win-unpacked*" } | Format-Table Id, ProcessName, WorkingSet64
+          Stop-Process -Id $p.Id -Force
+      - name: Report
+        run: |
+          $setup = Get-ChildItem "$env:DESKTOP_ROOT/dist-win" -Filter "*Setup.exe" | Select-Object -First 1
+          $hash = (Get-FileHash $setup.FullName -Algorithm SHA256).Hash.ToLower()
+          "{0}`t{1}`t{2}" -f $setup.Name, $setup.Length, $hash | Tee-Object -FilePath "$env:DESKTOP_ROOT/dist-win/SHA256SUMS.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: readflow-windows-protected
+          path: |
+            frontend/desktop/dist-win/*Setup.exe
+            frontend/desktop/dist-win/SHA256SUMS.txt
+          retention-days: 7
+          if-no-files-found: error

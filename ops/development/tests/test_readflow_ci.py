@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[3]
 class ReadFlowCiTests(unittest.TestCase):
     def test_ci_is_readonly_branch_only_bounded_and_has_no_release(self):
         directory = ROOT / '.github/workflows'
-        self.assertEqual([p.name for p in directory.glob('*.yml')], ['readflow-ci.yml'])
+        self.assertEqual(sorted(p.name for p in directory.glob('*.yml')), ['readflow-ci.yml', 'readflow-windows.yml'])
         workflow = yaml.safe_load((directory / 'readflow-ci.yml').read_text())
         self.assertEqual(workflow['on']['push'], {'branches': ['checkpoint-20261001']})
         self.assertEqual(workflow['permissions'], {'contents': 'read'})
@@ -42,3 +42,22 @@ class ReadFlowCiTests(unittest.TestCase):
                 self.assertIn(path, lock)
                 self.assertEqual(lock[path].get('version'), package.get('version'), path)
                 self.assertEqual(lock.get('node_modules/' + package['name']), {'resolved': path, 'link': True}, path)
+
+    def test_windows_build_is_manual_private_and_publishes_nothing(self):
+        # The user asked for a protected Windows installer for a few colleagues: manual runs only,
+        # read-only token, no secrets, no release; the installer is a short-lived private artifact.
+        source = (ROOT / '.github/workflows/readflow-windows.yml').read_text()
+        workflow = yaml.safe_load(source)
+        self.assertEqual(workflow['on'], {'workflow_dispatch': {}})
+        self.assertEqual(workflow['permissions'], {'contents': 'read'})
+        for value in ['secrets.', 'action-gh-release', 'gh release', 'npm publish', '--publish always', 'docker ']:
+            self.assertNotIn(value, source)
+        self.assertIn('--publish never', source)
+        steps = workflow['jobs']['windows']['steps']
+        uploads = [step for step in steps if step.get('uses', '').startswith('actions/upload-artifact')]
+        self.assertEqual(len(uploads), 1)
+        self.assertLessEqual(uploads[0]['with']['retention-days'], 7)
+        names = ' '.join(step.get('name', '') for step in steps)
+        for required in ['Protect Python', 'Protect JavaScript', 'Verify protection', 'Licence notices']:
+            self.assertIn(required, names)
+

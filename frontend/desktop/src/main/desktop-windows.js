@@ -5,6 +5,7 @@ const { PRODUCT_NAME, resolveBrandIcon } = require("./brand");
 const { resolveStartPage } = require("./desktop-startup");
 const { appVersionArguments } = require("./app-version");
 const { installRendererZoomShortcuts } = require("./renderer-shortcuts");
+const { isProtectedBuild } = require("./protection");
 
 function createDesktopWindows(app, options = {}) {
   const appRoot = options.appRoot || process.cwd();
@@ -155,6 +156,7 @@ function createDesktopWindows(app, options = {}) {
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: false,
+        devTools: !isProtectedBuild(appRoot),
       },
     });
 
