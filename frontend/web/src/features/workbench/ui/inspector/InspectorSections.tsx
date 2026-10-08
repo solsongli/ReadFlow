@@ -8,6 +8,7 @@ import { compareGroupNames, groupLabel } from "../../domain/groups.js";
 import { useWorkbench } from "../context.js";
 import { GroupPicker } from "./GroupPicker.js";
 import { InlineEdit } from "./InlineEdit.js";
+import { TagEditor } from "./TagEditor.js";
 
 export function Section({ title, aside, children }: { title: string; aside?: ReactNode; children: ReactNode }) {
   return (
@@ -68,7 +69,7 @@ export function MetadataSection({ row }: { row: WorkbenchRow }) {
             onSave={(citekey) => void wb.updateState(row.id, { citekey }, citekey ? "引用键已固定" : "已恢复自动引用键")} />
           {row.citekey_pinned ? <span title="清空引用键可恢复自动生成" className="ml-1.5 whitespace-nowrap text-[0.6875rem] text-wb-text-3">已固定</span> : null}
         </Field>
-        <Field label="标签"><span className="flex flex-wrap justify-end gap-1">{row.tags.length ? row.tags.map((tag) => <Chip key={tag}>{tag}</Chip>) : "—"}</span></Field>
+        <Field label="标签"><TagEditor ids={[row.id]} tags={row.tags} /></Field>
         <Field label="来源">{SOURCE_LABEL[row.source] ?? row.source}</Field>
       </dl>
     </Section>

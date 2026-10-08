@@ -15,7 +15,15 @@ export function annotationApi(item: string) {
     return response.status === 204 ? null : response.json();
   }
   return {
-    list: async (): Promise<Annotation[]> => (await request("")).items,
+    list: async (): Promise<Annotation[]> =>
+      (await request("")).items.map((row: Annotation) => ({ ...row, tags: row.tags || [] })),
+    tags: async (): Promise<string[]> => {
+      const response = await fetch(buildApiUrl("/api/research", "/workbench/annotation-tags"), {
+        headers: buildApiHeaders(),
+      });
+      if (!response.ok) throw new Error("批注标签未能加载。");
+      return (await response.json()).items.map((item: { name: string }) => item.name);
+    },
     save: (row: Annotation, exists: boolean): Promise<Annotation> =>
       request(exists ? `/${encodeURIComponent(row.id)}` : "", exists ? "PATCH" : "POST", row),
     remove: (id: string, policy = "") =>

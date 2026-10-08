@@ -18,12 +18,14 @@ import type { ReaderPorts } from "../domain/types.js";
 import { useReaderModel } from "../state/useReaderModel.js";
 import { Toolbar } from "./Toolbar.js";
 import { ReaderPages } from "./ReaderPages.js";
-import { NavigationPanel } from "./NavigationPanel.js";
+import { ReaderNavigation } from "./ReaderNavigation.js";
 import { InformationPanel } from "./InformationPanel.js";
 import { Preview } from "./Preview.js";
 import { SelectionTools } from "./SelectionTools.js";
 import { useSelectionGesture } from "../state/useSelectionGesture.js";
 import { useAlignmentGuide } from "../state/useAlignmentGuide.js";
+import { useReaderFullscreen } from "../state/useReaderFullscreen.js";
+import { useIndexActivity } from "../state/useIndexActivity.js";
 import type { MarginEntry } from "@/ui/wb/PageMargins.js";
 export interface PaperReaderProps extends ReaderPorts {
   toolbarTools?: ReactNode;
@@ -67,6 +69,8 @@ export function PaperReader(ports: PaperReaderProps) {
     sizes: model.source.sizes,
     paragraphs: ports.paragraphs || [],
   });
+  const fullscreen = useReaderFullscreen(ports.active, model.focus, model.setFocus);
+  useIndexActivity(model.root, ports.active, [model.source, model.translated, model.comparison]);
   useSelectionGesture(model.root);
   const peek = useInlinePeek(ports.active && model.mode === "inline");
   const annotations = useAnnotationReader(ports, model);
@@ -84,6 +88,19 @@ export function PaperReader(ports: PaperReaderProps) {
   );
   annotationKeys.current = (event) =>
     cards.key(event) || assistance.key(event) || annotations.key(event) || alignment.key(event);
+  useEffect(() => {
+    for (const document of new Set([model.source, model.translated, model.comparison])) {
+      document.setIndexPriority(false);
+    }
+    if (model.nav !== "search") return;
+    const searchDocument =
+      model.mode === "translated"
+        ? model.translated
+        : model.mode === "compare" && model.searcher.scope === "translated"
+          ? model.comparison
+          : model.source;
+    searchDocument.prioritizeIndexing();
+  }, [model.nav, model.mode, model.searcher.scope]);
   const { c, labels, byPage, annotate } = annotations;
   const {
     root,
@@ -102,8 +119,6 @@ export function PaperReader(ports: PaperReaderProps) {
     setLeft,
     right,
     setRight,
-    nav,
-    setNav,
     sync,
     setSync,
     position,
@@ -120,13 +135,11 @@ export function PaperReader(ports: PaperReaderProps) {
     reading,
     main,
     references,
-    headings,
     hovered,
     navigate,
     jump,
     travel,
     report,
-    currentHeading,
     copy,
     link,
     lookup,
@@ -142,6 +155,7 @@ export function PaperReader(ports: PaperReaderProps) {
       data-tone={ports.tone}
       data-focus={focus}
       data-reading-mode={mode}
+      data-fullscreen={fullscreen.active}
       className="pr-reader relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-wb-panel text-wb-text"
       onMouseDown={(event) => {
         if (event.button === 3 || event.button === 4) {
@@ -195,6 +209,8 @@ export function PaperReader(ports: PaperReaderProps) {
           </>
         }
         ports={ports}
+        fullscreen={fullscreen.active}
+        toggleFullscreen={fullscreen.toggle}
       />
       {!focus ? (
         <div className="border-b border-wb-line-soft px-3 py-1">
@@ -241,37 +257,7 @@ export function PaperReader(ports: PaperReaderProps) {
         </div>
       ) : null}
       <ReaderCanvasLayout layout={layout} canvas={ports.canvas}>
-        {left && !focus && layout === "document" && main.pdf ? (
-          <NavigationPanel
-            figures={ports.figures}
-            tab={nav}
-            setTab={setNav}
-            outline={headings}
-            current={currentHeading?.id ?? ""}
-            pdf={main.pdf}
-            queue={queue}
-            bookmarks={reading.bookmarks}
-            remove={(id) => void reading.remove(id)}
-            jump={jump}
-            query={searcher.query}
-            setQuery={searcher.setQuery}
-            searchOptions={searcher.options}
-            setSearchOptions={searcher.setOptions}
-            hits={searcher.hits}
-            resultIndex={searcher.resultIndex}
-            selectResult={searcher.selectResult}
-            compare={mode === "compare"}
-            searchScope={searcher.scope}
-            setSearchScope={searcher.setCompareScope}
-            indexed={
-              searcher.scope === "source"
-                ? source.indexed
-                : mode === "compare"
-                  ? comparison.indexed
-                  : translated.indexed
-            }
-          />
-        ) : null}
+        <ReaderNavigation model={model} ports={ports} hidden={!left || focus || layout !== "document"} />
         <ReaderPages
           model={model}
           ports={{ ...ports, inlinePeek: peek }}

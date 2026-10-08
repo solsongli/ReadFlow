@@ -233,8 +233,8 @@ try {
     "command palette creates and opens notes; dark and narrow layouts remain readable",
     async () => {
       await page.keyboard.press("Control+k");
-      await page.getByRole("combobox").fill("打开笔记");
-      await page.getByRole("combobox").press("Enter");
+      await page.getByRole("dialog", { name: "命令与搜索" }).getByRole("combobox").fill("打开笔记");
+      await page.getByRole("dialog", { name: "命令与搜索" }).getByRole("combobox").press("Enter");
       await note("n2").click();
       await button("设置").click();
       await page.getByRole("menuitemradio", { name: "深色", exact: true }).click();
@@ -245,8 +245,8 @@ try {
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       await screenshot("notes-narrow");
       await page.keyboard.press("Control+k");
-      await page.getByRole("combobox").fill("新建笔记");
-      await page.getByRole("combobox").press("Enter");
+      await page.getByRole("dialog", { name: "命令与搜索" }).getByRole("combobox").fill("新建笔记");
+      await page.getByRole("dialog", { name: "命令与搜索" }).getByRole("combobox").press("Enter");
       await page.getByRole("dialog", { name: "选择文献新建笔记" }).waitFor();
       await page.keyboard.press("Escape");
     },

@@ -1,16 +1,16 @@
 import { ReviewEntry } from "@/features/flashcards/index.js";
 import { CanvasList } from "@/features/thought-canvas/index.js";
-import { useState, type ComponentType } from "react";
+import type { ComponentType } from "react";
 import { Armchair, Bookmark, Clock, FileQuestion, Library, NotebookPen, PanelLeftClose, PanelLeftOpen, Plus, Star, Trash2 } from "lucide-react";
 import type { WorkbenchView } from "@/platform/contracts/workbench.js";
 import { cn } from "@/ui/lib/utils.js";
 import { IconButton } from "@/ui/wb/Button.js";
 import { SectionLabel } from "@/ui/wb/EmptyState.js";
-import { tagColorSlot } from "../../domain/format.js";
 import { LIBRARY_TAB } from "../../domain/workbench-store.js";
 import { useWb, useWorkbench } from "../context.js";
 import { GroupTree } from "./GroupTree.js";
 import { SettingsMenu } from "./SettingsMenu.js";
+import { TagList } from "./TagList.js";
 
 const VIEWS: ReadonlyArray<{ view: WorkbenchView; label: string; icon: ComponentType<{ size?: number; strokeWidth?: number }> }> = [
   { view: "all", label: "全部文献", icon: Library },
@@ -21,7 +21,6 @@ const VIEWS: ReadonlyArray<{ view: WorkbenchView; label: string; icon: Component
   { view: "unfiled", label: "未分组", icon: FileQuestion },
   { view: "trash", label: "回收站", icon: Trash2 },
 ];
-const TAG_DOT = ["", "bg-wb-tag-1", "bg-wb-tag-2", "bg-wb-tag-3", "bg-wb-tag-4", "bg-wb-tag-5", "bg-wb-tag-6", "bg-wb-tag-7"];
 
 function NavButton({ active, icon: Icon, label, count, onClick, collapsed, shortcut }: {
   active: boolean;
@@ -53,7 +52,6 @@ export function Sidebar() {
   const hasGroups = useWb((state) => Boolean(state.list.result?.groups.length));
   const collapsed = useWb((state) => state.sidebarCollapsed);
   const noteCounts = useWb((state) => state.desk.data?.counts);
-  const [moreTags, setMoreTags] = useState(false);
   const inLibrary = main === "library" && !groupId && !tag;
   return (
     <aside aria-label="导航" className={cn("flex shrink-0 flex-col border-r border-wb-line-soft bg-wb-sidebar", collapsed ? "w-[52px]" : "w-[236px]")}>
@@ -85,19 +83,10 @@ export function Sidebar() {
             {!hasGroups ? <p className="m-0 px-2 py-1 text-[0.75rem] text-wb-text-3">点 + 新建你的第一个分组</p> : null}
           </section>
           {tags.length ? (
-            <section aria-label="标签" className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-0.5">
               <SectionLabel>标签</SectionLabel>
-              {(moreTags ? tags : tags.slice(0, 8)).map((entry) => (
-                <button key={entry.name} type="button" onClick={() => wb.browse({ tag: tag === entry.name ? null : entry.name, query: "" })}
-                  aria-current={tag === entry.name && main === "library" ? "page" : undefined}
-                  className={cn("wb-transition flex h-7 w-full items-center gap-2.5 rounded-lg border-0 px-2.5 text-left", tag === entry.name && main === "library" ? "bg-wb-selected" : "bg-transparent hover:bg-wb-hover")}>
-                  <span aria-hidden="true" className={cn("h-2.5 w-2.5 shrink-0 rounded-full", TAG_DOT[tagColorSlot(entry.name)])} />
-                  <span className="flex-1 wb-truncate">{entry.name}</span>
-                  <span className="wb-numeric text-[0.75rem] text-wb-text-3">{entry.count}</span>
-                </button>
-              ))}
-              {tags.length > 8 ? <button type="button" aria-expanded={moreTags} onClick={() => setMoreTags(!moreTags)} className="wb-transition h-7 rounded-lg border-0 bg-transparent px-2.5 text-left text-[0.75rem] text-wb-text-3 hover:bg-wb-hover">{moreTags ? "收起" : `更多（${tags.length - 8}）`}</button> : null}
-            </section>
+              <TagList tags={tags} />
+            </div>
           ) : null}
         </> : null}
       </div>

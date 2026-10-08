@@ -35,6 +35,7 @@
   --color-wb-panel-2: var(--wb-panel-2);
   --color-wb-panel-3: var(--wb-panel-3);
   --color-wb-hover: var(--wb-hover);
+  --color-wb-zebra: var(--wb-zebra);
   --color-wb-selected: var(--wb-selected);
   --color-wb-fill: var(--wb-fill);
   --color-wb-sticky: var(--wb-sticky);
@@ -310,6 +311,11 @@
   z-index: 31;
   height: 14px;
   inset: 0 0 auto;
+}
+.pr-reader[data-fullscreen="true"] {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
 }
 .pr-reader[data-focus="true"] .pr-toolbar {
   position: absolute;

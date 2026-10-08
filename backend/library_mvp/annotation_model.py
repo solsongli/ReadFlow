@@ -1,7 +1,7 @@
 """ReadFlow annotation validation and presentation, independent of reader implementations."""
 import math
 
-from .store import StoreError, text
+from .store import StoreError, strings, text
 
 COLORS = ('yellow', 'blue', 'green', 'red', 'purple')
 TYPES = ('highlight', 'underline', 'sticky', 'region', 'ink')
@@ -51,7 +51,9 @@ def validate(data, attachment, *, migrated=False):
         'attachment_id': attachment['id'], 'page_index': page,
         'type': data['type'], 'color': data['color'], 'rects': rects, 'ink': ink,
         'quote': text(data.get('quote', ''), 'quote', 100000),
-        'note': text(data.get('note', ''), 'body', 100000), 'width': width,
+        'note': text(data.get('note', ''), 'body', 100000),
+        'tags': strings(data.get('tags', []), 'annotation tags', maximum=50, length=60),
+        'width': width,
     }
 
 
@@ -68,6 +70,7 @@ def note_view(row):
         'body': row['note'], 'color': row['color'], 'kind': 'annotation',
         'created_at': row['created_at'], 'updated_at': row['updated_at'],
         'annotation_type': row['type'], 'image_ref': row['image_ref'],
+        'tags': row.get('tags', []),
     }
 
 
@@ -86,4 +89,6 @@ def markdown(rows, labels, citation):
                 sections.append(f"![区域截图](/api/research/annotations/{row['id']}/image)")
             if row['note']:
                 sections.append(row['note'])
+            if row.get('tags'):
+                sections.append('标签：' + '、'.join(row['tags']))
     return '\n\n'.join([*sections, '---', citation]) + '\n'

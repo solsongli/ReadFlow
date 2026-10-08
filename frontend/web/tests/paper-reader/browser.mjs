@@ -147,6 +147,10 @@ export async function readerBrowser(query = "", fixture = "tests/paper-reader/fi
         });
       if (p === "/fixture.js")
         return route.fulfill({ contentType: "text/javascript", body: built.outputFiles[0].text });
+      if (p === "/api/research/workbench/annotation-tags") {
+        const tags = [...new Set(annotations.flatMap((row) => row.tags || []))].sort();
+        return route.fulfill({ json: { items: tags.map((name) => ({ name, count: 1 })) } });
+      }
       if (/^\/api\/research\/workbench\/items\/[^/]+\/annotations(?:\/[^/]+)?$/.test(p)) {
         const method = route.request().method(),
           body = ["POST", "PATCH"].includes(method) ? route.request().postDataJSON() : {};

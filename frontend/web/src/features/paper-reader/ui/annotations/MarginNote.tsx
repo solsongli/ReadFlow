@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { MessageSquare } from "lucide-react";
 import type { Annotation } from "../../domain/annotations/types.js";
 import type { AnnotationController } from "../../state/annotations/useAnnotations.js";
+import { AnnotationTags } from "./Tags.js";
+import { annotationDragPayload } from "../../domain/annotations/citation.js";
 export function MarginNote({
   row,
   controller,
@@ -25,9 +27,16 @@ export function MarginNote({
   };
   return (
     <article
+      draggable
       data-margin-note={row.id}
       className="space-y-2 p-2.5"
       onClick={(event) => event.stopPropagation()}
+      onDragStart={(event) => {
+        const payload = annotationDragPayload(row, controller.citation(row));
+        event.dataTransfer.setData("application/x-readflow-canvas", payload.canvas);
+        event.dataTransfer.setData("text/plain", payload.plain);
+        event.dataTransfer.setData("text/html", payload.html);
+      }}
     >
       <button
         type="button"
@@ -58,6 +67,7 @@ export function MarginNote({
         }}
         className="w-full resize-y border-0 bg-transparent p-0 text-[0.8125rem] leading-snug text-wb-text"
       />
+      <AnnotationTags row={row} controller={controller} />
       {saving ? (
         <span role="status" className="text-xs text-wb-text-3">
           正在保存…

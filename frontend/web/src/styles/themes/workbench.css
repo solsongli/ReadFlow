@@ -37,6 +37,7 @@
   --wb-panel-2: #f5f5f7;
   --wb-panel-3: #f5f5f7;
   --wb-hover: rgba(118, 118, 128, 0.08);
+  --wb-zebra: rgba(118, 118, 128, 0.055);
   --wb-selected: rgba(0, 0, 0, 0.065);
   --wb-fill: rgba(118, 118, 128, 0.12);
   --wb-sticky: rgba(245, 245, 247, 0.88);
@@ -106,6 +107,7 @@
   --wb-panel-2: #2c2c2e;
   --wb-panel-3: #2c2c2e;
   --wb-hover: rgba(118, 118, 128, 0.16);
+  --wb-zebra: rgba(255, 255, 255, 0.035);
   --wb-selected: rgba(255, 255, 255, 0.1);
   --wb-fill: rgba(118, 118, 128, 0.24);
   --wb-sticky: rgba(44, 44, 46, 0.88);
@@ -176,6 +178,7 @@
     --wb-panel-2: #2c2c2e;
     --wb-panel-3: #2c2c2e;
     --wb-hover: rgba(118, 118, 128, 0.16);
+    --wb-zebra: rgba(255, 255, 255, 0.035);
     --wb-selected: rgba(255, 255, 255, 0.1);
     --wb-fill: rgba(118, 118, 128, 0.24);
     --wb-sticky: rgba(44, 44, 46, 0.88);

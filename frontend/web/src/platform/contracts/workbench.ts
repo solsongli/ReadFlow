@@ -76,6 +76,13 @@ export interface WorkbenchTag {
   count: number;
 }
 
+/** A Zotero-style colored tag: palette slot 1–7 and keyboard position 1–9. */
+export interface TagColor {
+  name: string;
+  color: number;
+  position: number;
+}
+
 export interface WorkbenchCounts {
   all: number;
   unread: number;

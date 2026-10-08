@@ -12,6 +12,7 @@ export function useAnnotations(
   changed: () => void,
   labels: Semantics,
   citation: string,
+  cite: (row: Annotation) => string,
 ) {
   const api = useMemo(() => annotationApi(item), [item]);
   const [rows, setRows] = useState<Annotation[]>([]);
@@ -27,6 +28,9 @@ export function useAnnotations(
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [tagCatalog, setTagCatalog] = useState<string[]>([]);
+  const [marginFollowFilters, setMarginFollowFilters] = useState(false);
+  const [filteredIds, setFilteredIds] = useState<string[] | null>(null);
   const history = useRef<AnnotationHistory>({ past: [], future: [] });
   const current = useRef(rows);
   const locked = useRef(false);
@@ -36,9 +40,10 @@ export function useAnnotations(
   async function load() {
     const version = revision.current;
     try {
-      const values = await api.list();
+      const [values, tags] = await Promise.all([api.list(), api.tags()]);
       if (!locked.current && version === revision.current) {
         setRows(values.filter((row) => row.attachment_id === attachment || !row.attachment_id));
+        setTagCatalog(tags);
       }
       setError("");
     } catch (failure) {
@@ -84,6 +89,8 @@ export function useAnnotations(
         const next = current.current.filter((row) => row.id !== identity);
         if (after) {
           next.push(after);
+          if (after.tags?.length)
+            setTagCatalog((catalog) => [...new Set([...catalog, ...after!.tags])].sort((a, b) => a.localeCompare(b)));
         }
         current.current = next;
         setRows(next);
@@ -123,6 +130,7 @@ export function useAnnotations(
       ink: [],
       width,
       image_ref: "",
+      tags: [],
       created_at: timestamp,
       updated_at: timestamp,
       ...value,
@@ -224,6 +232,7 @@ export function useAnnotations(
     }
   }
   return {
+    item,
     deletion,
     setDeletion,
     confirmDeletion,
@@ -249,6 +258,12 @@ export function useAnnotations(
     error,
     notice,
     setNotice,
+    tagCatalog,
+    marginFollowFilters,
+    setMarginFollowFilters,
+    filteredIds,
+    setFilteredIds,
+    citation: cite,
     create,
     createBatch,
     createLinked,

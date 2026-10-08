@@ -144,8 +144,8 @@ try {
     await screenshot("shortcuts");
     await page.keyboard.press("Escape");
     await page.keyboard.press("Control+k");
-    await page.getByRole("combobox").fill("键盘快捷键");
-    await page.getByRole("combobox").press("Enter");
+    await page.getByRole("dialog", { name: "命令与搜索" }).getByRole("combobox").fill("键盘快捷键");
+    await page.getByRole("dialog", { name: "命令与搜索" }).getByRole("combobox").press("Enter");
     await dialog.waitFor();
     await page.keyboard.press("Escape");
   });

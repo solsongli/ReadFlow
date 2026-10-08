@@ -13,8 +13,8 @@ import {
   moveHistory,
 } from "../domain/navigation.js";
 import type { Mode, Position, ReaderPorts, Reference } from "../domain/types.js";
-import { destination, renderQueue } from "./document.js";
-import { useDocument } from "./useDocument.js";
+import { destination } from "./document.js";
+import { useReaderDocuments } from "./useReaderDocuments.js";
 import { useReadingData } from "./useReadingData.js";
 import { useReaderKeys } from "./useReaderKeys.js";
 import { useHover } from "./useHover.js";
@@ -30,14 +30,11 @@ export function useReaderModel(ports: ReaderPorts) {
     [translatedRetry, setTranslatedRetry] = useState(0);
   const pendingJump = useRef<Position | null>(null);
   const navigationSeen = useRef(ports.navigationKey);
-  const source = useDocument(ports.source.url, ports.source.headers, sourceRetry),
-    translated = useDocument(ports.translated?.url, ports.translated?.headers ?? {}, translatedRetry),
-    compareTranslated = useDocument(
-      ports.compareTranslated?.url,
-      ports.compareTranslated?.headers ?? {},
-      translatedRetry,
-    );
-  const comparison = ports.compareTranslated ? compareTranslated : translated;
+  const { queue, source, translated, comparison } = useReaderDocuments(
+    ports,
+    sourceRetry,
+    translatedRetry,
+  );
   const [zoom, setZoomState] = useState<Zoom>(ports.initialZoom ?? "width"),
     [mode, setMode] = useState<Mode>("source"),
     [focus, setFocus] = useState(false);
@@ -51,11 +48,10 @@ export function useReaderModel(ports: ReaderPorts) {
     [sync, setSync] = useState(true);
   const [position, setPosition] = useState<Position>({ page: ports.resumePage || 1, offset: 0 }),
     [history, setHistory] = useState(initialHistory);
-  const [external, setExternal] = useState<string | null>(null);
+  const positionRef = useRef(position), [external, setExternal] = useState<string | null>(null);
   const [bookmark, setBookmark] = useState<string | null>(null),
     [notice, setNotice] = useState("");
-  const queue = useMemo(renderQueue, []),
-    reading = useReadingData(ports.metadata.id, ports.active);
+  const reading = useReadingData(ports.metadata.id, ports.active);
   const main = mode === "translated" ? translated : source;
   const references = useMemo(() => parseReferences(source.lines), [source.lines]);
   const figures = useMemo(
@@ -95,10 +91,13 @@ export function useReaderModel(ports: ReaderPorts) {
       setMode(target.mode);
       return;
     }
-    const bounded = { ...target, mode, page: correspondingPage(target.page, main.pdf?.numPages ?? 1) };
+    const page = main.pdf ? correspondingPage(target.page, main.pdf.numPages) : Math.max(1, target.page);
+    const bounded = { ...target, mode, page };
     if (record) {
       setHistory((value) => jumpHistory(value, from, bounded));
     }
+    positionRef.current = bounded;
+    if (!main.pdf || !primary.current) pendingJump.current = bounded;
     primary.current?.jump(bounded);
     if (mode === "compare" && (target.other || sync)) {
       secondary.current?.jump(
@@ -156,9 +155,9 @@ export function useReaderModel(ports: ReaderPorts) {
     if (fromSecondary && !sync) {
       return;
     }
-    setPosition(
-      fromSecondary ? { ...value, page: correspondingPage(value.page, source.pdf?.numPages ?? 1) } : value,
-    );
+    const next = fromSecondary ? { ...value, page: correspondingPage(value.page, source.pdf?.numPages ?? 1) } : value;
+    positionRef.current = next;
+    setPosition(next);
     if (source.pdf) {
       latest.current.onPageChange?.(Math.min(value.page, source.pdf.numPages));
       pendingProgress.current = {
@@ -191,6 +190,7 @@ export function useReaderModel(ports: ReaderPorts) {
     }
     const changed = navigationSeen.current !== ports.navigationKey;
     navigationSeen.current = ports.navigationKey;
+    if (pendingJump.current) return;
     if (changed) {
       navigate({ page: ports.resumePage || 1, offset: 0, mode: "source" });
     } else if (!sourceRetry) {
@@ -201,7 +201,7 @@ export function useReaderModel(ports: ReaderPorts) {
     if (!ports.active) {
       return;
     }
-    const target = pendingJump.current ?? position;
+    const target = pendingJump.current ?? positionRef.current;
     primary.current?.jump(target);
     secondary.current?.jump(
       target.other ?? { ...target, page: correspondingPage(target.page, comparison.pdf?.numPages ?? 1) },

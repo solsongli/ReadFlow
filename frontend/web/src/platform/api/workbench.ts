@@ -1,4 +1,4 @@
-import type { TranslationResult } from "@/platform/contracts/workbench.js";
+import type { TagColor, TranslationResult } from "@/platform/contracts/workbench.js";
 // ReadFlow 工作台 HTTP 客户端。分组即后端 collections（多对多），因此新建/改名沿用 /collections，
 // 成员增减与删除走 /workbench/groups/*。条目元数据、上传、导入、原阅读器沿用 researchLibraryApi。
 import { buildApiHeaders, buildApiUrl } from "@/platform/config/runtime.js";
@@ -95,6 +95,14 @@ export const workbenchApi = {
   renameGroup: (groupId: string, name: string) => request<Collection>("/collections/" + id(groupId), send({ name }, "PATCH")),
   moveGroup: (groupId: string, parentId: string | null) =>
     request<Collection>("/collections/" + id(groupId), send({ parent_id: parentId }, "PATCH")),
+  tagColors: async () => (await request<{ items: TagColor[] }>("/workbench/tags/colors")).items,
+  setTagColor: async (name: string, color: number, position?: number) =>
+    (await request<{ items: TagColor[] }>("/workbench/tags/colors/" + id(name), send(position ? { color, position } : { color }, "PUT"))).items,
+  clearTagColor: async (name: string) => (await request<{ items: TagColor[] }>("/workbench/tags/colors/" + id(name), { method: "DELETE" })).items,
+  applyTags: (itemIds: string[], add: string[], remove: string[] = []) =>
+    request<{ updated: number }>("/workbench/tags/apply", send({ item_ids: itemIds, add, remove })),
+  renameTag: (from: string, to: string) => request<{ updated: number; colors: TagColor[] }>("/workbench/tags/rename", send({ from, to })),
+  deleteTag: (name: string) => request<{ updated: number; colors: TagColor[] }>("/workbench/tags/delete", send({ name })),
   item: researchLibraryApi.item,
   updateItem: researchLibraryApi.updateItem,
   upload: researchLibraryApi.upload,

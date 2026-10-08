@@ -11,6 +11,7 @@ import {
 } from "../../domain/annotations/types.js";
 import type { ReaderPorts } from "../../domain/types.js";
 import type { useReaderModel } from "../useReaderModel.js";
+import { annotationCitation } from "../../domain/annotations/citation.js";
 
 export function useAnnotationReader(ports: ReaderPorts, model: ReturnType<typeof useReaderModel>) {
   const labels = ports.annotationSemantics ?? DEFAULT_SEMANTICS;
@@ -23,6 +24,7 @@ export function useAnnotationReader(ports: ReaderPorts, model: ReturnType<typeof
     ports.metadata.citekey
       ? `@${ports.metadata.citekey} · ${ports.metadata.title}`
       : ports.quote("", 1, "gbt"),
+    (row) => annotationCitation(row, ports.metadata.authors, ports.metadata.year),
   );
   const { root, mode, jump, setRight, setFocus } = model;
   const cachedSelection = useRef<ReturnType<typeof sourceSelection>>([]);

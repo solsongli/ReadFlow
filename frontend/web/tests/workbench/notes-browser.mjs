@@ -56,6 +56,7 @@ export async function notesBrowser() {
     const url = new URL(route.request().url()),
       path = url.pathname;
     if (await todos.handle(route)) return;
+    if (path === "/api/research/workbench/tags/colors") return route.fulfill({ contentType: "application/json", body: JSON.stringify({ items: [] }) });
     if (url.origin !== "http://notes.test") {
       unexpected.push(url.origin);
       return route.abort();

@@ -54,6 +54,16 @@ function fixture() {
   ];
   const tags = ["待精读", "方法", "综述", "安全", "机器人", "视觉", "语言", "行动", "数据集", "基准"].map((name) => ({ name, count: 1 }));
   if (new URL(location.href).searchParams.has("empty")) { groups.splice(0); tags.splice(0); }
+  const tagColors: { name: string; color: number; position: number }[] = [];
+  // Keep the sidebar list in step with row tags once papers are tagged in the UI.
+  const syncTags = () => {
+    const counts = new Map<string, number>();
+    for (const r of rows) if (!r.deleted_at) for (const t of r.tags) counts.set(t, (counts.get(t) ?? 0) + 1);
+    const seeded = new Set(tags.map((t) => t.name));
+    for (const t of tags) t.count = counts.get(t.name) ?? 1;
+    for (const [name, count] of counts) if (!seeded.has(name)) tags.push({ name, count });
+    tags.splice(0, tags.length, ...tags.filter((t) => counts.has(t.name) || seeded.has(t.name)));
+  };
   const jobs = [];
   const calls = [];
   const item = (id) => ({ ...rows.find((r) => r.id === id), attachments: [{ id: rows.find((r) => r.id === id)?.attachment_id }], notes: [], abstract: "Vision-language-action models (VLAs) show potential as generalist robot policies. However, these models pose extreme safety challenges during real-world deployment, including the risk of harm to the environment, the robot itself, and humans. How can safety constraints be explicitly integrated into VLAs without loss of performance? ".repeat(3) });
@@ -119,6 +129,33 @@ function fixture() {
     async nativeReader(id) { return { attachment: { reader_url: `/reader.html?attachment=${id}` } }; },
     async markOpened(id) { rows.find((r) => r.id === id).last_opened_at = "2026-10-01"; return {}; },
     async exportItem(id, format) { calls.push({ method: "export", id, format }); },
+    // Zotero-style tags: in-memory colors plus batch apply / rename / delete on fixture rows.
+    async tagColors() { return structuredClone(tagColors); },
+    async setTagColor(name, color, position) {
+      const current = tagColors.find((t) => t.name === name);
+      const slot = position ?? current?.position ?? [1, 2, 3, 4, 5, 6, 7, 8, 9].find((p) => !tagColors.some((t) => t.position === p));
+      const owner = tagColors.find((t) => t.position === slot && t.name !== name);
+      if (owner) owner.position = current?.position ?? [1, 2, 3, 4, 5, 6, 7, 8, 9].find((p) => p !== slot && !tagColors.some((t) => t.position === p));
+      if (current) Object.assign(current, { color, position: slot }); else tagColors.push({ name, color, position: slot });
+      tagColors.sort((a, b) => a.position - b.position);
+      return structuredClone(tagColors);
+    },
+    async clearTagColor(name) { tagColors.splice(0, tagColors.length, ...tagColors.filter((t) => t.name !== name)); return structuredClone(tagColors); },
+    async applyTags(ids, add, remove = []) {
+      calls.push({ method: "applyTags", ids, add, remove });
+      for (const r of rows) if (ids.includes(r.id)) r.tags = [...r.tags.filter((t) => !remove.includes(t)), ...add.filter((t) => !r.tags.includes(t))];
+      syncTags(); return { updated: ids.length };
+    },
+    async renameTag(from, to) {
+      for (const r of rows) r.tags = [...new Set(r.tags.map((t) => (t === from ? to : t)))];
+      for (const t of tagColors) if (t.name === from) t.name = to;
+      syncTags(); return { updated: 1, colors: structuredClone(tagColors) };
+    },
+    async deleteTag(name) {
+      for (const r of rows) r.tags = r.tags.filter((t) => t !== name);
+      tagColors.splice(0, tagColors.length, ...tagColors.filter((t) => t.name !== name));
+      syncTags(); return { updated: 1, colors: structuredClone(tagColors) };
+    },
     async previewImport() { return { plan_hash: "fixture", counts: { items: 1, collections: 0, tags: 0, notes: 0, annotations: 0 }, warnings: [] }; },
     async commitImport() { return { created_items: 1, updated_items: 0 }; },
     async upload(file) { calls.push({ method: "upload", name: file.name }); if (!rows.length) rows.push({ ...emptySeed, title: file.name, translation: { status: "none" } }); return { item: rows[0] }; },
@@ -133,7 +170,7 @@ function fixture() {
     };
   } });
   wb.store.actions.patch({ main: dashboard ? "desk" : "library", expandedGroups: ["vla", "thesis"] });
-  Object.assign(window, { fixture: { wb, rows, groups, jobs, calls, settings } });
+  Object.assign(window, { fixture: { wb, rows, groups, jobs, calls, settings, tagColors } });
   createRoot(document.getElementById("workbench-root")!).render(<WorkbenchProvider workbench={wb}><WorkbenchShell /></WorkbenchProvider>);
 }
 fixture();

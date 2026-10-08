@@ -79,9 +79,11 @@ try {
   });
   await check("tags reveal beyond eight and fold back", async () => {
     const tags = page.getByRole("region", { name: "标签", exact: true });
-    assert.equal(await tags.getByRole("button").count(), 9);
+    // Each tag row has its filter button plus a "⋯" options button (colour, key, rename, delete).
+    const rows = () => tags.getByRole("button", { name: /^标签「.+」选项$/ }).count();
+    assert.equal(await rows(), 8);
     await button("更多（2）").click();
-    assert.equal(await tags.getByRole("button").count(), 11);
+    assert.equal(await rows(), 10);
     await button("收起").click();
   });
   await check("live search keeps group and clears all filters", async () => {
@@ -208,15 +210,15 @@ try {
   await check("command palette focus, Escape and slash search", async () => {
     await page.keyboard.press("Control+k");
     await page.getByRole("dialog", { name: "命令与搜索" }).waitFor();
-    await page.getByRole("combobox").fill("打开书桌");
-    await page.getByRole("combobox").press("Enter");
+    await page.getByRole("dialog", { name: "命令与搜索" }).getByRole("combobox").fill("打开书桌");
+    await page.getByRole("dialog", { name: "命令与搜索" }).getByRole("combobox").press("Enter");
     await page.getByRole("main", { name: "书桌" }).waitFor();
     await page.keyboard.press("Control+2");
     await page.keyboard.press("/");
     assert.equal(await page.getByRole("searchbox").evaluate((el) => el === document.activeElement), true);
     await page.getByRole("searchbox").press("Escape");
     await page.keyboard.press("Control+k");
-    await page.getByRole("combobox").press("Shift+Tab");
+    await page.getByRole("dialog", { name: "命令与搜索" }).getByRole("combobox").press("Shift+Tab");
     assert.equal(await page.getByRole("dialog", { name: "命令与搜索" }).evaluate((el) => el.contains(document.activeElement)), true);
     await page.keyboard.press("Escape");
   });

@@ -91,14 +91,21 @@ export async function pageLines(page: PDFPageProxy): Promise<TextLine[]> {
 /** Per-reader bounded queue; canceled/offscreen work is skipped before acquiring a canvas. */
 export function renderQueue() {
   let running = 0,
+    background = false,
+    backgroundStarted = 0,
+    backgroundCompleted = 0,
     maximum = 0,
     completed = 0;
-  const pending: Array<() => Promise<void>> = [];
+  const pending: Array<{ work: () => Promise<void>; priority: number; order: number }> = [];
+  let order = 0;
   const drain = () => {
-    while (running < 2 && pending.length) {
+    // Keep one CPU core available for scrolling, selection and React commits.
+    // Stale/offscreen jobs leave the queue quickly through their `gone` guard.
+    while (running < 1 && pending.length) {
       running++;
       maximum = Math.max(maximum, running);
-      void pending.shift()!().finally(() => {
+      pending.sort((left, right) => right.priority - left.priority || left.order - right.order);
+      void pending.shift()!.work().finally(() => {
         running--;
         completed++;
         drain();
@@ -106,10 +113,31 @@ export function renderQueue() {
     }
   };
   return {
-    run: (work: () => Promise<void>) => {
-      pending.push(work);
+    run: (work: () => Promise<void>, priority = 1) => {
+      pending.push({ work, priority, order: order++ });
       drain();
     },
-    metrics: () => ({ running, queued: pending.length, maximum, completed }),
+    acquireBackground: () => {
+      if (background || running || pending.length) return null;
+      background = true;
+      backgroundStarted++;
+      let released = false;
+      return () => {
+        if (released) return;
+        released = true;
+        background = false;
+        backgroundCompleted++;
+        drain();
+      };
+    },
+    metrics: () => ({
+      running,
+      queued: pending.length,
+      background,
+      backgroundStarted,
+      backgroundCompleted,
+      maximum,
+      completed,
+    }),
   };
 }

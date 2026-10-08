@@ -29,6 +29,8 @@ export function NavigationPanel({
   resultIndex,
   selectResult,
   indexed,
+  indexedPages,
+  totalPages,
   compare,
   searchScope,
   setSearchScope,
@@ -51,6 +53,8 @@ export function NavigationPanel({
   resultIndex: number;
   selectResult: (index: number) => void;
   indexed: boolean;
+  indexedPages: number;
+  totalPages: number;
   compare: boolean;
   searchScope: "source" | "translated";
   setSearchScope: (scope: "source" | "translated") => void;
@@ -221,7 +225,8 @@ export function NavigationPanel({
             <p aria-live="polite" className="text-[0.75rem] text-wb-text-3">
               {query.trim() && indexed && !hits.length
                 ? "无结果"
-                : `${resultIndex >= 0 ? resultIndex + 1 : 0} / ${hits.length} 处${indexed ? "" : " · 索引中"}`}
+                : `${resultIndex >= 0 ? resultIndex + 1 : 0} / ${hits.length} 处`}
+              {!indexed ? ` · 正在建立索引… ${indexedPages}/${totalPages}` : ""}
             </p>
             {hits.map((hit, index) => (
               <Button

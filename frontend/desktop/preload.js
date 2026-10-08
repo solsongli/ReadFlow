@@ -39,6 +39,15 @@ contextBridge.exposeInMainWorld("retainPdfDesktop", {
   restartReadFlow() {
     return ipcRenderer.invoke("desktop:invoke", "restart_readflow");
   },
+  setFullScreen(enabled) {
+    return ipcRenderer.invoke("desktop:invoke", "set_fullscreen", { enabled: !!enabled });
+  },
+  onFullScreenChange(callback) {
+    if (typeof callback !== "function") return () => {};
+    const listener = (_event, enabled) => callback(!!enabled);
+    ipcRenderer.on("desktop:fullscreen-changed", listener);
+    return () => ipcRenderer.removeListener("desktop:fullscreen-changed", listener);
+  },
   invoke(command, args = {}) {
     return ipcRenderer.invoke("desktop:invoke", command, args);
   },

@@ -95,10 +95,10 @@ export function AnnotationPopup({
           size="sm"
           disabled={!row.quote}
           onClick={() => {
-            void navigator.clipboard.writeText(row.quote).catch(() => c.setNotice("复制失败，请重试。"));
+            void navigator.clipboard.writeText(c.citation(row)).catch(() => c.setNotice("复制失败，请重试。"));
           }}
         >
-          复制引文
+          复制为引文
         </Button>
         <Button size="sm" onClick={() => setConfirm(true)}>
           删除

@@ -161,6 +161,8 @@ function createDesktopWindows(app, options = {}) {
     // Keep legacy page titles from overriding the desktop product identity.
     installRendererZoomShortcuts(mainWindow.webContents);
     mainWindow.on("page-title-updated", (event) => event.preventDefault());
+    mainWindow.on("enter-full-screen", () => mainWindow?.webContents.send("desktop:fullscreen-changed", true));
+    mainWindow.on("leave-full-screen", () => mainWindow?.webContents.send("desktop:fullscreen-changed", false));
     const startPage = resolveStartPage({ frontendRoot, isPackaged: app.isPackaged, startPage: options.startPage });
     const indexPath = path.join(frontendRoot, startPage);
     const frontendBaseUrl = typeof options.getFrontendBaseUrl === "function"
@@ -275,6 +277,14 @@ function createDesktopWindows(app, options = {}) {
     closeToTrayHintShown = !!value;
   }
 
+  function setMainWindowFullScreen(enabled) {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      throw new Error("ReadFlow main window is unavailable");
+    }
+    mainWindow.setFullScreen(Boolean(enabled));
+    return mainWindow.isFullScreen();
+  }
+
   function resolveFrontendRoot() {
     const generatedFrontendRoot = path.join(appRoot, "app", "frontend");
     if (app.isPackaged) {
@@ -297,6 +307,7 @@ function createDesktopWindows(app, options = {}) {
     resolveFrontendRoot,
     resolveWindowIcon,
     setCloseToTrayHintShown,
+    setMainWindowFullScreen,
     showExistingDesktopWindow,
     showMainWindow,
   };

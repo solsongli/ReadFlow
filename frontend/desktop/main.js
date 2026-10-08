@@ -204,6 +204,7 @@ const {
   resolveFrontendRoot,
   resolveWindowIcon,
   setCloseToTrayHintShown,
+  setMainWindowFullScreen,
   showExistingDesktopWindow,
   showMainWindow,
 } = desktopWindows;
@@ -706,6 +707,7 @@ ipcMain.handle("desktop:invoke", async (_event, command, args = {}) => {
     case "load_connector_settings": return connectorSettings.preferences();
     case "save_connector_settings": return connectorSettings.save(args.enabled);
     case "restart_readflow": connectorSettings.restart(); return { ok: true };
+    case "set_fullscreen": return { fullscreen: setMainWindowFullScreen(args.enabled) };
     case "load_desktop_config": {
       const config = loadDesktopConfig();
       return desktopConfigResponse(config);

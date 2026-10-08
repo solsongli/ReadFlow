@@ -16,6 +16,7 @@ test("window, tray and load/crash dialogs share the brand without launching Elec
   fs.writeFileSync(path.join(root, "app/frontend/workbench.html"), "fixture");
   let window;
   const errors = [];
+  const messages = [];
   class BrowserWindow extends EventEmitter {
     constructor(options) {
       super();
@@ -23,8 +24,13 @@ test("window, tray and load/crash dialogs share the brand without launching Elec
       this.options = options;
       this.webContents = new EventEmitter();
       this.webContents.setWindowOpenHandler = () => {};
+      this.webContents.send = (...args) => messages.push(args);
+      this.fullscreen = false;
     }
     loadURL(url) { this.url = url; }
+    isDestroyed() { return false; }
+    setFullScreen(value) { this.fullscreen = value; }
+    isFullScreen() { return this.fullscreen; }
   }
   class Tray extends EventEmitter {
     setToolTip(value) { this.tooltip = value; }
@@ -47,6 +53,12 @@ test("window, tray and load/crash dialogs share the brand without launching Elec
   assert.equal(window.options.title, "ReadFlow");
   assert.equal(window.options.webPreferences.additionalArguments[0], "--readflow-app-version=0.9.0");
   assert.equal(window.url, "http://127.0.0.1:40001/workbench.html");
+  assert.equal(desktop.setMainWindowFullScreen(true), true);
+  window.emit("enter-full-screen");
+  assert.deepEqual(messages, [["desktop:fullscreen-changed", true]]);
+  assert.equal(desktop.setMainWindowFullScreen(false), false);
+  window.emit("leave-full-screen");
+  assert.deepEqual(messages.at(-1), ["desktop:fullscreen-changed", false]);
   let prevented = false;
   window.emit("page-title-updated", { preventDefault() { prevented = true; } }, "Legacy title");
   assert.equal(prevented, true);

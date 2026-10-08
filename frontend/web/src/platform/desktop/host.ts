@@ -43,6 +43,8 @@ export interface DesktopBridge {
   loadDesktopConfig?: () => DesktopIpcResult;
   saveDesktopConfig?: (payload?: DesktopConfigPayload) => DesktopIpcResult;
   onStartupProgress?: (callback: (event: unknown) => void) => () => void;
+  setFullScreen?: (enabled: boolean) => DesktopIpcResult;
+  onFullScreenChange?: (callback: (enabled: boolean) => void) => () => void;
   platform?: string;
   [key: string]: unknown;
 }
@@ -53,6 +55,8 @@ export interface DesktopHost {
   loadDesktopConfig(): DesktopIpcResult;
   saveDesktopConfig(payload?: DesktopConfigPayload): DesktopIpcResult;
   openOutputDirectory(): DesktopIpcResult;
+  setFullScreen(enabled: boolean): DesktopIpcResult;
+  onFullScreenChange(callback: (enabled: boolean) => void): () => void;
   onStartupProgress(callback: (event: unknown) => void): () => void;
   platform: string;
 }
@@ -113,6 +117,18 @@ function resolveDesktopHost(): DesktopHost | null {
     },
     openOutputDirectory() {
       return invokeAdapter!.invoke("open_output_directory");
+    },
+    setFullScreen(enabled: boolean) {
+      if (preferredBridge && typeof preferredBridge.setFullScreen === "function") {
+        return preferredBridge.setFullScreen(enabled);
+      }
+      return invokeAdapter!.invoke("set_fullscreen", { enabled });
+    },
+    onFullScreenChange(callback: (enabled: boolean) => void) {
+      if (preferredBridge && typeof preferredBridge.onFullScreenChange === "function") {
+        return preferredBridge.onFullScreenChange(callback);
+      }
+      return () => {};
     },
     onStartupProgress(callback: (event: unknown) => void) {
       if (preferredBridge && typeof preferredBridge.onStartupProgress === "function") {

@@ -1,6 +1,7 @@
 """Synthetic R2 CRUD, migration, image lifecycle and ReadFlow count integration."""
 import base64
 import json
+import sqlite3
 from pathlib import Path
 import tempfile
 import unittest
@@ -39,8 +40,12 @@ class AnnotationTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_crud_scope_validation_and_note_workspace_edits(self):
         row = await self.request('POST', self.root, self.payload())
-        updated = await self.request('PATCH', self.root + '/' + row['id'], {'color': 'blue', 'note': 'Changed'})
+        updated = await self.request(
+            'PATCH', self.root + '/' + row['id'],
+            {'color': 'blue', 'note': 'Changed', 'tags': ['待引用', '综述']},
+        )
         self.assertEqual(updated['color'], 'blue')
+        self.assertEqual(updated['tags'], ['待引用', '综述'])
         self.assertEqual((await self.request('GET', self.root))['items'][0]['note'], 'Changed')
         await self.request('PATCH', '/api/research/notes/' + row['id'], {'body': 'From Notes'})
         self.assertEqual((await self.request('GET', self.root))['items'][0]['note'], 'From Notes')
@@ -53,6 +58,19 @@ class AnnotationTests(unittest.IsolatedAsyncioTestCase):
         await self.request('DELETE', self.root + '/' + row['id'])
         await self.request('DELETE', self.root + '/' + row['id'])
         self.assertEqual((await self.request('GET', self.root))['items'], [])
+
+    async def test_annotation_tag_validation_and_global_catalog(self):
+        first = await self.request('POST', self.root, {**self.payload(), 'tags': ['方法', '待引用', '方法']})
+        second = await self.request('POST', self.root, {**self.payload(), 'tags': ['方法', '复现']})
+        self.assertEqual(first['tags'], ['方法', '待引用'])
+        tags = (await self.request('GET', '/api/research/workbench/annotation-tags'))['items']
+        self.assertEqual(tags, [
+            {'name': '复现', 'count': 1},
+            {'name': '待引用', 'count': 1},
+            {'name': '方法', 'count': 2},
+        ])
+        invalid = await self.client.patch(self.root + '/' + second['id'], json={'tags': [1]})
+        self.assertEqual(invalid.status_code, 400)
 
     async def test_region_image_lifecycle_and_restore(self):
         pix = pymupdf.Pixmap(pymupdf.csRGB, (0, 0, 20, 20), False)
@@ -140,3 +158,35 @@ class AnnotationTests(unittest.IsolatedAsyncioTestCase):
         updated = await self.request('PATCH', self.root + '/' + note['id'], {'note': 'Edited', 'color': 'green'})
         self.assertEqual(updated['note'], 'Edited')
         self.assertEqual(updated['rects'], [])
+
+
+class AnnotationSchemaMigrationTests(unittest.TestCase):
+    def test_existing_annotation_table_gains_tags_without_losing_rows(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder)
+            (path / 'research-library.json').write_text(
+                '{"application":"retainpdf-research-library","schema_version":1}'
+            )
+            db = sqlite3.connect(path / 'library.sqlite3')
+            db.execute(
+                'CREATE TABLE annotations ('
+                'id TEXT PRIMARY KEY,item_id TEXT NOT NULL,attachment_id TEXT,page_index INTEGER NOT NULL,'
+                'type TEXT NOT NULL,color TEXT NOT NULL,rects TEXT NOT NULL,quote TEXT NOT NULL,'
+                'note TEXT NOT NULL,ink TEXT NOT NULL,width INTEGER NOT NULL,image_ref TEXT NOT NULL,'
+                'created_at TEXT NOT NULL,updated_at TEXT NOT NULL,source_id TEXT UNIQUE)'
+            )
+            db.execute(
+                'INSERT INTO annotations VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                ('legacy', 'paper', None, 0, 'highlight', 'yellow', '[]', 'quote', 'note', '[]', 2, '',
+                 '2026-10-01', '2026-10-01', None),
+            )
+            db.commit()
+            db.close()
+            app = create_app(path)
+            try:
+                row = app.state.store.annotations.get('legacy')
+                self.assertEqual(row['tags'], [])
+                self.assertIn('tags', {entry['name'] for entry in app.state.store.db.execute(
+                    'PRAGMA table_info(annotations)')})
+            finally:
+                app.state.store.close()

@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS annotations (
  id TEXT PRIMARY KEY, item_id TEXT NOT NULL REFERENCES items(id) ON DELETE CASCADE,
  attachment_id TEXT REFERENCES attachments(id), page_index INTEGER NOT NULL,
  type TEXT NOT NULL, color TEXT NOT NULL, rects TEXT NOT NULL, quote TEXT NOT NULL,
- note TEXT NOT NULL, ink TEXT NOT NULL, width INTEGER NOT NULL, image_ref TEXT NOT NULL,
+ note TEXT NOT NULL, tags TEXT NOT NULL DEFAULT '[]', ink TEXT NOT NULL,
+ width INTEGER NOT NULL, image_ref TEXT NOT NULL,
  created_at TEXT NOT NULL, updated_at TEXT NOT NULL, source_id TEXT UNIQUE
 );
 CREATE INDEX IF NOT EXISTS annotations_item_page ON annotations(item_id,page_index);
@@ -35,6 +36,9 @@ class Annotations:
         self.store = store
         with store.lock:
             store.db.executescript(SCHEMA)
+            columns = {row['name'] for row in store.db.execute('PRAGMA table_info(annotations)')}
+            if 'tags' not in columns:
+                store.db.execute("ALTER TABLE annotations ADD COLUMN tags TEXT NOT NULL DEFAULT '[]'")
         self.root = store.data_root / ANNOTATION_IMAGES
         if self.root.is_symlink():
             raise StoreError('UNSAFE_DATA_ROOT', '批注图片目录不能是符号链接。')
@@ -49,6 +53,7 @@ class Annotations:
         result = dict(row)
         result['rects'] = json.loads(result['rects'])
         result['ink'] = json.loads(result['ink'])
+        result['tags'] = json.loads(result['tags'])
         return result
 
     def get(self, identity):
@@ -68,6 +73,18 @@ class Annotations:
                 sql += ' WHERE item_id=?'
                 args = (item_id,)
             return [self.decode(row) for row in self.store.db.execute(sql + ' ORDER BY page_index,created_at', args)]
+
+    def tags(self):
+        counts = {}
+        with self.store.lock:
+            rows = self.store.db.execute(
+                'SELECT a.tags FROM annotations a JOIN items i ON i.id=a.item_id '
+                'LEFT JOIN item_state s ON s.item_id=i.id WHERE s.deleted_at IS NULL'
+            )
+            for row in rows:
+                for tag in json.loads(row['tags']):
+                    counts[tag] = counts.get(tag, 0) + 1
+        return [{'name': name, 'count': count} for name, count in sorted(counts.items(), key=lambda pair: pair[0].casefold())]
 
     def image_path(self, identity):
         row = self.get(identity)
@@ -150,7 +167,12 @@ class Annotations:
             with self.store.transaction():
                 if not old and self.store.db.execute('SELECT 1 FROM annotations WHERE id=?', (identity,)).fetchone():
                     raise StoreError('ANNOTATION_CONFLICT', '批注标识已存在。', 409)
-                record = {**result, 'rects': json.dumps(value['rects']), 'ink': json.dumps(value['ink'])}
+                record = {
+                    **result,
+                    'rects': json.dumps(value['rects']),
+                    'tags': json.dumps(value['tags'], ensure_ascii=False),
+                    'ink': json.dumps(value['ink']),
+                }
                 if old:
                     fields = [key for key in record if key != 'id']
                     self.store.db.execute(

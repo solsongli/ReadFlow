@@ -28,6 +28,7 @@ export interface Annotation {
   rects: Rect[];
   quote: string;
   note: string;
+  tags: string[];
   ink: Point[];
   width: 1 | 2 | 4;
   image_ref: string;

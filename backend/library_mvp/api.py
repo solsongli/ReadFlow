@@ -266,6 +266,8 @@ def create_app(data_root: Path, *, bridge: NativeBridge | None = None,
     register_flashcard_routes(app, store, json_body)
     from .todo_routes import register_todo_routes
     register_todo_routes(app, store, json_body)
+    from .tag_catalog import register_tag_routes
+    register_tag_routes(app, store, json_body)
     from .reader_assistance import register_reader_assistance
     register_reader_assistance(app, store, json_body, allowed=allow_external_models)
     from .paper_blocks_routes import register_paper_blocks

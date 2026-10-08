@@ -23,6 +23,7 @@ export function ItemList() {
   const view = useWb((state) => state.view);
   const query = useWb((state) => state.query);
   const tag = useWb((state) => state.tag);
+  const tagColors = useWb((state) => state.tagColors);
   const typography = useWb((state) => JSON.stringify([state.uiFont, state.customFont, state.textScale]));
   const { metrics, measurement } = useListMetrics(typography, !result || Boolean(result.items.length));
   const [collapsed, setCollapsed] = useState<string[]>([]);
@@ -77,7 +78,7 @@ export function ItemList() {
           {entry.collapsed ? <ChevronRight size={12} aria-hidden="true" /> : <ChevronDown size={12} aria-hidden="true" />}<span className="wb-truncate font-semibold">{entry.label}</span><span className="shrink-0">{entry.count}</span>
         </button>;
         return <div key={entry.key} data-row={entry.row.id} className="absolute left-0 w-full" style={{ top: entry.top, height: entry.height }}>
-          <ItemRow id={`wb-row-${index}`} position={entry.position} total={list.order.length} row={entry.row} density={density} selected={selection.has(entry.row.id)} selection={selectedIds} onSelect={onSelect} onOpen={onOpen} />
+          <ItemRow id={`wb-row-${index}`} position={entry.position} total={list.order.length} row={entry.row} density={density} selected={selection.has(entry.row.id)} selection={selectedIds} onSelect={onSelect} onOpen={onOpen} colors={tagColors} />
         </div>;
       })}
     </div>

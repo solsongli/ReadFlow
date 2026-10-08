@@ -11,7 +11,20 @@ async function open() {
   await page.getByRole("option", { name: "Paper a", exact: true }).dblclick();
   const input = page.getByRole("spinbutton", { name: "页码" });
   await input.fill("1"); await input.press("Enter");
-  await page.locator('[data-paper-page="1"] .pr-text-layer span').first().waitFor();
+  try {
+    await page.locator('[data-paper-page="1"] .pr-text-layer span').first().waitFor();
+  } catch (error) {
+    console.error(await page.evaluate(() => ({
+      queue: document.querySelector("[data-paper-reader]")?.dataset.renderQueue,
+      pages: [...document.querySelectorAll("[data-paper-page]")].map((node) => ({
+        page: node.getAttribute("data-paper-page"),
+        canvas: node.querySelector(":scope > canvas")?.width,
+        text: node.querySelectorAll(".pr-text-layer span").length,
+      })),
+      statuses: [...document.querySelectorAll('[role="status"]')].map((node) => node.textContent),
+    })));
+    throw error;
+  }
 }
 try {
   await open();

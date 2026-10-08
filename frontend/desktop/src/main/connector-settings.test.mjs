@@ -108,7 +108,7 @@ test("restart schedules one relaunch and waits for the existing ordered cleanup 
   assert.deepEqual(events, ["relaunch", "stopping", "cleanup", "children-stopped", "exit"]);
 });
 
-test("preload exposes only targeted Connector commands and restart", async () => {
+test("preload exposes targeted Connector, restart and fullscreen commands", async () => {
   const preload = new URL("../../preload.js", import.meta.url);
   const require = createRequire(preload), calls = [], exposed = {};
   vm.runInNewContext(fs.readFileSync(preload, "utf8"), {
@@ -118,5 +118,6 @@ test("preload exposes only targeted Connector commands and restart", async () =>
   });
   const bridge = exposed.retainPdfDesktop;
   await bridge.loadConnectorSettings(); await bridge.saveConnectorSettings(false); await bridge.restartReadFlow();
-  assert.deepEqual(calls, [["desktop:invoke", "load_connector_settings"], ["desktop:invoke", "save_connector_settings", { enabled: false }], ["desktop:invoke", "restart_readflow"]]);
+  await bridge.setFullScreen(true);
+  assert.deepEqual(calls, [["desktop:invoke", "load_connector_settings"], ["desktop:invoke", "save_connector_settings", { enabled: false }], ["desktop:invoke", "restart_readflow"], ["desktop:invoke", "set_fullscreen", { enabled: true }]]);
 });

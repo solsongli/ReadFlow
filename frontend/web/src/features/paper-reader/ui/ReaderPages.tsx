@@ -25,6 +25,8 @@ export function ReaderPages({
 }) {
   const {
     main,
+    source,
+    translated,
     mode,
     primary,
     secondary,
@@ -38,6 +40,7 @@ export function ReaderPages({
     link,
   } = model;
   const { c, byPage } = annotations;
+  const primaryDocument = mode === "translated" ? translated : source;
   const primarySearch =
     mode === "compare" && model.searcher.scope === "translated" ? NO_SEARCH : common.search;
   const secondarySearch = model.searcher.scope === "translated" ? common.search : NO_SEARCH;
@@ -66,7 +69,13 @@ export function ReaderPages({
       return undefined;
     return (page: number): MarginEntry[] => [
       ...(ports.marginPreferences?.notes !== false
-        ? annotationMargins(byPage.get(page) || [], c, (row) => latest.current.open(row))
+        ? annotationMargins(
+            (byPage.get(page) || []).filter(
+              (row) => !c.marginFollowFilters || c.filteredIds?.includes(row.id),
+            ),
+            c,
+            (row) => latest.current.open(row),
+          )
         : []),
       ...(ports.blockMargins?.(page + 1, c.tool === "select") || []),
     ];
@@ -82,6 +91,8 @@ export function ReaderPages({
     c.hover,
     c.flash,
     c.editingId,
+    c.marginFollowFilters,
+    c.filteredIds,
   ]);
   return (
     <>
@@ -105,6 +116,10 @@ export function ReaderPages({
           sizes={main.sizes}
           {...common}
           search={primarySearch}
+          painted={() => {
+            common.painted();
+            primaryDocument.startIndexing();
+          }}
           label={mode === "translated" ? "译文页面" : "原文页面"}
           marginSide={ports.marginPreferences?.side || "auto"}
           paragraphMargins={ports.blockMarginWide}
@@ -124,7 +139,10 @@ export function ReaderPages({
                   </>
                 )
           }
-          onPosition={(pos, program) => report(pos, false, program)}
+          onPosition={(pos, program) => {
+            primaryDocument.pauseIndexing();
+            report(pos, false, program);
+          }}
         />
       ) : (
         <p role="status" className="m-auto text-wb-text-3">
@@ -138,11 +156,18 @@ export function ReaderPages({
           sizes={comparison.sizes}
           {...common}
           search={secondarySearch}
+          painted={() => {
+            common.painted();
+            comparison.startIndexing();
+          }}
           label="译文页面"
           readingOverlay={readingOverlay}
           readingGuide={readingGuide}
           onLink={(value) => void link(value, true)}
-          onPosition={(pos, program) => report(pos, true, program)}
+          onPosition={(pos, program) => {
+            comparison.pauseIndexing();
+            report(pos, true, program);
+          }}
         />
       ) : null}
     </>

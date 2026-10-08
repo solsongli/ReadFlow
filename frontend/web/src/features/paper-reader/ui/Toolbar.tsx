@@ -37,6 +37,8 @@ export function Toolbar({
   bookmark,
   tools,
   ports,
+  fullscreen,
+  toggleFullscreen,
 }: {
   page: number;
   pages: number;
@@ -60,6 +62,8 @@ export function Toolbar({
   search: () => void;
   bookmark: () => void;
   ports: ReaderPorts;
+  fullscreen: boolean;
+  toggleFullscreen: () => void;
 }) {
   return (
     <div
@@ -174,6 +178,8 @@ export function Toolbar({
         setMargins={ports.setMarginPreferences}
         alignmentGuide={ports.alignmentGuide}
         setAlignmentGuide={ports.setAlignmentGuide}
+        fullscreen={fullscreen}
+        toggleFullscreen={toggleFullscreen}
       />
       <IconButton label="切换信息面板" onClick={toggleRight}>
         <PanelRight size={17} />

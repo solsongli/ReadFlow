@@ -37,9 +37,12 @@ async def seed(resources, root):
         annotation = store.annotations.save(imported['item']['id'], {
             'attachment_id': imported['attachment']['id'], 'page_index': 0, 'type': 'region', 'color': 'yellow',
             'rects': [{'x': .1, 'y': .1, 'width': .2, 'height': .2}],
+            'tags': ['restart-tag', 'persistent'],
             'image': base64.b64encode(pixels.tobytes('png')).decode(),
         })
         store.todos.create({'title': 'Restart to-do', 'item_id': imported['item']['id'], 'due': '2026-10-09'})
+        store.tag_catalog.apply({'item_ids': [imported['item']['id']], 'add': ['重要', 'restart']})
+        store.tag_catalog.set_color('重要', {'color': 5})
         canvas = store.canvases.create({'name': 'Restart fixture'})
         store.canvases.patch(canvas['id'], {'nodes': [{'id': 'image', 'type': 'image',
             'annotation_id': annotation['id'], 'x': 0, 'y': 0, 'width': 200, 'height': 160}]})
@@ -112,6 +115,10 @@ def check(unpacked, home):
             assert get('/api/research/healthz')['ok']
             items = get('/api/research/items')['items']
             assert len(items) == 1
+            annotations = get('/api/research/workbench/items/' + items[0]['id'] + '/annotations')['items']
+            assert annotations[0]['tags'] == ['restart-tag', 'persistent']
+            assert get('/api/research/workbench/annotation-tags')['items'] == [
+                {'name': 'persistent', 'count': 1}, {'name': 'restart-tag', 'count': 1}]
             blocks = get('/api/research/workbench/items/' + items[0]['id'] + '/blocks')
             deadline = time.monotonic() + 30
             while blocks.get('result', {}).get('repair_pending') and time.monotonic() < deadline:
@@ -132,9 +139,11 @@ def check(unpacked, home):
             assert overview['result']['target'] == 'restart-fixture'
             todos = get('/api/research/workbench/todos')['items']
             assert [(t['title'], t['item_id'], t['due']) for t in todos] == [('Restart to-do', items[0]['id'], '2026-10-09')]
+            assert get('/api/research/workbench/tags/colors')['items'] == [{'name': '重要', 'color': 5, 'position': 1}]
+            assert get('/api/research/items/' + items[0]['id'])['tags'] == ['重要', 'restart']
             status = get('/api/research/connector/status')
             assert status['status'] == 'disabled' and status['client'] == 'ReadFlow'
-            results.append({'run': number + 1, 'health': True, 'persistent_items': 1, 'overview_cache': True, 'term_cards': True, 'marker_repair': True, 'todos': True,
+            results.append({'run': number + 1, 'health': True, 'persistent_items': 1, 'annotation_tags': True, 'overview_cache': True, 'term_cards': True, 'marker_repair': True, 'todos': True, 'tag_colors': True,
                             'blocks_cache': True, 'layout_cache': True, 'ocr_cache': True, 'layout_pdf': True, 'connector': 'disabled'})
         finally:
             child.terminate()

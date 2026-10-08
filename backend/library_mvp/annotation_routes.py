@@ -13,6 +13,10 @@ def register_annotation_routes(app, store, json_body):
     def listing(item_id: str):
         return {'items': annotations.list(item_id)}
 
+    @app.get('/api/research/workbench/annotation-tags')
+    def tags():
+        return {'items': annotations.tags()}
+
     @app.post(root, status_code=201)
     async def create(item_id: str, request: Request):
         return annotations.save(item_id, await json_body(request))

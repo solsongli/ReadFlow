@@ -88,6 +88,8 @@ export interface WorkbenchState extends Prefs {
   view: WorkbenchView;
   groupId: string | null;
   tag: string | null;
+  /** Colored tags (Zotero-style), ordered by keyboard position 1–9. */
+  tagColors: import("@/platform/contracts/workbench.js").TagColor[];
   query: string;
   selectedIds: string[];
   anchorId: string | null;
@@ -160,6 +162,7 @@ export function initialWorkbenchState(prefs: Partial<Prefs> = {}): WorkbenchStat
     detail: { status: "idle", item: null, error: null },
     tabs: [],
     activeTab: LIBRARY_TAB,
+    tagColors: [],
     paletteOpen: false,
     shortcutsOpen: false,
     selectionFocusId: null,

@@ -7,6 +7,8 @@ import { useEffect, useState } from "react";
 import { Button } from "@/ui/wb/Button.js";
 import type { Annotation } from "../../domain/annotations/types.js";
 import type { AnnotationController } from "../../state/annotations/useAnnotations.js";
+import { AnnotationTags } from "./Tags.js";
+import { annotationDragPayload } from "../../domain/annotations/citation.js";
 export function AnnotationCard({
   row,
   controller: c,
@@ -56,12 +58,12 @@ export function AnnotationCard({
   return (
     <article
       draggable
-      onDragStart={(event) =>
-        event.dataTransfer.setData(
-          "application/x-readflow-canvas",
-          JSON.stringify({ type: "annotation", annotationId: row.id, itemId: row.item_id }),
-        )
-      }
+      onDragStart={(event) => {
+        const payload = annotationDragPayload(row, c.citation(row));
+        event.dataTransfer.setData("application/x-readflow-canvas", payload.canvas);
+        event.dataTransfer.setData("text/plain", payload.plain);
+        event.dataTransfer.setData("text/html", payload.html);
+      }}
       data-annotation-card={row.id}
       data-annotation-color={row.color}
       onMouseEnter={() => c.setHover(row.id)}
@@ -99,6 +101,9 @@ export function AnnotationCard({
               </MenuItem>
             ) : null}
             <MenuItem onSelect={() => void c.exportRows([row.id])}>导出这条批注</MenuItem>
+            <MenuItem onSelect={() => void navigator.clipboard.writeText(c.citation(row))}>
+              复制为引文
+            </MenuItem>
             <MenuItem
               onSelect={() => {
                 jump();
@@ -156,6 +161,7 @@ export function AnnotationCard({
           画布 · {link.name}
         </button>
       ))}
+      <AnnotationTags row={row} controller={c} />
       <textarea
         aria-label="批注说明"
         placeholder="添加说明（支持 Markdown）"

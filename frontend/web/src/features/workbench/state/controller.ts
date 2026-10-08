@@ -12,6 +12,7 @@ import { createReaderActions, type ReaderTarget } from "./reader-actions.js";
 import { createServiceRecovery } from "./service-recovery.js";
 import { createPdfImporter } from "./pdf-import.js";
 import { createAutoTranslation } from "./auto-translation.js";
+import { createTagActions } from "./tag-actions.js";
 import { preferenceEvents, syncWorkbenchPreferences } from "./preferences-sync.js";
 import { parseWorkbenchPrefs, PREFS_KEY } from "../domain/preferences.js";
 import { normalizeTypography } from "../domain/typography.js";
@@ -136,7 +137,7 @@ export function createWorkbench(env: WorkbenchEnv) {
   }
 
   async function refreshAll() {
-    await Promise.all([refreshList(), refreshDesk(), refreshJobs()]);
+    await Promise.all([refreshList(), refreshDesk(), refreshJobs(), tags.loadColors()]);
   }
 
   async function loadDetail(id: string) {
@@ -274,6 +275,7 @@ export function createWorkbench(env: WorkbenchEnv) {
   const translations = createTranslations({ api, store, notify, openReader, refreshDesk, loadConfig: env.translationConfig });
 
   const autoTranslation = createAutoTranslation({ api, store, notify, config: env.translationConfig });
+  const tags = createTagActions({ api, store, rowById, refreshList, browse, notify, failure });
   const importPdfs = createPdfImporter({ api, group: () => get().groupId, notify, failure,
     refresh: refreshAll, select: revealNotePaper, imported: autoTranslation.enqueue });
 
@@ -324,6 +326,7 @@ export function createWorkbench(env: WorkbenchEnv) {
     closeTab: (id: string) => store.actions.closeTab(id),
     setPalette: (paletteOpen: boolean) => store.actions.patch({ paletteOpen }),
     importPdfs,
+    tags,
     api,
   };
 }

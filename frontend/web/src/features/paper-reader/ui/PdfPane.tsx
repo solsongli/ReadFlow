@@ -80,7 +80,10 @@ export const PdfPane = forwardRef<
 ) {
   const element = useRef<HTMLDivElement>(null),
     [box, setBox] = useState({ width: 700, height: 700 }),
-    [scrollTop, setScrollTop] = useState(0);
+    [scrollTop, setScrollTop] = useState(0),
+    [scrolling, setScrolling] = useState(false);
+  const scrollTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined),
+    scrollingRef = useRef(false);
   const programTarget = useRef<number | null>(null);
   const logical = useRef<Position>({ page: 1, offset: 0 }),
     previousScale = useRef<number | null>(null);
@@ -160,6 +163,12 @@ export const PdfPane = forwardRef<
     observer.observe(target);
     return () => observer.disconnect();
   }, []);
+  useEffect(
+    () => () => {
+      clearTimeout(scrollTimer.current);
+    },
+    [],
+  );
   useEffect(() => {
     const target = element.current!;
     const wheel = (event: WheelEvent) => {
@@ -231,6 +240,15 @@ export const PdfPane = forwardRef<
         if (!active) {
           return;
         }
+        if (!scrollingRef.current) {
+          scrollingRef.current = true;
+          setScrolling(true);
+        }
+        clearTimeout(scrollTimer.current);
+        scrollTimer.current = setTimeout(() => {
+          scrollingRef.current = false;
+          setScrolling(false);
+        }, 160);
         setScrollTop(element.current!.scrollTop);
         const next = position();
         logical.current = next;
@@ -259,6 +277,8 @@ export const PdfPane = forwardRef<
               scale={scale}
               size={sizes[index]}
               queue={queue}
+              deferRender={scrolling}
+              visiblePage={marginVisible.includes(index)}
               search={search}
               onLink={onLink}
               onTextClick={onTextClick}

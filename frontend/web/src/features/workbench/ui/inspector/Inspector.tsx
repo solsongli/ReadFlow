@@ -12,6 +12,7 @@ import { InlineEdit } from "./InlineEdit.js";
 import { AbstractSection, GroupsSection, MetadataSection } from "./InspectorSections.js";
 import { InspectorNotes } from "./InspectorNotes.js";
 import { PdfTitleSuggestion } from "./PdfTitleSuggestion.js";
+import { TagEditor } from "./TagEditor.js";
 
 const PANEL = "wb-scroll w-[360px] min-w-0 shrink-0 border-l border-wb-line-soft bg-wb-panel";
 
@@ -19,6 +20,9 @@ function BulkPanel({ ids }: { ids: string[] }) {
   const wb = useWorkbench();
   const trashView = useWb((state) => state.view === "trash");
   const translating = useWb((state) => state.translatingIds ?? []);
+  const rows = useWb((state) => state.list.result?.items ?? []);
+  const chosen = rows.filter((row) => ids.includes(row.id));
+  const commonTags = chosen.length ? chosen[0].tags.filter((tag) => chosen.every((row) => row.tags.includes(tag))) : [];
   return (
     <div className="flex flex-col gap-[1.125rem] p-[1.375rem]">
       <h2 className="m-0 text-[1.125rem] font-bold">已选 {ids.length} 篇文献</h2>
@@ -26,6 +30,11 @@ function BulkPanel({ ids }: { ids: string[] }) {
       {trashView ? <Button variant="primary" icon={<Undo2 size={15} aria-hidden="true" />} onClick={() => void wb.restore(ids)}>从回收站恢复</Button> : <>
         <Button disabled={ids.some((id) => translating.includes(id))} onClick={() => void wb.translations.start(ids)}>翻译所选</Button>
         <GroupPicker itemIds={ids}><Button variant="primary" icon={<FolderPlus size={15} aria-hidden="true" />} shortcut="G">加入分组…</Button></GroupPicker>
+        <section aria-label="批量标签" className="flex flex-col gap-1.5">
+          <h3 className="m-0 text-[0.8125rem] font-semibold">标签</h3>
+          <p className="m-0 text-[0.75rem] text-wb-text-3">下方为所选文献共有的标签；也可按 1–9 切换彩色标签。</p>
+          <TagEditor ids={ids} tags={commonTags} align="start" />
+        </section>
         <div className="flex flex-col overflow-hidden rounded-xl bg-wb-panel-2">
           <button type="button" title="切换星标（S）" className="wb-info-row wb-transition relative px-3.5 py-2.5 text-left hover:bg-wb-hover" onClick={() => void wb.toggleStar(ids)}>切换星标</button>
           <button type="button" className="wb-info-row wb-transition relative px-3.5 py-2.5 text-left hover:bg-wb-hover" onClick={() => void wb.setReadStatus(ids, "read")}>标为已读</button>

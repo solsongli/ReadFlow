@@ -47,7 +47,7 @@ try {
     throw error;
   }
   await page.waitForFunction(
-    () => !document.querySelector('[aria-live="polite"]')?.textContent?.includes("索引中"),
+    () => !document.querySelector('[aria-live="polite"]')?.textContent?.includes("正在建立索引"),
   );
   const total = Number((await count.textContent()).match(/\/\s*(\d+)/)?.[1]);
   assert.ok(total > 1);

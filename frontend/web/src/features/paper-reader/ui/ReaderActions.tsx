@@ -22,6 +22,8 @@ export function ReaderActions({
   setMargins,
   alignmentGuide,
   setAlignmentGuide,
+  fullscreen,
+  toggleFullscreen,
 }: {
   tone: PaperTone;
   setTone: (value: PaperTone) => void;
@@ -32,6 +34,8 @@ export function ReaderActions({
   setMargins?: ReaderPorts["setMarginPreferences"];
   alignmentGuide?: boolean;
   setAlignmentGuide?: ReaderPorts["setAlignmentGuide"];
+  fullscreen: boolean;
+  toggleFullscreen: () => void;
 }) {
   return (
     <MenuRoot>
@@ -44,6 +48,9 @@ export function ReaderActions({
         <MenuItem onSelect={bookmark}>添加书签</MenuItem>
         <MenuItem onSelect={toggleFocus} shortcut="F">
           {focus ? "退出专注模式" : "专注模式"}
+        </MenuItem>
+        <MenuItem onSelect={toggleFullscreen} shortcut="F11">
+          {fullscreen ? "退出全屏" : "全屏"}
         </MenuItem>
         <MenuSeparator />
         {setAlignmentGuide ? (

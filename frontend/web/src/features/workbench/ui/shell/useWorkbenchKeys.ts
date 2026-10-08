@@ -80,6 +80,11 @@ export function useWorkbenchKeys() {
           if (selected.length && state.view !== "trash") void wb.trash(selected);
           break;
         default:
+          // Zotero: digits 1–9 toggle the colored tag at that position on the selected papers.
+          if (/^[1-9]$/.test(event.key) && selected.length && state.view !== "trash" && state.tagColors.some((t) => t.position === Number(event.key))) {
+            event.preventDefault();
+            void wb.tags.toggleColored(Number(event.key));
+          }
       }
     }
     window.addEventListener("keydown", onKey);
