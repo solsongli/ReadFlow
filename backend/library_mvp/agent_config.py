@@ -11,6 +11,10 @@ from pathlib import Path
 from urllib.parse import urlsplit
 from .evidence import EvidenceError
 
+# Windows has no owner/mode bits, getuid or O_NOFOLLOW; there the file sits in the user's private profile
+# (%APPDATA%), symlinks are refused explicitly, and the regular-file and size checks still apply.
+POSIX = os.name == 'posix'
+
 class AgentConfig:
     def __init__(self, path: Path | None, *, allow_external_models: bool = False):
         self.path = Path(path) if path is not None else None
@@ -21,13 +25,16 @@ class AgentConfig:
     def _load(self):
         if self.path is None:
             return self._memory
+        if not POSIX and self.path.is_symlink():
+            raise EvidenceError('CONFIG_PERMISSIONS', '模型配置文件必须仅对当前用户可读写。', 409)
         try:
-            fd = os.open(self.path, os.O_RDONLY | os.O_NOFOLLOW)
+            fd = os.open(self.path, os.O_RDONLY | (os.O_NOFOLLOW if POSIX else 0))
         except FileNotFoundError:
             return None
         with os.fdopen(fd) as stream:
             info = os.fstat(stream.fileno())
-            if not stat.S_ISREG(info.st_mode) or info.st_mode & 0o077 or info.st_uid != os.getuid() or info.st_size > 12000:
+            private = not POSIX or (not info.st_mode & 0o077 and info.st_uid == os.getuid())
+            if not stat.S_ISREG(info.st_mode) or not private or info.st_size > 12000:
                 raise EvidenceError('CONFIG_PERMISSIONS', '模型配置文件必须仅对当前用户可读写。', 409)
             value = json.load(stream)
         return self._validate(value)
@@ -87,7 +94,8 @@ class AgentConfig:
                 fd, temporary = tempfile.mkstemp(prefix='.agent-config-', dir=parent)
                 try:
                     with os.fdopen(fd, 'w') as stream:
-                        os.fchmod(stream.fileno(), 0o600)
+                        if POSIX:
+                            os.fchmod(stream.fileno(), 0o600)
                         json.dump(clean, stream)
                         stream.flush()
                         os.fsync(stream.fileno())

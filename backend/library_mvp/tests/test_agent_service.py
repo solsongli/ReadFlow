@@ -103,6 +103,23 @@ class AgentConfigTests(unittest.TestCase):
             link = Path(directory)/'agent-config.json'; link.symlink_to(target)
             with self.assertRaises(EvidenceError): AgentConfig(link).save({'base_url':'https://example.test','model':'x','api_key':'x'})
             self.assertEqual(target.read_text(), 'do not change')
+    def test_windows_save_and_load_without_posix_calls(self):
+        # The first Windows build failed in AgentConfig.save: os.fchmod, os.getuid and O_NOFOLLOW are POSIX-only.
+        from unittest import mock
+        from backend.library_mvp import agent_config
+        value = {'base_url':'https://example.test/v1','model':'manual-model','api_key':'synthetic-test-key'}
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)/'agent-config.json'
+            with mock.patch.object(agent_config, 'POSIX', False), \
+                    mock.patch.object(agent_config.os, 'fchmod', side_effect=AssertionError('fchmod')), \
+                    mock.patch.object(agent_config.os, 'getuid', side_effect=AssertionError('getuid')):
+                cfg = AgentConfig(path)
+                self.assertTrue(cfg.save(value)['configured'])
+                path.chmod(0o644)  # Windows reports 0o666 for an ordinary user file
+                self.assertEqual(cfg.status()['model'], 'manual-model')
+                link = Path(directory)/'linked.json'; link.symlink_to(path)
+                with self.assertRaises(EvidenceError): AgentConfig(link).status()
+            with self.assertRaises(EvidenceError): AgentConfig(path).status()  # POSIX still demands owner-only
 
 class AgentLoopTests(unittest.TestCase):
     def test_actual_retrieval_loop_search_read_answer(self):

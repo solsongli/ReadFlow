@@ -118,6 +118,9 @@ class OcrModules:
     @contextmanager
     def _module_file_lock(self, module_id, *, exclusive=False):
         """Stable lock inode outside the removable runtime; shared across application processes."""
+        if os.name != 'posix':
+            # The pinned optional bundle is Linux-only (Windows uses the built-in CPU OCR), and flock is POSIX.
+            raise StoreError('OCR_PLATFORM_UNSUPPORTED', 'This pinned OCR bundle requires Linux x86_64 and Python 3.11.', 409)
         import fcntl
         import stat
         self._module(module_id)
