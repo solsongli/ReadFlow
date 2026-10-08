@@ -51,6 +51,7 @@ jobs:
         run: cargo build --release --locked --workspace --bins --target x86_64-pc-windows-msvc
       - name: Typst runtime and packages
         run: |
+          $PSNativeCommandUseErrorActionPreference = $true # a failing tool stops the step
           $zip = Join-Path $env:RUNNER_TEMP "typst.zip"
           Invoke-WebRequest "https://github.com/typst/typst/releases/download/v$env:TYPST_VERSION/typst-x86_64-pc-windows-msvc.zip" -OutFile $zip
           $x = Join-Path $env:RUNNER_TEMP "typst"; Expand-Archive $zip $x -Force
@@ -71,6 +72,7 @@ jobs:
           New-Item -ItemType Directory $bundle -Force | Out-Null
           robocopy $root $bundle /E /NFL /NDL /NJH /NJS /NP /XD "__pycache__" "Doc" "docs" "Tools" "Scripts" "site-packages" "include" "libs"
           if ($LASTEXITCODE -ge 8) { throw "robocopy failed: $LASTEXITCODE" }
+          $PSNativeCommandUseErrorActionPreference = $true # a failing tool stops the step
           $site = "$bundle/Lib/site-packages"; New-Item -ItemType Directory $site -Force | Out-Null
           python -m pip install --upgrade pip
           python -m pip install --target $site -r "$env:DESKTOP_ROOT/requirements-readflow-windows.txt"
@@ -84,6 +86,7 @@ jobs:
         run: python ops/models/fetch.py --models-only # Windows wheels come from pip; the pinned ones are Linux builds
       - name: Web build and app assembly
         run: |
+          $PSNativeCommandUseErrorActionPreference = $true # a failing tool stops the step
           npm --prefix frontend/web run build
           Push-Location $env:DESKTOP_ROOT
           $env:RETAIN_PDF_VERSION = node -p "require('./package.json').version"
@@ -92,6 +95,7 @@ jobs:
           Pop-Location
       - name: Protect Python (Nuitka-compiled library_mvp)
         run: |
+          $PSNativeCommandUseErrorActionPreference = $true # a failing tool stops the step
           python -m pip install "nuitka==2.7.16" ordered-set zstandard
           python "$env:DESKTOP_ROOT/scripts/protect-python.py" --research-library "$env:DESKTOP_ROOT/app/backend/research-library" `
             --bundled-python "$env:DESKTOP_ROOT/app/backend/python/python.exe" --work-dir "$env:DESKTOP_ROOT/build-protect"
@@ -101,6 +105,7 @@ jobs:
         run: python "$env:DESKTOP_ROOT/scripts/collect-windows-licenses.py" --site-packages "$env:DESKTOP_ROOT/app/backend/python/Lib/site-packages"
       - name: Protect JavaScript (obfuscation)
         run: |
+          $PSNativeCommandUseErrorActionPreference = $true # a failing tool stops the step
           npm install --prefix "$env:RUNNER_TEMP/obf" javascript-obfuscator@4.1.1
           Push-Location $env:DESKTOP_ROOT
           node scripts/protect-js.mjs --obfuscator "$env:RUNNER_TEMP/obf/node_modules/javascript-obfuscator"
@@ -110,13 +115,16 @@ jobs:
         run: npx electron-builder --win nsis --x64 --publish never --config electron-builder.windows.cjs
       - name: Verify protection
         run: |
+          $PSNativeCommandUseErrorActionPreference = $true # a failing tool stops the step
           $app = "$env:DESKTOP_ROOT/dist-win/win-unpacked"
           npx --yes @electron/fuses read --app "$app/ReadFlow.exe" | Tee-Object -FilePath fuses.txt
           if (-not (Select-String -Path fuses.txt -Pattern "RunAsNode is Disabled")) { throw "RunAsNode fuse not disabled" }
           if (-not (Select-String -Path fuses.txt -Pattern "EnableEmbeddedAsarIntegrityValidation is Enabled")) { throw "asar integrity fuse not enabled" }
-          node -e "const a=require('@electron/asar'); const p=JSON.parse(a.extractFile(process.argv[1],'package.json')); if(!p.readflowProtected) throw new Error('not marked protected'); const b=a.extractFile(process.argv[1],'app/frontend/dist/workbench.bundle.js').toString(); if(/sourceMappingURL/.test(b)) throw new Error('source map'); console.log('asar-protected-ok', b.length)" "$app/resources/app.asar"
+          # @electron/asar resolves archive paths with the platform separator.
+          node -e "const a=require('@electron/asar'), path=require('path'), f=process.argv[1]; const p=JSON.parse(a.extractFile(f,'package.json')); if(!p.readflowProtected) throw new Error('not marked protected'); const files=a.listPackage(f); const bad=files.filter(x=>/\.(map|tsx?)$/.test(x)); if(bad.length) throw new Error('source files in asar: '+bad.slice(0,5)); const b=a.extractFile(f,path.join('app','frontend','dist','workbench.bundle.js')).toString(); if(/sourceMappingURL/.test(b)) throw new Error('source map'); console.log('asar-protected-ok', files.length, b.length)" "$app/resources/app.asar"
           $py = Get-ChildItem "$app/resources/backend/research-library/library_mvp" -Recurse -Filter *.py | Where-Object Name -ne "ocr_worker.py"
           if ($py) { throw "Python sources shipped: $($py.FullName -join ', ')" }
+          if (Select-String -Path "$app/resources/backend/research-library/native_library_service.py" -Pattern "def create_native_app") { throw "service launcher shipped as source" }
           Get-ChildItem "$app/resources/backend/research-library" | Format-Table Name, Length
           Get-ChildItem "$app/resources/licenses" | Format-Table Name
       - name: Packaged sidecar restart check (compiled backend, twice)
