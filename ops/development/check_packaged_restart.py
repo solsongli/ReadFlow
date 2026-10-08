@@ -112,14 +112,24 @@ def check(unpacked, home):
             '--native-base', 'http://127.0.0.1:9', '--port', '0'], env=env,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding='utf-8',
             **({'creationflags': subprocess.CREATE_NEW_PROCESS_GROUP} if WINDOWS else {'start_new_session': True}))
+        # Drain both pipes like the desktop shell does: a Windows pipe buffers only ~4 KB, and a sidecar
+        # blocked on a full pipe would stall its background render jobs. Keep the tail for diagnostics.
+        lines, errors, ready = [], [], threading.Event()
+
+        def drain(stream, sink, signal=None):
+            for text in stream:
+                sink.append(text)
+                del sink[:-200]
+                if signal:
+                    signal.set()
+
+        threading.Thread(target=drain, args=(child.stdout, lines, ready), daemon=True).start()
+        threading.Thread(target=drain, args=(child.stderr, errors), daemon=True).start()
         try:
-            first = []
-            reader = threading.Thread(target=lambda: first.append(child.stdout.readline()), daemon=True)
-            reader.start()
-            reader.join(60 if WINDOWS else 25)
-            if not first:
-                raise RuntimeError('Packaged sidecar readiness timed out: ' + (child.stderr.read() if child.poll() is not None else ''))
-            line = first[0]
+            ready.wait(60 if WINDOWS else 25)
+            if not lines:
+                raise RuntimeError('Packaged sidecar readiness timed out: ' + ''.join(errors[-40:]))
+            line = lines[0]
             if not line.startswith('RETAINPDF_RESEARCH_READY='):
                 raise RuntimeError('Packaged sidecar did not become ready')
             base = json.loads(line.split('=', 1)[1])['base_url']
@@ -134,11 +144,17 @@ def check(unpacked, home):
             assert get('/api/research/workbench/annotation-tags')['items'] == [
                 {'name': 'persistent', 'count': 1}, {'name': 'restart-tag', 'count': 1}]
             blocks = get('/api/research/workbench/items/' + items[0]['id'] + '/blocks')
-            deadline = time.monotonic() + 30
-            while blocks.get('result', {}).get('repair_pending') and time.monotonic() < deadline:
-                time.sleep(.1)
+            # The marker repair re-renders layout, aligned and reflow PDFs; the Windows runner is much slower.
+            started = time.monotonic()
+            while blocks.get('result', {}).get('repair_pending') and time.monotonic() < started + (180 if WINDOWS else 30):
+                time.sleep(.25)
                 blocks = get('/api/research/workbench/items/' + items[0]['id'] + '/blocks')
-            assert blocks['result']['reflow_ready'] and not blocks['result'].get('repair_pending')
+            if not (blocks['result']['reflow_ready'] and not blocks['result'].get('repair_pending')):
+                jobs = [{k: j.get(k) for k in ('status', 'stage', 'error', 'message', 'progress', 'repair_revision')}
+                        for j in blocks.get('jobs', [])]
+                raise AssertionError('reflow not ready after restart ' + json.dumps(
+                    {'waited': round(time.monotonic() - started, 1), 'result': blocks['result'], 'jobs': jobs},
+                    ensure_ascii=False) + '\nsidecar stderr:\n' + ''.join(errors[-40:]))
             assert all('BOLD' not in (b.get('translation') or '') for b in blocks['document']['blocks'])
             assert blocks['document']['blocks']
             assert blocks['document']['capabilities']['ocr']
@@ -166,8 +182,6 @@ def check(unpacked, home):
             except subprocess.TimeoutExpired:
                 child.kill()
                 child.wait(timeout=5)
-            child.stdout.close()
-            child.stderr.close()
     print(json.dumps({'mode': 'packaged-sidecar', 'runs': results, 'isolated_home': str(home)}))
 
 
