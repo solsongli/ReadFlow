@@ -32,9 +32,15 @@ def safe_target(root, relative):
     return target
 
 
-def fetch(cache=CACHE, *, offline=False):
+def entries(manifest, *, models_only=False):
+    # The pinned wheels are Linux builds; a Windows bundle installs its own wheels with pip
+    # and takes only the platform-independent models from this manifest.
+    return [e for e in manifest["files"] if not (models_only and e["kind"] == "wheel")]
+
+
+def fetch(cache=CACHE, *, offline=False, models_only=False):
     manifest = json.loads(MANIFEST.read_text())
-    for entry in manifest["files"]:
+    for entry in entries(manifest, models_only=models_only):
         target = safe_target(cache, entry["path"])
         if verified(target, entry):
             continue
@@ -43,7 +49,9 @@ def fetch(cache=CACHE, *, offline=False):
         target.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(dir=target.parent, delete=False) as output:
             pending = Path(output.name)
-            try:
+        try:
+            # The file is reopened so it is closed before the rename: Windows cannot replace an open file.
+            with pending.open("wb") as output:
                 # urllib does not read netrc or browser credentials.
                 with urllib.request.urlopen(entry["url"], timeout=90) as response:
                     if not response.url.startswith("https://"):
@@ -54,20 +62,19 @@ def fetch(cache=CACHE, *, offline=False):
                         if copied > entry["bytes"]:
                             raise ValueError("Component exceeds its pinned byte size")
                         output.write(chunk)
-                output.flush()
-                if not verified(pending, entry):
-                    raise ValueError("Size/SHA-256 mismatch: " + entry["path"])
-                pending.replace(target)
-            finally:
-                pending.unlink(missing_ok=True)
+            if not verified(pending, entry):
+                raise ValueError("Size/SHA-256 mismatch: " + entry["path"])
+            pending.replace(target)
+        finally:
+            pending.unlink(missing_ok=True)
         print("Verified", entry["path"], flush=True)
     return manifest
 
 
-def stage(destination, cache=CACHE):
+def stage(destination, cache=CACHE, *, models_only=False):
     """A separate site directory is also usable by CI; licenses and metadata are retained."""
-    manifest = fetch(cache, offline=True)
-    for entry in manifest["files"]:
+    manifest = fetch(cache, offline=True, models_only=models_only)
+    for entry in entries(manifest, models_only=models_only):
         source = safe_target(cache, entry["path"])
         if entry["kind"] == "wheel":
             with zipfile.ZipFile(source) as archive:
@@ -106,7 +113,8 @@ if __name__ == "__main__":
     parser.add_argument("--offline", action="store_true")
     parser.add_argument("--cache", type=Path, default=CACHE)
     parser.add_argument("--stage", type=Path)
+    parser.add_argument("--models-only", action="store_true", help="skip the pinned (Linux) wheels")
     args = parser.parse_args()
-    fetch(args.cache, offline=args.offline)
+    fetch(args.cache, offline=args.offline, models_only=args.models_only)
     if args.stage:
-        stage(args.stage, args.cache)
+        stage(args.stage, args.cache, models_only=args.models_only)

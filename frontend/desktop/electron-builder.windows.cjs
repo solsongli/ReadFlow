@@ -2,12 +2,15 @@
 // Used only by the Windows release workflow:  electron-builder --win nsis --x64 --config electron-builder.windows.cjs
 // The Linux release keeps package.json "build" unchanged (its acceptance tooling needs inspect/run-as-node).
 const base = require("./package.json").build;
+// build/icon.ico is the upstream RetainPDF mark; the ReadFlow icon is generated from build/readflow/*.png.
+const icon = "build/readflow/icon.ico";
 
 module.exports = {
   ...base,
   directories: { ...base.directories, output: "dist-win" },
   win: {
     ...base.win,
+    icon,
     target: [{ target: "nsis", arch: ["x64"] }],
   },
   nsis: {
@@ -18,6 +21,9 @@ module.exports = {
     createDesktopShortcut: true,
     createStartMenuShortcut: true,
     shortcutName: "ReadFlow",
+    installerIcon: icon,
+    uninstallerIcon: icon,
+    installerHeaderIcon: icon,
     deleteAppDataOnUninstall: false,
   },
   extraResources: [

@@ -35,6 +35,44 @@ class ManifestTests(unittest.TestCase):
             if os.environ.get("READFLOW_REQUIRE_MODELS") == "1":
                 self.assertTrue(available(), "CI must download the pinned CPU models")
 
+    def test_download_closes_before_rename_and_models_only_skips_wheels(self):
+        # The first Windows build failed renaming a still-open temporary file (WinError 32).
+        import io
+        from unittest import mock
+        from ops.models import fetch as fetcher
+
+        good, bad = b"model-bytes", b"wrong-bytes"
+        files = [
+            {"path": "models/a.onnx", "kind": "model", "url": "https://example.test/a",
+             "bytes": len(good), "sha256": hashlib.sha256(good).hexdigest()},
+            {"path": "packages/x.whl", "kind": "wheel", "url": "https://example.test/x",
+             "bytes": 1, "sha256": "0" * 64},
+        ]
+        opened = []
+
+        class Response(io.BytesIO):
+            url = "https://example.test/a"
+
+        def urlopen(url, timeout):
+            opened.append(url)
+            return Response(good if url.endswith("/a") else bad)
+
+        with tempfile.TemporaryDirectory() as root:
+            manifest = Path(root) / "manifest.json"
+            manifest.write_text(json.dumps({"files": files}))
+            cache = Path(root) / "cache"
+            with mock.patch.object(fetcher, "MANIFEST", manifest), \
+                    mock.patch.object(fetcher.urllib.request, "urlopen", urlopen):
+                fetcher.fetch(cache, models_only=True)
+                self.assertEqual(opened, ["https://example.test/a"])
+                self.assertEqual((cache / "models/a.onnx").read_bytes(), good)
+                self.assertEqual(sorted(p.name for p in (cache / "models").iterdir()), ["a.onnx"])
+                files[0]["sha256"] = "f" * 64
+                manifest.write_text(json.dumps({"files": files}))
+                with self.assertRaises(ValueError):
+                    fetcher.fetch(cache, models_only=True)
+                self.assertEqual(sorted(p.name for p in (cache / "models").iterdir()), ["a.onnx"])
+
 
 @unittest.skipUnless(
     available(), "Pinned models absent; run python3 ops/models/fetch.py --stage .model-cache/runtime"

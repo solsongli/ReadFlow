@@ -12,7 +12,7 @@ env:
   MITEX_VERSION: '0.2.7'
   PYTHONDONTWRITEBYTECODE: '1'
   CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-  RETAIN_PDF_DESKTOP_PLATFORM: windows
+  RETAIN_PDF_DESKTOP_PLATFORM: win32 # prepare-app.mjs compares against process.platform names
 jobs:
   windows:
     if: github.ref_type != 'tag'
@@ -79,9 +79,9 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: .model-cache
-          key: readflow-cpu-Windows-${{ hashFiles('ops/models/manifest.json', 'ops/models/fetch.py') }}
+          key: readflow-models-Windows-${{ hashFiles('ops/models/manifest.json', 'ops/models/fetch.py') }}
       - name: Document models
-        run: python ops/models/fetch.py --stage .model-cache/runtime
+        run: python ops/models/fetch.py --models-only # Windows wheels come from pip; the pinned ones are Linux builds
       - name: Web build and app assembly
         run: |
           npm --prefix frontend/web run build
