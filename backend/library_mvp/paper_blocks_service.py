@@ -40,10 +40,10 @@ class BlockService:
         document = self.storage.load(entry, accept_stale=True)
         with self.lock:
             contexts = (
-                json.loads((root / "contexts.json").read_text()) if (root / "contexts.json").exists() else {}
+                json.loads((root / "contexts.json").read_text(encoding="utf-8")) if (root / "contexts.json").exists() else {}
             )
             old = (
-                json.loads((root / "selection.json").read_text())
+                json.loads((root / "selection.json").read_text(encoding="utf-8"))
                 if (root / "selection.json").exists()
                 else {}
             )
@@ -278,7 +278,7 @@ class BlockService:
             document = self.storage.extract(entry)
             root = self.storage.directory(entry)
             context = (
-                json.loads((root / "selection.json").read_text())
+                json.loads((root / "selection.json").read_text(encoding="utf-8"))
                 if (root / "selection.json").exists()
                 else {}
             )

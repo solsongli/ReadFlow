@@ -29,7 +29,7 @@ def available():
 
 def revision():
     try:
-        return json.loads((model_root() / "manifest.json").read_text())["revision"] if available() else None
+        return json.loads((model_root() / "manifest.json").read_text(encoding="utf-8"))["revision"] if available() else None
     except (OSError, ValueError, KeyError):
         return None
 
@@ -48,7 +48,7 @@ class DocumentModels:
         self.root = Path(root or model_root())
         self.sessions = {}
         self.lock = threading.RLock()
-        manifest = json.loads((self.root / "manifest.json").read_text())
+        manifest = json.loads((self.root / "manifest.json").read_text(encoding="utf-8"))
         self.revision = manifest["revision"]
         for entry in manifest["files"]:
             if not entry["path"].startswith("models/"):

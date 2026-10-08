@@ -42,7 +42,7 @@ def cached_title(store, attachment, candidate):
     ):
         return candidate
     try:
-        data = json.loads(manifest.read_text())
+        data = json.loads(manifest.read_text(encoding="utf-8"))
         titles = [b for b in data.get("blocks", []) if b.get("type") == "title" and b.get("page") == 1]
         if (
             len(titles) == 1

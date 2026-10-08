@@ -105,7 +105,7 @@ def relevant(terms, blocks):
 
 def load(root, language):
     path = root / "terms.json"
-    all_terms = json.loads(path.read_text()) if path.exists() else {}
+    all_terms = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
     value = all_terms.get(language, {"entries": [], "prepared": False, "revision": 0})
     if value.get("term_normalization") != 1 and value.get("entries"):
         entries = normalize(value["entries"])
@@ -115,7 +115,7 @@ def load(root, language):
 
 def save(root, language, value):
     path = root / "terms.json"
-    all_terms = json.loads(path.read_text()) if path.exists() else {}
+    all_terms = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
     all_terms[language] = value
     write_json(path, all_terms)
 

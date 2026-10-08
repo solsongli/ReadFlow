@@ -158,7 +158,7 @@ def render(root, document, cache, language, fingerprint, check=lambda: None, *, 
             }
         )
     write_json(root / "render-data.json", {"blocks": blocks, "language": language})
-    (root / "main.typ").write_text(TEMPLATE)
+    (root / "main.typ").write_text(TEMPLATE, encoding="utf-8")
     env = {key: val for key, val in os.environ.items() if key in ("PATH", "LANG", "SYSTEMROOT", "TMPDIR")}
     env["RAYON_NUM_THREADS"] = "2"
     if packages:
@@ -195,7 +195,7 @@ def render(root, document, cache, language, fingerprint, check=lambda: None, *, 
                     with fitz.open(root / failed["asset"]) as crop:
                         svg = crop[0].get_svg_image(text_as_path=True)
                     name = failed["id"] + ".svg"
-                    (root / name).write_text(svg)
+                    (root / name).write_text(svg, encoding="utf-8")
                     failed["asset"] = name
                     converted = True
                 except Exception:

@@ -64,7 +64,7 @@ class OcrModules:
     def _catalog(self):
         if not self.manifest_path.exists():
             return []
-        return json.loads(self.manifest_path.read_text())['modules']
+        return json.loads(self.manifest_path.read_text(encoding='utf-8'))['modules']
 
     def _module(self, module_id):
         for module in self._catalog():
@@ -157,7 +157,7 @@ class OcrModules:
             self.preview(module_id)
             marker = safe_path(directory, 'ready.json')
             try:
-                activation = json.loads(marker.read_text())
+                activation = json.loads(marker.read_text(encoding='utf-8'))
                 if activation.get('manifest_hash') != fingerprint(module) or not isinstance(activation.get('site_hashes'), dict):
                     raise ValueError('mismatch')
             except (ValueError, OSError):
@@ -375,7 +375,7 @@ class OcrModules:
                 raise StoreError('OCR_DOWNLOAD_CANCELLED', 'OCR download cancelled.', 409)
             site_hashes = {str(path.relative_to(site)): hashlib.sha256(path.read_bytes()).hexdigest()
                            for path in site.rglob('*') if path.is_file()}
-            (stage / 'ready.json').write_text(json.dumps({'manifest_hash': fingerprint(module), 'site_hashes': site_hashes}))
+            (stage / 'ready.json').write_text(json.dumps({'manifest_hash': fingerprint(module), 'site_hashes': site_hashes}), encoding='utf-8')
             os.replace(stage, self._directory(module))
             with self.lock:
                 self.states.pop(module_id, None)

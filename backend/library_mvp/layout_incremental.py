@@ -41,8 +41,8 @@ def previous(
 ):
     root = Path(root)
     try:
-        value = json.loads((root / pages_name).read_text())
-        audit = json.loads((root / audit_name).read_text())
+        value = json.loads((root / pages_name).read_text(encoding="utf-8"))
+        audit = json.loads((root / audit_name).read_text(encoding="utf-8"))
         path = root / pdf_name
         if (
             value["version"] != version

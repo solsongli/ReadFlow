@@ -137,7 +137,7 @@ def run(
             with self.lock:
                 context = {"language": language, "fingerprint": fingerprint}
                 contexts = (
-                    json.loads((root / "contexts.json").read_text())
+                    json.loads((root / "contexts.json").read_text(encoding="utf-8"))
                     if (root / "contexts.json").exists()
                     else {}
                 )

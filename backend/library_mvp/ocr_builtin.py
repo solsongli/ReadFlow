@@ -23,7 +23,7 @@ class BuiltinOcrModules:
         ready = available()
         size = 0
         if ready:
-            entries = json.loads((model_root() / "manifest.json").read_text())["files"]
+            entries = json.loads((model_root() / "manifest.json").read_text(encoding="utf-8"))["files"]
             size = sum(e["bytes"] for e in entries if e["path"].startswith("models/ocr-"))
         return [
             {

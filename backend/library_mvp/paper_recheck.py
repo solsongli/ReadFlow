@@ -32,11 +32,11 @@ def recheck(service, item, body):
         if not document:
             raise StoreError("no_translation", "请先提取文献块。", 409)
         contexts = (
-            json.loads((root / "contexts.json").read_text()) if (root / "contexts.json").exists() else {}
+            json.loads((root / "contexts.json").read_text(encoding="utf-8")) if (root / "contexts.json").exists() else {}
         )
         previous = service.storage.result(entry) or {}
         selection = (
-            json.loads((root / "selection.json").read_text())
+            json.loads((root / "selection.json").read_text(encoding="utf-8"))
             if (root / "selection.json").exists()
             else previous
         )

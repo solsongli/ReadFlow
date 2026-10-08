@@ -14,9 +14,9 @@ def submission(service, entry, body, extraction, render_only):
         root = service.storage.directory(entry)
         with service.lock:
             contexts = (
-                json.loads((root / "contexts.json").read_text()) if (root / "contexts.json").exists() else {}
+                json.loads((root / "contexts.json").read_text(encoding="utf-8")) if (root / "contexts.json").exists() else {}
             )
-            old = json.loads((root / "selection.json").read_text()) if (root / "selection.json").exists() else {}
+            old = json.loads((root / "selection.json").read_text(encoding="utf-8")) if (root / "selection.json").exists() else {}
             context = contexts.get(language, old if old.get("language") == language else {})
         if not context.get("fingerprint"):
             previous = service.storage.result(entry) or {}

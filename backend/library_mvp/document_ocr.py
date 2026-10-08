@@ -60,7 +60,7 @@ def decode_ctc(scores, dictionary):
 class DocumentOcr:
     def __init__(self, models):
         self.models = models
-        self.dictionary = [""] + (models.root / "ocr-dict.txt").read_text().splitlines() + [" "]
+        self.dictionary = [""] + (models.root / "ocr-dict.txt").read_text(encoding="utf-8").splitlines() + [" "]
 
     def recognize(self, image, check=lambda: None):
         import numpy as np

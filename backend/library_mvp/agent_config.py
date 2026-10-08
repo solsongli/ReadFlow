@@ -31,7 +31,7 @@ class AgentConfig:
             fd = os.open(self.path, os.O_RDONLY | (os.O_NOFOLLOW if POSIX else 0))
         except FileNotFoundError:
             return None
-        with os.fdopen(fd) as stream:
+        with os.fdopen(fd, encoding='utf-8') as stream:
             info = os.fstat(stream.fileno())
             private = not POSIX or (not info.st_mode & 0o077 and info.st_uid == os.getuid())
             if not stat.S_ISREG(info.st_mode) or not private or info.st_size > 12000:
@@ -93,7 +93,7 @@ class AgentConfig:
                     raise EvidenceError('CONFIG_PATH_UNSAFE', '模型配置目录不安全。', 409)
                 fd, temporary = tempfile.mkstemp(prefix='.agent-config-', dir=parent)
                 try:
-                    with os.fdopen(fd, 'w') as stream:
+                    with os.fdopen(fd, 'w', encoding='utf-8') as stream:
                         if POSIX:
                             os.fchmod(stream.fileno(), 0o600)
                         json.dump(clean, stream)

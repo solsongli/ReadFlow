@@ -167,8 +167,8 @@ def prepare_fonts(root, texts, check=lambda: None):
         raise StoreError("UNSAFE_DATA_ROOT", "字体缓存不能是符号链接。")
     manifest = folder / "ready.json"
     if not manifest.is_file():
-        (folder / "chars.json").write_text(json.dumps(chars, ensure_ascii=False))
-        (folder / "seed.typ").write_text(SEED)
+        (folder / "chars.json").write_text(json.dumps(chars, ensure_ascii=False), encoding="utf-8")
+        (folder / "seed.typ").write_text(SEED, encoding="utf-8")
         env = {key: val for key, val in os.environ.items() if key in ("PATH", "LANG", "TMPDIR")}
         env["RAYON_NUM_THREADS"] = "2"
         process = subprocess.Popen(
@@ -219,7 +219,7 @@ def prepare_fonts(root, texts, check=lambda: None):
         if not names:
             raise StoreError("font_subset", "未生成可用的字形子集。")
         write_json(manifest, names)
-    names = json.loads(manifest.read_text())
+    names = json.loads(manifest.read_text(encoding="utf-8"))
     css = "".join(
         f'@font-face{{font-family:RF;src:url("{name}");font-weight:{weight}}}'
         for weight, name in names.items()

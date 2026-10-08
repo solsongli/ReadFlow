@@ -17,7 +17,7 @@ def write_json(path, value):
         raise StoreError("UNSAFE_DATA_ROOT", "块文件不能是符号链接。")
     fd, temporary = tempfile.mkstemp(prefix=".pending-", dir=path.parent)
     try:
-        with os.fdopen(fd, "w") as stream:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
             json.dump(value, stream, ensure_ascii=False)
         os.replace(temporary, path)
     finally:
@@ -59,7 +59,7 @@ class BlockStorage:
         if not path.exists():
             return None
         try:
-            value = json.loads(path.read_text())
+            value = json.loads(path.read_text(encoding="utf-8"))
             if value["schema_version"] == SCHEMA_VERSION and (
                 accept_stale
                 or value["extractor_version"] == EXTRACTOR_VERSION
@@ -99,7 +99,7 @@ class BlockStorage:
         with self.cache_lock:
             path = self.directory(entry) / "translations.json"
             stamp = self.cache_signature(path)
-            cache = json.loads(path.read_text()) if stamp else {}
+            cache = json.loads(path.read_text(encoding="utf-8")) if stamp else {}
             if stamp is None or self.validated_caches.get(entry["sha256"]) == stamp:
                 return cache
             if not any(has_markers(value) for value in cache.values()):
@@ -132,7 +132,7 @@ class BlockStorage:
 
     def repair_state(self, entry):
         path = self.directory(entry) / "marker-repair.json"
-        return json.loads(path.read_text()) if path.exists() else {}
+        return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
     def finish_repair(self, entry, revision):
         with self.cache_lock:
@@ -142,4 +142,4 @@ class BlockStorage:
 
     def result(self, entry):
         path = self.directory(entry) / "result.json"
-        return json.loads(path.read_text()) if path.exists() else None
+        return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
