@@ -1,9 +1,14 @@
 from pathlib import Path
 import json
+import re
+import subprocess
 import unittest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
+
+# Names a Windows checkout cannot create: reserved characters, reserved device names, trailing dot/space.
+WINDOWS_INVALID = re.compile(r'[<>:"|?*\\\x00-\x1f]|^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$|[. ]$', re.I)
 
 
 class ReadFlowCiTests(unittest.TestCase):
@@ -60,4 +65,19 @@ class ReadFlowCiTests(unittest.TestCase):
         names = ' '.join(step.get('name', '') for step in steps)
         for required in ['Protect Python', 'Protect JavaScript', 'Verify protection', 'Licence notices']:
             self.assertIn(required, names)
+
+    def test_every_path_checks_out_on_windows(self):
+        # The first Windows run failed in actions/checkout on a stray ':memory:.ses' at the repository root.
+        try:
+            listed = subprocess.run(['git', 'ls-files', '-co', '--exclude-standard', '-z'], cwd=ROOT,
+                                    capture_output=True, check=True).stdout.decode()
+        except (OSError, subprocess.CalledProcessError):
+            self.skipTest('not a git work tree')
+        paths = [p for p in listed.split('\0') if p]
+        bad = [p for p in paths if any(WINDOWS_INVALID.search(part) for part in p.split('/'))]
+        self.assertEqual(bad, [])
+        folded = {}
+        for path in paths:
+            folded.setdefault(path.lower(), []).append(path)
+        self.assertEqual([v for v in folded.values() if len(v) > 1], [])
 
