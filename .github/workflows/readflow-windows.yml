@@ -76,8 +76,9 @@ jobs:
           $site = "$bundle/Lib/site-packages"; New-Item -ItemType Directory $site -Force | Out-Null
           python -m pip install --upgrade pip
           python -m pip install --target $site -r "$env:DESKTOP_ROOT/requirements-readflow-windows.txt"
-          python -m pip install --target $site --no-deps --no-build-isolation backend/pipeline backend/ai
-          & "$bundle/python.exe" -I -c "import fitz, pikepdf, PIL, numpy, onnxruntime, fastapi, uvicorn, httpx; print('bundle-import-ok')"
+          # Build isolation lets pip fetch the declared setuptools>=75; the runner's own setuptools lacks bdist_wheel.
+          python -m pip install --target $site --no-deps backend/pipeline backend/ai
+          & "$bundle/python.exe" -I -c "import fitz, pikepdf, PIL, numpy, onnxruntime, fastapi, uvicorn, httpx, retainpdf_pipeline, retainpdf_ai; print('bundle-import-ok')"
       - uses: actions/cache@v4
         with:
           path: .model-cache
