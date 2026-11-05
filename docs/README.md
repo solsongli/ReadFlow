@@ -1,6 +1,6 @@
-# RetainPDF 文档目录
+# ReadFlow 文档目录
 
-用户安装、下载和 Docker 部署入口见仓库根目录 [README](../README.md)。
+用户安装与下载入口见仓库根目录 [README](../README.md)，详细操作见[使用说明](readflow/使用说明.md)。
 本目录是仓库唯一的文档根目录；不要再新建平行的 `doc/` 或模块外文档目录。
 
 ## 入口

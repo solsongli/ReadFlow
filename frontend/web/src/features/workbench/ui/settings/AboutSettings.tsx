@@ -16,7 +16,7 @@ export function AboutSettings() {
     <div className="flex items-center gap-4 py-2">{logo ? <img src="./src/assets/readflow-logo.svg" alt="ReadFlow" className="h-16 w-16" onError={() => setLogo(false)} /> : <span className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-wb-fill text-[1.5rem] font-semibold">RF</span>}<div><p className="m-0 text-[1.5rem] font-bold tracking-[-0.02em]">ReadFlow</p><p className="m-0 mt-1 text-[0.8125rem] text-wb-text-3">{version}</p></div></div>
     <p className="m-0 text-[0.8125rem] leading-relaxed text-wb-text-3">面向科研的文献管理、双语阅读与笔记工具</p>
     <SettingsCard title="开源许可">
-      <SettingsRow label="基于 RetainPDF 开源项目"><span className="text-[0.75rem] text-wb-text-3">MIT License</span></SettingsRow>
+      <SettingsRow label="项目许可"><span className="text-[0.75rem] text-wb-text-3">MIT License</span></SettingsRow>
       <SettingsRow label="Inter 字体"><a href="./src/assets/fonts/inter/LICENSE.txt" className="text-[0.75rem] text-wb-link hover:underline" onClick={(event) => { event.preventDefault(); void showLicense(); }}>SIL Open Font License（OFL）</a></SettingsRow>
     </SettingsCard>
     {license != null ? <SettingsCard title="Inter 字体许可"><div className="p-3.5"><pre className="wb-scroll m-0 max-h-60 whitespace-pre-wrap break-words font-wb-sans text-[0.75rem] text-wb-text-2">{license}</pre><Button size="sm" className="mt-3" onClick={() => setLicense(null)}>收起许可</Button></div></SettingsCard> : null}
